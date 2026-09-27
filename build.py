@@ -35,7 +35,7 @@ WHISPER_FILES = [
     "decoder_model_merged_quantized.onnx",
 ]
 CHAT_FILES = ["model_q4f16.onnx"]
-STATIC_PAGES = ["cassandra-course.html", "copilot-pm-course.html", "claude-code-course.html"]  # plain pages without models, copied verbatim
+STATIC_PAGES = ["cassandra-course.html", "copilot-pm-course.html", "claude-code-course.html", "kafka-course.html"]  # plain pages without models, copied verbatim
 CHAT_PART_CHARS = 52_428_800  # ~50 MiB of base64 per part (multiple of 4)
 
 
