@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Design: From Zero to Confident</title>
+<meta name="description" content="Animated Head-First-style guide to system design fundamentals: scalability, reliability, CAP, load balancing, caching, sharding, replication, resilience, REST API design and contracts, event-driven contracts, and a step-by-step design walkthrough.">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper:#fbf8f1; --paper2:#ffffff; --ink:#1c1c22; --mut:#5d5f6b; --line:#d9d3c4; --shadow:#1c1c22;
+  --accent:#1b6fa8; --accent2:#e39b2d; --ok:#2f9e63; --bad:#d64545; --warn:#c98a00;
+  --pen:#b8431f; --note:#fff4c2; --card:#f1ece0; --code:#f3efe6; --dim:#9aa0ab;
+  --hand:"Segoe Print","Bradley Hand","Comic Neue","Comic Sans MS","Chalkboard SE","Marker Felt",cursive;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,"Palatino Linotype",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#15171c; --paper2:#1d2027; --ink:#e7e5df; --mut:#a3a6b1; --line:#383c49; --shadow:#000;
+          --accent:#5aa9e6; --accent2:#f0b34f; --ok:#4cc38a; --bad:#f06b6b; --warn:#f0c040;
+          --pen:#ff9a6b; --note:#3a3420; --card:#232730; --code:#22262e; --dim:#5d6270; }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.68 var(--serif); }
+a { color:var(--accent); }
+code, kbd { font:.86em var(--mono); background:var(--code); padding:.08em .35em; border-radius:4px; }
+pre { font:14px/1.5 var(--mono); background:var(--code); border-left:4px solid var(--accent); padding:.9rem 1rem; overflow:auto; border-radius:4px; }
+pre code { background:none; padding:0; font-size:inherit; }
+h1,h2,h3,h4 { font-family:var(--sans); line-height:1.2; }
+h3 { font-size:1.28rem; margin:2.2rem 0 .6rem; }
+strong, b { font-weight:700; }
+.hand { font-family:var(--hand); color:var(--pen); }
+.mut { color:var(--mut); }
+
+/* progress + toc */
+#progress { position:fixed; inset:0 0 auto 0; height:5px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform-origin:0 50%; transform:scaleX(0); z-index:50; }
+#toc { position:fixed; top:1.4rem; left:1rem; width:205px; font:13.5px/1.35 var(--sans); z-index:40; display:none; opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #toc { opacity:1; pointer-events:auto; }
+#toc b { display:block; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.5rem; }
+#toc a { display:block; padding:.28rem .55rem; border-left:3px solid var(--line); color:var(--mut); text-decoration:none; }
+#toc a:hover { color:var(--ink); }
+#toc a.active { border-color:var(--accent2); color:var(--ink); font-weight:700; background:var(--card); }
+@media (min-width:1440px) { #toc { display:block; } }
+
+/* cover */
+.cover { min-height:96vh; display:grid; place-items:center; padding:3rem 1.2rem; position:relative; overflow:hidden;
+         background:radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 55%), var(--paper); }
+.cover-inner { max-width:1040px; width:100%; display:grid; gap:2rem; grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px) { .cover-inner { grid-template-columns:1.1fr .9fr; } }
+.cover .kicker { font:700 .85rem var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); }
+.cover h1 { font-size:clamp(2.4rem,5.6vw,4.2rem); margin:.3rem 0 .6rem; letter-spacing:-.02em; }
+.cover h1 span { display:inline-block; background:var(--ink); color:var(--paper); padding:0 .25em; transform:rotate(-1.5deg); }
+.cover .sub { font-size:1.2rem; color:var(--mut); max-width:34em; }
+.cover .stamp { display:inline-block; margin-top:1.2rem; font:700 1rem var(--hand); color:var(--pen); border:3px solid var(--pen); padding:.3rem .8rem; border-radius:8px; transform:rotate(-4deg); }
+.cover svg { width:100%; max-width:400px; justify-self:center; overflow:visible; }
+.spin { animation:spin 50s linear infinite; transform-origin:200px 200px; }
+.spin-rev { animation:spin 34s linear infinite reverse; transform-origin:200px 200px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.cover .scroll-hint { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); font:1rem var(--hand); color:var(--mut); animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob { 50% { transform:translate(-50%,8px); } }
+
+/* layout */
+main { max-width:800px; margin:0 auto; padding:0 1.2rem 6rem; }
+.chapter { padding-top:4.5rem; }
+.chap-head { display:flex; gap:1.1rem; align-items:center; margin-bottom:1rem; }
+.chap-num { flex:none; width:4.2rem; height:4.2rem; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font:800 1.7rem var(--sans); transform:rotate(-6deg); box-shadow:4px 4px 0 var(--accent2); }
+.chap-head h2 { font-size:clamp(1.6rem,3.8vw,2.2rem); margin:0; }
+.chap-head .tag { font:1.02rem var(--hand); color:var(--pen); display:block; margin-top:.3rem; }
+
+/* reveal */
+.js .reveal { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.js .reveal.shown { opacity:1; transform:none; }
+
+/* head-first boxes */
+.box { position:relative; margin:2rem 0; padding:1.1rem 1.25rem 1rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper2); box-shadow:5px 5px 0 var(--shadow); }
+.box > .lbl { position:absolute; top:-1rem; left:1rem; font:800 .82rem var(--sans); letter-spacing:.06em; text-transform:uppercase; background:var(--ink); color:var(--paper); padding:.25rem .65rem; border-radius:4px; transform:rotate(-2deg); }
+.box.brain { border-style:dashed; background:color-mix(in srgb, var(--accent) 8%, var(--paper2)); }
+.box.brain > .lbl { background:var(--accent); color:#fff; }
+.box.pencil { background:color-mix(in srgb, var(--accent2) 10%, var(--paper2)); }
+.box.pencil > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.watch { border-color:var(--bad); box-shadow:5px 5px 0 var(--bad); }
+.box.watch > .lbl { background:var(--bad); color:#fff; }
+.box.geek { background:var(--card); font-size:.95em; }
+.box.geek > .lbl { background:var(--mut); }
+.box.relax { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); }
+.box.relax > .lbl { background:var(--ok); color:#fff; }
+.box.bullets { background:var(--note); transform:rotate(-.4deg); }
+.box.bullets ul { margin:.3rem 0 0; padding-left:1.2rem; }
+.box.bullets li { margin:.35rem 0; }
+.box.bullets li::marker { content:"▸ "; color:var(--pen); }
+.box.usecase { border-color:var(--accent); box-shadow:5px 5px 0 var(--accent); }
+.box.usecase > .lbl { background:var(--accent); color:#fff; }
+.box.usecase ol { margin:.5rem 0 .3rem; padding-left:1.3rem; }
+.box.usecase li { margin:.4rem 0; }
+.box p:first-of-type { margin-top:.4rem; }
+.box p:last-child { margin-bottom:0; }
+.qa { display:grid; grid-template-columns:auto 1fr; gap:.4rem .8rem; margin:.8rem 0 1rem; }
+.qa .q, .qa .a { font:800 1.15rem var(--sans); }
+.qa .q { color:var(--accent); } .qa .a { color:var(--pen); }
+.qa div { margin:0; }
+details { margin-top:.8rem; }
+summary { cursor:pointer; font:700 .95rem var(--sans); color:var(--pen); }
+.anno { font:1.05rem/1.35 var(--hand); color:var(--pen); display:block; margin:.4rem 0 .4rem 1.2rem; transform:rotate(-1.2deg); }
+.anno::before { content:"↖ "; }
+.pull { font:italic 1.35rem/1.45 var(--serif); border-left:6px solid var(--accent2); padding:.2rem 0 .2rem 1rem; margin:1.6rem 0; }
+
+/* figures (generic) */
+.fig { margin:2.2rem -1rem; padding:1rem 1rem .9rem; background:var(--paper2); border:2px solid var(--ink); border-radius:8px; box-shadow:6px 6px 0 var(--shadow); position:relative; }
+@media (min-width:1000px) { .fig.wide { margin-left:-6rem; margin-right:-6rem; } }
+.fig .ftitle { font:800 .95rem var(--sans); margin:0 0 .6rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.fig .ftitle span { font:400 .85rem var(--sans); color:var(--mut); }
+.fig figcaption, .fig .cap { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.6rem; }
+.fig svg { display:block; width:100%; height:auto; }
+.fig svg text { fill:var(--ink); font-family:var(--sans); }
+.ctrl { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.4rem 0 .6rem; font:14px var(--sans); }
+.btn { font:700 13.5px var(--sans); color:var(--ink); background:var(--paper2); border:2px solid var(--ink); border-radius:999px; padding:.33rem .85rem; box-shadow:2px 2px 0 var(--shadow); cursor:pointer; transition:transform .08s; }
+.btn:hover { background:var(--card); }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.on { background:var(--ink); color:var(--paper); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.ctrl input[type=text], .ctrl select, .calc input { font:14px var(--mono); padding:.3rem .5rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); }
+.ctrl input[type=text] { width:9rem; }
+.ctrl label { display:inline-flex; gap:.35rem; align-items:center; flex-wrap:wrap; max-width:100%; }
+.ctrl select { max-width:100%; min-width:0; }
+.scroll-x { overflow-x:auto; }
+.scroll-x > svg { min-width:620px; }
+.two { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:720px) { .two { grid-template-columns:1.2fr 1fr; align-items:start; } }
+.two > * { min-width:0; }
+table.mini { width:100%; border-collapse:collapse; font:13.5px var(--sans); }
+table.mini th, table.mini td { text-align:left; padding:.28rem .4rem; border-bottom:1px solid var(--line); }
+table.mini th { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+table.mini tr.flash td { animation:flashbg 1.2s ease; }
+@keyframes flashbg { 0%{ background:color-mix(in srgb, var(--accent2) 45%, transparent);} 100%{ background:transparent;} }
+.chip { display:inline-block; min-width:1.6em; text-align:center; font:800 12px var(--sans); color:#fff; padding:.1rem .4rem; border-radius:999px; }
+.status { font:14px/1.45 var(--sans); padding:.55rem .75rem; border-radius:6px; background:var(--card); margin-top:.5rem; min-height:2.2rem; }
+.status.ok { background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.status.bad { background:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.status.warn { background:color-mix(in srgb, var(--warn) 20%, var(--paper2)); }
+.small { font-size:11px; }
+.pop { animation:pulse .6s ease; transform-origin:center; }
+@keyframes pulse { 40% { transform:scale(1.25); } }
+main, footer { overflow-wrap:break-word; }
+.meter { height:12px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.meter > i { display:block; height:100%; width:0; background:var(--ok); transition:width .6s ease, background .4s; }
+.legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.3rem; background:var(--c); vertical-align:-1px; }
+.log { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; height:170px; overflow-y:auto; }
+.log div { opacity:0; transform:translateX(-6px); transition:opacity .3s, transform .3s; white-space:pre-wrap; }
+.log div.shown { opacity:1; transform:none; }
+.log .u { color:var(--accent); font-weight:700; } .log .e { color:var(--bad); } .log .g { color:var(--ok); }
+.stack { position:relative; height:34px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:var(--paper); display:flex; }
+.stack .seg { height:100%; transition:width .7s ease; overflow:hidden; white-space:nowrap; font:700 10.5px/34px var(--sans); color:#fff; text-indent:4px; }
+
+/* ==== per-figure CSS (prefixed) ==== */
+.topo { display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; justify-content:center; margin:.6rem 0; }
+.node { border:2px solid var(--ink); border-radius:8px; padding:.5rem .7rem; background:var(--paper2); font:700 12px/1.3 var(--sans); text-align:center; min-width:4.6rem; transition:opacity .3s, background .3s, border-color .3s, transform .2s; }
+.node .sub { display:block; font:400 10.5px var(--sans); color:var(--mut); }
+.node.dead { opacity:.35; border-style:dashed; }
+.node.hot { background:var(--accent2); border-color:var(--accent2); }
+.node.bad { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 18%, var(--paper2)); }
+.node.ok2 { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.node.leader { box-shadow:3px 3px 0 var(--accent2); }
+.arrow { font-size:1.35rem; color:var(--mut); flex:none; }
+.row-wrap { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
+.badge { display:inline-block; font:800 11px var(--sans); padding:.12rem .5rem; border-radius:999px; background:var(--card); color:var(--mut); }
+.badge.on { background:var(--ok); color:#fff; }
+.badge.bad2 { background:var(--bad); color:#fff; }
+.state-row { display:flex; gap:.4rem; flex-wrap:wrap; justify-content:center; margin:.6rem 0; }
+.state-box { border:2px solid var(--line); border-radius:8px; padding:.5rem .8rem; font:700 12.5px var(--sans); color:var(--mut); }
+.state-box.cur { border-color:var(--ink); color:var(--ink); background:var(--card); }
+.state-box.cur.bad3 { border-color:var(--bad); color:#fff; background:var(--bad); }
+.state-box.cur.warn3 { border-color:var(--warn); background:var(--warn); color:#1c1c22; }
+.acc-stage { border:2px solid var(--line); border-radius:8px; margin:.5rem 0; overflow:hidden; }
+.acc-h { width:100%; text-align:left; font:700 13.5px var(--sans); background:var(--card); border:0; padding:.55rem .8rem; cursor:pointer; color:var(--ink); display:flex; justify-content:space-between; gap:.5rem; }
+.acc-h .n { color:var(--accent); }
+.acc-b { padding:.7rem .9rem; font:14px/1.5 var(--sans); display:none; }
+.acc-b.open { display:block; }
+.acc-b ul { margin:.2rem 0; padding-left:1.2rem; }
+.pill-list { display:flex; gap:.4rem; flex-wrap:wrap; margin:.4rem 0; }
+.pill { font:700 12px var(--mono); border:2px solid var(--ink); border-radius:6px; padding:.15rem .5rem; background:var(--paper2); }
+.pill.gone { text-decoration:line-through; opacity:.5; }
+.pill.moved { border-color:var(--accent2); }
+
+/* quiz */
+.quiz-q { margin:1.2rem 0; padding:.9rem 1rem; border:2px solid var(--ink); border-radius:8px; background:var(--paper2); }
+.quiz-q h4 { margin:0 0 .6rem; font-size:1rem; }
+.quiz-q .opts { display:grid; gap:.4rem; }
+.quiz-q button { text-align:left; font:14px/1.4 var(--sans); color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:6px; padding:.45rem .7rem; cursor:pointer; }
+.quiz-q button:hover:not(:disabled) { border-color:var(--ink); }
+.quiz-q button.right { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+.quiz-q button.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); }
+.quiz-q .why { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.5rem; display:none; }
+.quiz-q.done .why { display:block; }
+.score { position:sticky; bottom:1rem; margin-left:auto; width:max-content; font:800 1rem var(--sans); background:var(--ink); color:var(--paper); padding:.45rem .9rem; border-radius:999px; box-shadow:3px 3px 0 var(--accent2); }
+.cheat td:first-child { font-family:var(--mono); font-size:12.5px; white-space:nowrap; }
+footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var(--sans); color:var(--mut); border-top:2px solid var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+  html { scroll-behavior:auto; }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Chapters"></nav>
+
+<header class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="kicker">Animated guide · System Design</div>
+      <h1>System Design <span>from first principles</span></h1>
+      <p class="sub">The heuristics behind scalable, reliable systems — plus the two contracts that hold them together: REST APIs and events. Sixteen mechanisms, one figure each, all clickable. Scroll — the diagrams start by themselves.</p>
+      <div class="stamp">basics, no hand-waving 🧠</div>
+    </div>
+    <svg viewBox="0 0 400 400" aria-hidden="true">
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <g id="cover-nodes"></g>
+      </g>
+      <g class="spin-rev">
+        <circle cx="200" cy="200" r="95" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 10"/>
+      </g>
+      <circle cx="200" cy="200" r="46" fill="var(--accent)" stroke="var(--ink)" stroke-width="4"/>
+    </svg>
+  </div>
+  <div class="scroll-hint">scroll ↓</div>
+</header>
+
+<main>
+
+<section class="chapter" id="intro" data-title="How to read this">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>How to read this guide</h2><span class="tag">rules before recipes</span></div></div>
+  <p class="reveal">System design isn't a list of buzzwords to memorize — it's a small set of <strong>heuristics</strong> that keep repeating: spread load, tolerate failure, pick your trade-off consciously, make retries safe. Once you see the pattern, every "new" system is a remix of the same fifteen ideas.</p>
+  <p class="reveal">Each chapter below is one mechanism, with one thing you can click and break. Do the breaking — that's where the lesson lives, not in the paragraph above it.</p>
+  <div class="box brain reveal"><span class="lbl">🧠 Brain power</span>
+    <p>Why does almost every "design X" interview question start with "how many users, how many requests per second"? Keep this question in mind — the finale ties it together.</p>
+  </div>
+</section>
+
+<!-- ============ 1. SCALABILITY ============ -->
+<section class="chapter" id="ch-scale" data-title="Scale out, not just up">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Scale out, not just up</h2><span class="tag">the first heuristic</span></div></div>
+  <p class="reveal"><strong>Vertical scaling</strong> means a bigger machine — more CPU, more RAM. It's simple and it works, but it has a ceiling (the biggest machine money can buy) and a single point of failure. <strong>Horizontal scaling</strong> means more machines doing the same job behind a load balancer. It has (almost) no ceiling, but it only works if any request can be handled by any machine — which is why later chapters spend so much effort making services <strong>stateless</strong>.</p>
+  <p class="reveal">Before scaling anything, estimate the load: requests per second, data per day, read/write ratio. A back-of-envelope number tells you whether you need three servers or three thousand — and whether the bottleneck is CPU, network, or disk.</p>
+
+  <figure class="fig wide" id="fig-scale">
+    <div class="ftitle">▶ Scale-out simulator <span>watch latency climb as traffic outruns capacity</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="traffic">📈 +50 req/s traffic</button>
+      <button class="btn" data-act="addnode">🖥️ Add server (horizontal)</button>
+      <button class="btn" data-act="upgrade">⬆️ Upgrade node (vertical)</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="topo" id="sc-nodes"></div>
+    <div class="row-wrap small mut"><span>Utilization</span></div>
+    <div class="meter"><i id="sc-util"></i></div>
+    <div class="row-wrap small mut" style="margin-top:.5rem"><span>Latency (illustrative)</span></div>
+    <div class="meter"><i id="sc-lat"></i></div>
+    <div class="status" id="sc-status">Press "＋50 req/s traffic" to load the cluster.</div>
+    <figcaption>Illustrative queueing model: latency rises sharply as utilization approaches 100%. Vertical upgrades cap out after 3 steps (diminishing returns); horizontal add is unbounded here.</figcaption>
+  </figure>
+
+  <div class="box geek reveal"><span class="lbl">🤓 Deep dive</span>
+    <p>This is a simplified M/M/1-style intuition: latency ≈ base / (1 − utilization). As utilization creeps toward 100%, queueing time explodes even though average load looks "almost fine" — this is why healthy systems run at 60–70% utilization, not 95%.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Vertical scaling: simple, has a hard ceiling, stays a single point of failure.</li>
+      <li>Horizontal scaling: needs statelessness, scales further, needs a load balancer.</li>
+      <li>Always start from an estimate — requests/sec and data/day decide the architecture.</li>
+      <li>Latency doesn't rise linearly with load — it rises sharply near saturation.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 2. RELIABILITY ============ -->
+<section class="chapter" id="ch-reliability" data-title="Redundancy & failover">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Redundancy &amp; failover</h2><span class="tag">nothing runs on one box</span></div></div>
+  <p class="reveal">Reliability is what happens after something breaks — and something always breaks. The fix is <strong>redundancy</strong>: no component that matters should exist as a single copy. A <strong>single point of failure (SPOF)</strong> is any one thing whose death takes the whole system down with it.</p>
+  <p class="reveal">Availability is usually expressed in "nines": 99.9% ("three nines") allows about 8.8 hours of downtime a year; 99.99% allows about 52 minutes. Each extra nine costs real engineering effort, so pick a target the business actually needs — not the highest number that sounds impressive.</p>
+
+  <figure class="fig wide" id="fig-failover">
+    <div class="ftitle">▶ Failover <span>kill the leader, watch a replica take over</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="killleader">💥 Kill the leader</button>
+      <button class="btn bad" data-act="killquorum">☠️ Kill the majority</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="topo" id="fo-nodes"></div>
+    <div class="status" id="fo-status">Three replicas, one leader. Client traffic goes to whoever is leader.</div>
+    <figcaption>Simplified single-datacenter failover; real systems add a consensus protocol to agree on the new leader safely.</figcaption>
+  </figure>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch out</span>
+    <p>Redundancy that shares a failure domain isn't redundancy. Three replicas in the same rack, same power circuit, same availability zone can all die together. Spread copies across zones/regions to survive correlated failures.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>No single copy of anything that matters — that's redundancy.</li>
+      <li>A SPOF is any component whose failure takes the whole system down.</li>
+      <li>Losing the majority of replicas is different from losing one — the survivors can't safely elect a leader.</li>
+      <li>Spread redundancy across real failure domains (racks, zones, regions).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 3. CAP ============ -->
+<section class="chapter" id="ch-cap" data-title="CAP & the consistency spectrum">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>CAP &amp; the consistency spectrum</h2><span class="tag">pick two, but only during a partition</span></div></div>
+  <p class="reveal">The CAP theorem says: when a network <strong>P</strong>artition happens between nodes that hold the same data, you must choose between <strong>C</strong>onsistency (every read sees the latest write, so you refuse writes on the cut-off side) and <strong>A</strong>vailability (every request gets a response, even if it might be stale). Outside of a partition, you can have both — CAP is specifically about what happens <em>during</em> a network split, not a permanent trade-off.</p>
+  <p class="reveal">A related, more practical framing is <strong>PACELC</strong>: if there is a <strong>P</strong>artition, choose <strong>A</strong>vailability or <strong>C</strong>onsistency; <strong>E</strong>lse (normal operation), choose <strong>L</strong>atency or <strong>C</strong>onsistency. Strongly consistent systems pay a latency tax even when nothing is broken, because they must coordinate before answering.</p>
+
+  <figure class="fig wide" id="fig-cap">
+    <div class="ftitle">▶ Partition simulator <span>same write, two philosophies</span></div>
+    <div class="ctrl">
+      <label><input type="radio" name="cap-mode" value="cp" checked> CP (consistent)</label>
+      <label><input type="radio" name="cap-mode" value="ap"> AP (available)</label>
+    </div>
+    <div class="ctrl">
+      <button class="btn" data-act="partition">✂️ Partition the network</button>
+      <button class="btn primary" data-act="writea">Write on A</button>
+      <button class="btn primary" data-act="writeb">Write on B</button>
+      <button class="btn" data-act="heal">🩹 Heal partition</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="topo">
+      <div class="node ok2" id="cap-a">Node A<span class="sub" id="cap-a-val">v0</span></div>
+      <div class="arrow" id="cap-link">━━</div>
+      <div class="node ok2" id="cap-b">Node B<span class="sub" id="cap-b-val">v0</span></div>
+    </div>
+    <div class="status" id="cap-status">Not partitioned — a write on either side reaches both.</div>
+    <figcaption>Illustrative two-node system. Real CP/AP databases (e.g. a strongly-consistent SQL cluster vs. a Dynamo-style store) implement this choice with quorums, not a mode switch.</figcaption>
+  </figure>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ There are no dumb questions</span>
+    <div class="qa">
+      <div class="q">Q:</div><div>So is CAP saying my database is either "consistent" or "available" forever?</div>
+      <div class="a">A:</div><div>No — it's a statement about one moment: a network partition. A CP system stays consistent by refusing some requests during that partition; an AP system stays available by accepting writes on both sides and reconciling them once the partition heals.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>CAP only forces a choice while a partition exists.</li>
+      <li>CP: refuse requests on the minority side, stay correct.</li>
+      <li>AP: answer everywhere, accept that copies can diverge, reconcile later.</li>
+      <li>PACELC: even without a partition, strong consistency costs latency.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 4. LOAD BALANCING ============ -->
+<section class="chapter" id="ch-lb" data-title="Load balancing">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Load balancing</h2><span class="tag">who gets the next request</span></div></div>
+  <p class="reveal">A load balancer sits in front of a pool of identical servers and picks one for each request. <strong>Round robin</strong> cycles through servers in order — simple, ignores current load. <strong>Least connections</strong> sends the request to whichever server has the fewest in-flight requests — better when requests take unequal time. <strong>Consistent hashing</strong> maps both servers and requests onto a ring by hash, so a given key (e.g. a user ID) usually lands on the same server — useful for cache locality — and when a server dies, only its slice of the ring remaps, not everything.</p>
+  <p class="reveal">Load balancers also work at different layers: <strong>L4</strong> balances raw TCP/UDP connections (fast, protocol-blind); <strong>L7</strong> reads HTTP (host, path, headers) and can route <code>/api/*</code> to one pool and <code>/static/*</code> to another. Either way, a load balancer must stop sending traffic to a node that fails its <strong>health check</strong>.</p>
+
+  <figure class="fig wide" id="fig-lb">
+    <div class="ftitle">▶ Routing algorithms <span>send requests, then kill a node</span></div>
+    <div class="ctrl">
+      <label>Algorithm
+        <select id="lb-algo">
+          <option value="rr">Round robin</option>
+          <option value="lc">Least connections</option>
+          <option value="ch">Consistent hashing</option>
+        </select>
+      </label>
+      <button class="btn primary" data-act="send">➕ Send request</button>
+      <button class="btn bad" data-act="kill">💥 Kill a node</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="topo" id="lb-nodes"></div>
+    <div class="status" id="lb-status">Pick an algorithm, then send a few requests.</div>
+    <figcaption>Node load shown as request count (illustrative). Consistent hashing keeps most keys on their original node after a kill; round robin and least-connections simply redistribute across survivors.</figcaption>
+  </figure>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Round robin: fair by turn, blind to actual load.</li>
+      <li>Least connections: fair by current load, needs live state.</li>
+      <li>Consistent hashing: stable placement, minimal remap on node changes.</li>
+      <li>L4 = fast and protocol-blind; L7 = content-aware routing.</li>
+      <li>Health checks remove dead nodes from rotation automatically.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 5. CACHING ============ -->
+<section class="chapter" id="ch-cache" data-title="Caching">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Caching</h2><span class="tag">remember what's expensive to recompute</span></div></div>
+  <p class="reveal">A cache trades a little staleness for a lot of speed. <strong>Cache-aside</strong> (lazy loading): the app checks the cache first; on a miss, it reads the database and writes the result into the cache. <strong>Write-through</strong>: every write goes to the cache and the database together, so the cache is never stale but writes are slower. <strong>Write-behind</strong>: writes land in the cache first and are flushed to the database asynchronously — fast, but can lose data if the cache dies before flushing.</p>
+  <p class="reveal">Every cache entry needs an eviction rule — a <strong>TTL</strong> (time to live) or a policy like LRU (evict the least recently used entry) — otherwise the cache grows forever. And watch for a <strong>cache stampede</strong>: when a hot key expires, hundreds of requests miss at once and all hammer the database simultaneously.</p>
+
+  <figure class="fig wide" id="fig-cache">
+    <div class="ftitle">▶ Cache-aside <span>hits are fast, misses cost a database round trip</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="req">🔑 Request "product:42"</button>
+      <button class="btn bad" data-act="stampede">💥 Expire it, then 6 requests at once</button>
+      <label><input type="checkbox" id="ca-lock"> 🔒 singleflight lock</label>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="topo">
+      <div class="node" id="ca-client">Client</div>
+      <div class="arrow">→</div>
+      <div class="node" id="ca-cache">Cache<span class="sub" id="ca-cache-sub">empty</span></div>
+      <div class="arrow">→</div>
+      <div class="node" id="ca-db">Database</div>
+    </div>
+    <div class="row-wrap small mut" style="margin-top:.5rem"><span>Database load</span></div>
+    <div class="meter"><i id="ca-dbload"></i></div>
+    <div class="log" id="ca-log"></div>
+    <figcaption>Illustrative timings. The singleflight lock lets only one request repopulate an expired key while the rest wait for that result, instead of all of them hitting the database.</figcaption>
+  </figure>
+
+  <div class="box geek reveal"><span class="lbl">🤓 Deep dive</span>
+    <p>"Singleflight" (a term from Go's <code>golang.org/x/sync/singleflight</code>) collapses concurrent identical requests into one in-flight call and shares its result — a general fix for stampedes, not just caches.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Cache-aside: app manages the cache, simplest, can serve stale data.</li>
+      <li>Write-through: always fresh, slower writes.</li>
+      <li>Write-behind: fastest writes, risk of loss on cache failure.</li>
+      <li>Always set a TTL or eviction policy — unbounded caches are a memory leak with extra steps.</li>
+      <li>Guard hot keys against stampedes with a lock or early refresh.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 6. SHARDING ============ -->
+<section class="chapter" id="ch-shard" data-title="Partitioning & sharding">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Partitioning &amp; sharding</h2><span class="tag">one database is not enough</span></div></div>
+  <p class="reveal">When one database can't hold or serve all the data, split it into <strong>shards</strong>, each on its own machine. <strong>Range-based</strong> sharding (e.g. users A–M on shard 1, N–Z on shard 2) keeps ranges queryable together but can create uneven load. <strong>Hash-based</strong> sharding (hash the key, mod by shard count) spreads load evenly but makes range queries expensive. <strong>Directory-based</strong> sharding keeps an explicit lookup table of key → shard, which is flexible but adds a lookup hop.</p>
+  <p class="reveal">A <strong>hot key</strong> is a single key (a viral post, a celebrity account) that gets so much traffic it overwhelms its one shard, no matter how many shards exist. Fixes include splitting the key's traffic further (e.g. appending a random suffix and merging results) or caching it aggressively.</p>
+
+  <figure class="fig wide" id="fig-shard">
+    <div class="ftitle">▶ Hash-based sharding <span>add a shard, then create a hot key</span></div>
+    <div class="ctrl">
+      <button class="btn" data-act="addshard">➕ Add shard</button>
+      <button class="btn bad" data-act="hotkey">🔥 Hot key hits shard 0</button>
+      <button class="btn primary" data-act="salt" id="ca-salt">🧂 Salt the key</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="topo" id="sh-nodes"></div>
+    <div class="pill-list" id="sh-keys"></div>
+    <div class="status" id="sh-status">Four keys, two shards. Add a shard and see how few keys move.</div>
+    <figcaption>Illustrative key set. Consistent hashing (not plain "hash mod N") is what keeps remapping minimal in real systems — plain modulo reshuffles almost every key when the shard count changes.</figcaption>
+  </figure>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Range sharding: easy range queries, uneven load risk.</li>
+      <li>Hash sharding: even load, expensive range queries.</li>
+      <li>Directory sharding: flexible, adds a lookup hop.</li>
+      <li>A hot key overloads one shard regardless of shard count — fix the key, not the shard.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 7. REPLICATION ============ -->
+<section class="chapter" id="ch-replication" data-title="Replication & quorums">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Replication &amp; quorums</h2><span class="tag">how many copies must agree</span></div></div>
+  <p class="reveal">Replication keeps multiple copies of the same data for durability and read scale. In <strong>leader–follower</strong> replication, writes go to the leader and are streamed to followers; reads can go to either, trading freshness for read capacity. <strong>Replication lag</strong> is the delay before a follower catches up — read a follower during lag and you can see stale data.</p>
+  <p class="reveal">Quorum-based systems make this tunable: with <strong>N</strong> replicas, a write must be acknowledged by <strong>W</strong> of them, and a read must query <strong>R</strong> of them. If <strong>W + R &gt; N</strong>, every read overlaps with the latest write on at least one replica, guaranteeing you see it — this is <strong>strong consistency</strong> via quorum overlap, not via a single leader.</p>
+
+  <figure class="fig wide" id="fig-repl">
+    <div class="ftitle">▶ Quorum reads/writes <span>N=3 replicas — tune W and R</span></div>
+    <div class="ctrl">
+      <label>W (write quorum)
+        <select id="rp-w"><option>1</option><option selected>2</option><option>3</option></select>
+      </label>
+      <label>R (read quorum)
+        <select id="rp-r"><option>1</option><option selected>2</option><option>3</option></select>
+      </label>
+      <button class="btn primary" data-act="write">Write x=7</button>
+      <button class="btn" data-act="read">Read x</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="topo" id="rp-nodes"></div>
+    <div class="status" id="rp-status">N=3. Try W=1,R=1 (fast, can read stale) vs W=2,R=2 (W+R&gt;N, always fresh).</div>
+    <figcaption>Illustrative replica set with simulated propagation delay between the write and each follower catching up.</figcaption>
+  </figure>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Leader–follower: simple, followers can lag behind the leader.</li>
+      <li>W = replicas that must ack a write; R = replicas a read must query.</li>
+      <li>W + R &gt; N guarantees the read overlaps the latest write.</li>
+      <li>Lower W/R = faster, higher chance of staleness; higher W/R = slower, stronger guarantees.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 8. RESILIENCE ============ -->
+<section class="chapter" id="ch-resilience" data-title="Timeouts, retries, circuit breakers, back-pressure">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Timeouts, retries, circuit breakers, back-pressure</h2><span class="tag">failing on purpose, safely</span></div></div>
+  <p class="reveal">Every network call needs a <strong>timeout</strong> — otherwise a slow dependency can hold a thread (or a connection) forever, and enough stuck threads can take down a healthy service. A <strong>retry</strong> (ideally with exponential backoff and jitter) handles transient failures, but blind retries can turn one slow dependency into a traffic avalanche.</p>
+  <p class="reveal">A <strong>circuit breaker</strong> tracks failures to a dependency: in the <em>Closed</em> state, calls go through normally; once failures cross a threshold, it trips <em>Open</em> and fails fast without even calling the dependency, giving it time to recover; after a cooldown it goes <em>Half-Open</em> and lets one test call through — success closes the circuit, failure re-opens it. <strong>Back-pressure</strong> is the general idea behind all of this: a system tells its upstream "slow down" (via a bounded queue, a 429 response, or dropping the connection) instead of silently accepting more work than it can do and collapsing.</p>
+
+  <figure class="fig wide" id="fig-cb">
+    <div class="ftitle">▶ Circuit breaker <span>closed → open → half-open</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="ok">✅ Call (downstream healthy)</button>
+      <button class="btn bad" data-act="fail">💥 Downstream fails</button>
+      <button class="btn" data-act="wait">⏱️ Wait for cooldown</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="state-row" id="cb-states"></div>
+    <div class="log" id="cb-log"></div>
+    <figcaption>Threshold: 3 consecutive failures trip the breaker (illustrative). Real breakers use a rolling window, not a raw counter.</figcaption>
+  </figure>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch out</span>
+    <p>Retries without backoff, or without a circuit breaker, are how a five-minute blip in one dependency becomes a five-hour outage everywhere that calls it — the retries themselves become the overload.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Timeouts bound how long a bad dependency can hurt you.</li>
+      <li>Retries need backoff + jitter, or they synchronize into a thundering herd.</li>
+      <li>A circuit breaker fails fast and gives a struggling dependency room to recover.</li>
+      <li>Back-pressure: push overload signals upstream instead of absorbing them silently.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 9. IDEMPOTENCY & STATELESSNESS ============ -->
+<section class="chapter" id="ch-idempotency" data-title="Idempotency & statelessness">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Idempotency &amp; statelessness</h2><span class="tag">the two properties that make retries and scaling safe</span></div></div>
+  <p class="reveal">An operation is <strong>idempotent</strong> if doing it once has the same effect as doing it many times. By the HTTP spec, <code>GET</code>, <code>PUT</code>, and <code>DELETE</code> are idempotent — sending the same <code>PUT</code> twice leaves the resource in the same state. <code>POST</code> is not — sending "create an order" twice, naively, creates two orders. Since retries are unavoidable (timeouts don't tell you whether the server actually finished), clients attach a unique <strong>idempotency key</strong> to unsafe operations, and the server stores "I already handled key X, here's that same response" instead of repeating the side effect.</p>
+  <p class="reveal"><strong>Statelessness</strong> means a server keeps no client-specific state between requests — session data lives in a token (e.g. a JWT) the client holds, or in a shared store (e.g. Redis) any server instance can read. That's what makes horizontal scaling and load balancing trivial in <a href="#ch-scale">Chapter 1</a>: any server can handle any request.</p>
+
+  <figure class="fig wide" id="fig-idem">
+    <div class="ftitle">▶ Retry a timed-out "create order" <span>with and without an idempotency key</span></div>
+    <div class="ctrl">
+      <label><input type="checkbox" id="id-key" checked> use idempotency key</label>
+      <button class="btn primary" data-act="request">📨 Send "create order"</button>
+      <button class="btn bad" data-act="retry">🔁 Timeout — client retries</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="row-wrap small mut"><span>Orders actually created in the database</span></div>
+    <div class="pill-list" id="id-orders"></div>
+    <div class="status" id="id-status">Send a request, then simulate the client retrying after a timeout.</div>
+    <figcaption>Illustrative: the client can't tell "server never got it" from "server finished but the reply was lost" — so it must retry, and the server must be able to absorb that safely.</figcaption>
+  </figure>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Idempotent by spec: GET, PUT, DELETE. Not idempotent by default: POST.</li>
+      <li>Idempotency keys make unsafe operations safe to retry.</li>
+      <li>Statelessness: no per-client memory on the server — any instance can serve any request.</li>
+      <li>Statelessness is what makes horizontal scaling (Ch. 1) and load balancing (Ch. 4) work without sticky sessions.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 10. REST I ============ -->
+<section class="chapter" id="ch-rest1" data-title="REST: resources, verbs, status codes">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>REST: resources, verbs, status codes</h2><span class="tag">the API is a contract too</span></div></div>
+  <p class="reveal">REST models the world as <strong>resources</strong> named by nouns (<code>/orders</code>, <code>/orders/42</code>), not verbs (never <code>/getOrder</code>). The HTTP method says what to do to that resource: <code>GET</code> read, <code>POST</code> create (or trigger a non-idempotent action), <code>PUT</code> replace fully, <code>PATCH</code> update partially, <code>DELETE</code> remove.</p>
+  <p class="reveal">The status code is part of the contract, not decoration: <code>200</code> OK, <code>201</code> Created (with a <code>Location</code> header), <code>204</code> No Content, <code>400</code> Bad Request (malformed input), <code>401</code> Unauthorized (no/bad credentials), <code>403</code> Forbidden (authenticated but not allowed), <code>404</code> Not Found, <code>409</code> Conflict (e.g. duplicate), <code>422</code> Unprocessable Entity (well-formed but semantically invalid), <code>429</code> Too Many Requests, <code>500</code> Internal Server Error, <code>503</code> Service Unavailable. A good error contract returns a consistent JSON shape (e.g. <code>{"error":{"code":"...","message":"..."}}</code>) every time, not a different shape per endpoint.</p>
+
+  <figure class="fig wide" id="fig-rest">
+    <div class="ftitle">▶ Request builder <span>pick a scenario, get the response</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="ok">✅ Success</button>
+      <button class="btn" data-act="notfound">❓ Not found</button>
+      <button class="btn" data-act="validation">🚫 Validation error</button>
+      <button class="btn" data-act="auth">🔒 Unauthorized</button>
+      <button class="btn" data-act="conflict">⚠️ Conflict (duplicate)</button>
+      <button class="btn bad" data-act="ratelimit">🐢 Rate limited</button>
+    </div>
+    <div class="row-wrap"><span class="chip" id="rs-chip" style="background:var(--mut)">···</span><code id="rs-path">POST /orders</code></div>
+    <pre id="rs-body">// pick a scenario above</pre>
+    <figcaption>Illustrative response bodies — shape (not exact fields) is the point: always the same envelope.</figcaption>
+  </figure>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Resources are nouns and URLs; verbs live in the HTTP method.</li>
+      <li>Status codes are part of the contract — clients branch on them.</li>
+      <li>409 = conflict with current state; 422 = the request itself is invalid semantically.</li>
+      <li>Keep the error body shape identical across every endpoint.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 11. REST II ============ -->
+<section class="chapter" id="ch-rest2" data-title="REST: versioning, pagination, HATEOAS">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>REST: versioning, pagination, HATEOAS</h2><span class="tag">APIs live longer than you plan</span></div></div>
+  <p class="reveal">APIs need <strong>versioning</strong> because clients update on their own schedule: a URI version (<code>/v2/orders</code>) is explicit and cacheable; a header version (<code>Accept: application/vnd.api+json;version=2</code>) keeps URLs stable but is easy to miss. Either way, never break a version that clients already depend on — add a new one instead.</p>
+  <p class="reveal"><strong>Offset pagination</strong> (<code>?offset=20&amp;limit=10</code>) is simple but drifts under concurrent writes: if an item is inserted before page 2 is fetched, page 2 can repeat or skip a row. <strong>Cursor (keyset) pagination</strong> (<code>?after=&lt;last_id&gt;&amp;limit=10</code>) anchors to a stable position and doesn't drift, and it's cheaper for the database at high offsets. <strong>Filtering</strong> belongs in query parameters (<code>?status=shipped</code>), never in the path. <strong>HATEOAS</strong> means responses include links to the actions available on that resource (e.g. a <code>cancel</code> link on an order that can still be cancelled) so clients discover capabilities instead of hardcoding URLs — the most-cited but least-implemented REST constraint in practice.</p>
+
+  <figure class="fig wide" id="fig-page">
+    <div class="ftitle">▶ Pagination under concurrent inserts <span>offset drifts, cursor doesn't</span></div>
+    <div class="ctrl">
+      <label><input type="radio" name="pg-mode" value="offset" checked> Offset</label>
+      <label><input type="radio" name="pg-mode" value="cursor"> Cursor</label>
+      <button class="btn primary" data-act="next">Fetch page 2</button>
+      <button class="btn bad" data-act="insert">➕ New item arrives (before page 2)</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="pill-list" id="pg-list"></div>
+    <div class="status" id="pg-status">Page 1 fetched (items 1–4, newest first). Now insert an item, then fetch page 2.</div>
+    <figcaption>Illustrative 8-item feed, page size 4. Offset counts positions from the top, so a new item at the top shifts everything down by one.</figcaption>
+  </figure>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Version explicitly (URI or header); never break a shipped version.</li>
+      <li>Offset pagination: simple, drifts under concurrent writes.</li>
+      <li>Cursor pagination: stable, cheaper at scale, needs a sortable unique key.</li>
+      <li>HATEOAS: let responses tell the client what it can do next.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 12. CONTRACTS ============ -->
+<section class="chapter" id="ch-contracts" data-title="Contracts & compatibility">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Contracts &amp; compatibility</h2><span class="tag">a schema is a promise to every caller</span></div></div>
+  <p class="reveal">An <strong>API contract</strong> defines the shape of requests and responses (e.g. an OpenAPI spec); a <strong>data contract</strong> defines the shape of stored or transmitted data (e.g. a database schema or an event schema). Both need a compatibility rule so producers and consumers can change independently. A change is <strong>backward compatible</strong> if new code can still read data written by old code (a new consumer handles old messages). It's <strong>forward compatible</strong> if old code can still read data written by new code (an old consumer survives new messages, usually by ignoring fields it doesn't recognize).</p>
+  <p class="reveal">Safe changes: adding an optional field, adding a new enum value if consumers already ignore unknown ones, loosening a validation rule. Breaking changes: removing a field still in use, renaming a field, changing a field's type, or adding a new <em>required</em> field with no default. <strong>Contract testing</strong> (e.g. a consumer-driven contract, or a schema registry that rejects incompatible changes) catches these breaks in CI, before a deploy — not after a downstream service starts throwing errors in production.</p>
+
+  <figure class="fig wide" id="fig-schema">
+    <div class="ftitle">▶ Compatibility checker <span>pick a schema change, get the verdict</span></div>
+    <div class="ctrl">
+      <label>Change
+        <select id="sch-change">
+          <option value="addopt">Add optional field</option>
+          <option value="addreq">Add required field (no default)</option>
+          <option value="remove">Remove a used field</option>
+          <option value="rename">Rename a field</option>
+          <option value="type">Change a field's type</option>
+        </select>
+      </label>
+      <button class="btn primary" data-act="check">Check compatibility</button>
+    </div>
+    <div class="topo">
+      <div class="node" id="sch-producer">Producer<span class="sub">new schema</span></div>
+      <div class="arrow">→</div>
+      <div class="node" id="sch-old">Old consumer</div>
+    </div>
+    <div class="status" id="sch-status">Pick a change and check it.</div>
+    <figcaption>Illustrative rule of thumb, not a substitute for your schema registry's actual compatibility mode (e.g. Avro/Protobuf BACKWARD, FORWARD, FULL).</figcaption>
+  </figure>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Backward compatible: new code reads old data.</li>
+      <li>Forward compatible: old code survives new data.</li>
+      <li>Adding optional fields is almost always safe; removing or retyping used fields almost never is.</li>
+      <li>Enforce compatibility in CI with contract tests or a schema registry, not by convention.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 13. EVENTS I ============ -->
+<section class="chapter" id="ch-events1" data-title="Event, command, or notification?">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Event, command, or notification?</h2><span class="tag">naming the message shapes the system</span></div></div>
+  <p class="reveal">An <strong>event</strong> is a fact about something that already happened (<code>OrderShipped</code>) — the producer doesn't know or care who reacts to it; any number of consumers can subscribe. A <strong>command</strong> tells one specific receiver to do something (<code>ShipOrder</code>) — it implies an expected outcome and usually one intended handler. A <strong>notification</strong> is a lightweight event carrying little or no payload (just "something changed, go fetch it if you care") — cheap to send, but every consumer pays a round trip to find out what changed.</p>
+  <p class="reveal">Whichever shape you pick, the message's <strong>schema evolves over time</strong> just like an API's, and the same compatibility rules from <a href="#ch-contracts">Chapter 12</a> apply — plus one more: put a version identifier in every event so consumers can tell old shapes from new ones, and never silently repurpose a field.</p>
+
+  <figure class="fig wide" id="fig-evolve">
+    <div class="ftitle">▶ Event schema evolution <span>publish v1, then evolve it</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="v1">Publish OrderShipped v1</button>
+      <button class="btn" data-act="v2ok">Publish v2 (+ optional trackingUrl)</button>
+      <button class="btn bad" data-act="v2break">Publish v2 (removed carrier field)</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="topo">
+      <div class="node" id="ev-old">Consumer A<span class="sub">built for v1</span></div>
+      <div class="node" id="ev-new">Consumer B<span class="sub">built for v2</span></div>
+    </div>
+    <div class="status" id="ev-status">Two consumers subscribed to the same topic, built at different times.</div>
+    <figcaption>Illustrative. In practice a schema registry (e.g. for Avro/Protobuf/JSON Schema) enforces this at publish time, before a bad event ever reaches a consumer.</figcaption>
+  </figure>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Event: a fact, any number of subscribers, producer doesn't care who listens.</li>
+      <li>Command: an instruction, one intended handler, implies an outcome.</li>
+      <li>Notification: cheap signal, consumers fetch details themselves.</li>
+      <li>Version every event; treat schema changes with the same rigor as an API contract.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 14. EVENTS II ============ -->
+<section class="chapter" id="ch-events2" data-title="Delivery guarantees & the outbox pattern">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Delivery guarantees &amp; the outbox pattern</h2><span class="tag">the DB write and the event publish must not disagree</span></div></div>
+  <p class="reveal">Most message brokers give you <strong>at-least-once</strong> delivery by default: a message might be delivered more than once (after a retry, a rebalance, or a crash before an acknowledgment), but never zero times. <strong>Exactly-once processing</strong> — as an observed effect — is achieved on top of at-least-once delivery by making consumers <strong>idempotent</strong> (the same idempotency-key idea from <a href="#ch-idempotency">Chapter 9</a>: track processed message IDs and skip duplicates), not by a broker magically deduplicating for you.</p>
+  <p class="reveal">The classic bug is the <strong>dual-write problem</strong>: a service writes to its database, then separately publishes an event — but a crash between those two steps leaves the database changed with no event ever sent (or vice versa). The <strong>outbox pattern</strong> fixes this: write the business row <em>and</em> an outbox row in the <strong>same database transaction</strong> (so both commit or neither does), then a separate relay process reads the outbox and publishes to the broker, retrying until it succeeds. This guarantees the event is eventually published if and only if the transaction committed.</p>
+
+  <figure class="fig wide" id="fig-outbox">
+    <div class="ftitle">▶ Outbox pattern <span>compare with a naive dual write</span></div>
+    <div class="ctrl">
+      <label><input type="checkbox" id="ob-use" checked> use outbox pattern</label>
+      <button class="btn primary" data-act="save">💾 Save order</button>
+      <button class="btn bad" data-act="crash">💥 Crash right after the DB commit</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="log" id="ob-log"></div>
+    <div class="row-wrap small" style="margin-top:.4rem">
+      <span class="badge" id="ob-db">DB: —</span>
+      <span class="badge" id="ob-event">Event published: —</span>
+    </div>
+    <div class="status" id="ob-status">Save an order normally, then try crashing right after the commit.</div>
+    <figcaption>Illustrative timeline. "Crash after commit" models a process dying between the DB write and the publish call — the exact gap the outbox pattern closes.</figcaption>
+  </figure>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>At-least-once is the realistic default; build idempotent consumers, don't assume exactly-once.</li>
+      <li>Dual write = DB write + separate publish call = a gap where a crash loses one of them.</li>
+      <li>Outbox: write data + outbox row in one transaction, relay publishes asynchronously.</li>
+      <li>Consumers still need dedup — the outbox guarantees "at least one publish," not "exactly one delivery."</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 15. WALKTHROUGH ============ -->
+<section class="chapter" id="ch-walkthrough" data-title="Design a system, step by step">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Design a system, step by step</h2><span class="tag">putting all fifteen mechanisms to work</span></div></div>
+  <p class="reveal">Worked example: <strong>design a URL shortener.</strong> Below is the order that turns a vague prompt into a defensible design — click each stage.</p>
+
+  <figure class="fig wide" id="fig-walk">
+    <div class="ftitle">▶ Design walkthrough <span>click a stage to expand it</span></div>
+    <div id="wf-stages"></div>
+    <figcaption>Illustrative numbers throughout — the point is the order of decisions, not these exact figures.</figcaption>
+  </figure>
+
+  <div class="box usecase reveal"><span class="lbl">🧩 Use case</span>
+    <p>Notice what didn't come first: the database schema. It came <em>after</em> the estimate and the API contract, because the estimate decides whether you need sharding at all, and the contract decides what the data model has to support.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Estimate first — it decides everything downstream.</li>
+      <li>Contract before storage — the API is what callers actually depend on.</li>
+      <li>Pick your CAP/consistency trade-off deliberately, in writing, not by accident.</li>
+      <li>Design for failure (Ch. 2, 8) from the start — it's expensive to retrofit.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="final" data-title="Exam + cheat sheet">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Exam + cheat sheet</h2><span class="tag">check what stuck</span></div></div>
+  <div id="quiz"></div>
+  <div class="score" id="score">Score: 0 / 0</div>
+  <h3 class="reveal">Cheat sheet</h3>
+  <div class="scroll-x reveal">
+  <table class="mini cheat">
+    <thead><tr><th>Parameter / concept</th><th>What it does</th><th>Use when</th></tr></thead>
+    <tbody>
+      <tr><td>Horizontal scaling</td><td>Add more machines behind a load balancer</td><td>Need to scale past one box; state is externalized</td></tr>
+      <tr><td>Vertical scaling</td><td>Bigger machine, same count</td><td>Quick fix, low complexity, you accept a ceiling</td></tr>
+      <tr><td>CAP (during partition)</td><td>Choose Consistency or Availability</td><td>Deciding a data store's failure behavior</td></tr>
+      <tr><td>Consistent hashing</td><td>Stable key→node mapping, minimal remap</td><td>Load balancing or sharding with elastic node count</td></tr>
+      <tr><td>Cache-aside</td><td>App checks cache, falls back to DB on miss</td><td>Default caching strategy for read-heavy data</td></tr>
+      <tr><td>W + R &gt; N</td><td>Quorum read overlaps latest write</td><td>Need strong consistency without a single leader</td></tr>
+      <tr><td>Circuit breaker</td><td>Fails fast after a failure threshold</td><td>Protecting callers from a struggling dependency</td></tr>
+      <tr><td>Idempotency key</td><td>Dedupes retried non-idempotent requests</td><td>Any POST that has a side effect and might be retried</td></tr>
+      <tr><td>409 Conflict</td><td>Request valid, but clashes with current state</td><td>Duplicate create, version mismatch</td></tr>
+      <tr><td>Cursor pagination</td><td>Anchors to a stable key, not a position</td><td>Feeds/lists under concurrent writes, large offsets</td></tr>
+      <tr><td>Backward compatible</td><td>New code reads old data</td><td>Rolling out a consumer/schema change safely</td></tr>
+      <tr><td>Outbox pattern</td><td>DB write + event enqueue in one transaction</td><td>Publishing an event that must match a DB write</td></tr>
+      <tr><td>At-least-once + idempotent consumer</td><td>Realistic "exactly-once" effect</td><td>Any consumer of a message broker</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box relax reveal"><span class="lbl">🎓 Congratulations</span><p>Back to the opening question: why "how many requests per second" first? Because every heuristic above — scale out vs up, which CAP side to pick, how many shards, what quorum — is a function of load. Estimate first, then design. Next: pick one real system you use daily and sketch its 15-mechanism checklist from Chapter 15.</p></div>
+</section>
+</main>
+
+<footer>
+  Educational guide in a single HTML file — no frameworks, no build step, no network dependencies.
+  Sources: HTTP semantics (RFC 9110), the CAP theorem (Brewer, 2000; Gilbert &amp; Lynch, 2002), PACELC (Abadi, 2012), and standard distributed-systems and API-design practice as documented across major cloud providers' architecture guides. Simulated numbers are illustrative, not benchmarks. Built 2026-09-28.
+</footer>
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sleep = ms => new Promise(r => setTimeout(r, REDUCE ? 0 : ms));
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, text, attrs = {}) {
+  const t = S('text', Object.assign({ x, y, 'text-anchor': 'middle' }, attrs), parent);
+  t.textContent = text;
+  return t;
+}
+function H(tag, cls, html, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const ease = k => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (REDUCE || ms <= 0) { fn(1); return res(); }
+    const t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / ms);
+      fn(ease(k));
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function readColors() { for (const k of ['ink', 'paper', 'paper2', 'mut', 'line', 'accent', 'accent2', 'ok', 'bad', 'warn', 'dim', 'card']) C[k] = cssVar('--' + k); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function ringXY(cx, cy, r, f) { const a = f * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+function pulse(el) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+
+/* ---------- structure: auto numbering, TOC (flat page: no parts/levels) ---------- */
+const LEVELS = [];
+const blocks = $$('main > section.part, main > section.chapter');
+const chapters = blocks.filter(b => b.classList.contains('chapter'));
+chapters.forEach((s, i) => { const n = $('.chap-num', s); if (n && !n.textContent.trim()) n.textContent = i; });
+const titleOf = s => s.dataset.title || $('h2', s).textContent.trim();
+(() => {
+  const toc = $('#toc');
+  if (toc) toc.innerHTML = '<b>Contents</b>';
+  for (const b of chapters) {
+    const num = $('.chap-num', b)?.textContent || '';
+    if (toc) { const a = H('a', '', null, toc); a.href = '#' + b.id; a.textContent = `${num} · ${titleOf(b)}`; }
+  }
+})();
+
+/* ---------- scroll machinery ---------- */
+const bar = $('#progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+    document.body.classList.toggle('past-cover', scrollY > innerHeight * .8);
+    ticking = false;
+  });
+}, { passive: true });
+
+const revealIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('shown'); revealIO.unobserve(e.target); }
+}), { threshold: 0.12 });
+$$('.reveal').forEach(el => revealIO.observe(el));
+
+const tocLinks = new Map($$('#toc a').map(a => [a.getAttribute('href').slice(1), a]));
+const tocIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove('active'));
+  const a = tocLinks.get(e.target.id); if (a) a.classList.add('active');
+}), { rootMargin: '-35% 0px -60% 0px' });
+$$('section.chapter').forEach(s => tocIO.observe(s));
+
+const figIO = new IntersectionObserver(es => es.forEach(e => {
+  const f = e.target._fig; if (!f) return;
+  if (e.isIntersecting) {
+    if (f.visible) return;
+    f.visible = true;
+    if (!f.seen) { f.seen = true; f.first && f.first(); }
+    f.enter && f.enter();
+  } else if (f.visible) {
+    f.visible = false; f.leave && f.leave();
+  }
+}), { threshold: 0.25 });
+function registerFig(el, api) { el._fig = api; figIO.observe(el); return api; }
+
+function makeQueue() {
+  let queue = Promise.resolve(), pending = 0;
+  return fn => { if (pending >= 3) return; pending++; queue = queue.then(fn).catch(e => console.error(e)).finally(() => pending--); };
+}
+function say(el, html, cls = '') { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = html; }
+function logLine(box, text, cls = '') {
+  const d = H('div', cls, null, box); d.textContent = text;
+  requestAnimationFrame(() => d.classList.add('shown'));
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+function paintMeter(el, pct, warnAt = 70, badAt = 90) {
+  pct = Math.max(0, Math.min(100, pct));
+  el.style.width = pct + '%';
+  el.style.background = pct >= badAt ? C.bad : pct >= warnAt ? C.warn : C.ok;
+}
+
+/* ---------- cover ---------- */
+(() => {
+  const g = $('#cover-nodes');
+  const icons = ['🧩', '🔀', '🗄️', '🧵', '⚡', '📡', '📨', '🧭'];
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = ringXY(200, 200, 150, i / 8);
+    const c = S('circle', { cx: x, cy: y, r: 17 }, g);
+    c.style.fill = C.paper2; c.style.stroke = C.ink; c.style.strokeWidth = 3;
+    T(g, x, y + 6, icons[i], { 'font-size': 16 });
+  }
+})();
+
+/* ---------- 1. scale-out ---------- */
+(() => {
+  const root = $('#fig-scale'), util = $('#sc-util'), lat = $('#sc-lat'), st = $('#sc-status'), nodesEl = $('#sc-nodes');
+  const CAP_PER_NODE = 100;
+  let nodes, vlevel, traffic, run = 0;
+  const enqueue = makeQueue();
+  function paintNodes() {
+    nodesEl.innerHTML = '';
+    for (let i = 0; i < nodes; i++) {
+      const n = H('div', 'node ok2', `Server ${i + 1}<span class="sub">${vlevel > 1 ? 'x' + vlevel + ' cap' : 'base cap'}</span>`, nodesEl);
+    }
+  }
+  function paint() {
+    const cap = nodes * CAP_PER_NODE * vlevel;
+    const u = Math.min(0.99, traffic / cap);
+    paintMeter(util, u * 100);
+    const latency = 20 / Math.max(0.02, 1 - u);
+    paintMeter(lat, Math.min(100, latency / 2), 40, 70);
+  }
+  function reset() { run++; nodes = 1; vlevel = 1; traffic = 0; paintNodes(); paint(); say(st, 'Press "＋50 req/s traffic" to load the cluster.'); }
+  async function addTraffic() { traffic += 50; paint(); say(st, `Traffic now ${traffic} req/s across ${nodes} node(s) at ${vlevel}x capacity.`, traffic / (nodes * CAP_PER_NODE * vlevel) > 0.85 ? 'bad' : 'ok'); }
+  async function addNode() { nodes++; paintNodes(); paint(); say(st, `Added server ${nodes} (horizontal). Capacity now ${nodes * CAP_PER_NODE * vlevel} req/s.`, 'ok'); }
+  async function upgrade() { if (vlevel >= 3) { say(st, 'This node is already maxed out — vertical scaling has a ceiling.', 'warn'); return; } vlevel++; paintNodes(); paint(); say(st, `Upgraded node CPU/RAM (vertical, step ${vlevel}/3). Diminishing returns from here.`, 'ok'); }
+  $('[data-act=traffic]', root).onclick = () => enqueue(addTraffic);
+  $('[data-act=addnode]', root).onclick = () => enqueue(addNode);
+  $('[data-act=upgrade]', root).onclick = () => enqueue(upgrade);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(addTraffic); enqueue(addTraffic); enqueue(addTraffic); } });
+})();
+
+/* ---------- 2. failover ---------- */
+(() => {
+  const root = $('#fig-failover'), nodesEl = $('#fo-nodes'), st = $('#fo-status');
+  let state;
+  function paint() {
+    nodesEl.innerHTML = '';
+    state.forEach((n, i) => {
+      const cls = 'node' + (n.dead ? ' dead' : n.leader ? ' hot leader' : ' ok2');
+      H('div', cls, `Replica ${i + 1}<span class="sub">${n.dead ? 'down' : n.leader ? 'LEADER' : 'follower'}</span>`, nodesEl);
+    });
+  }
+  function reset() { state = [{ leader: true, dead: false }, { leader: false, dead: false }, { leader: false, dead: false }]; paint(); say(st, 'Three replicas, one leader. Client traffic goes to whoever is leader.'); }
+  async function killLeader() {
+    const li = state.findIndex(n => n.leader);
+    if (li < 0) { say(st, 'No leader to kill — the cluster is already down.', 'bad'); return; }
+    state[li].dead = true; state[li].leader = false; paint();
+    say(st, `Leader (replica ${li + 1}) died. Electing a new leader from the survivors…`, 'warn');
+    await sleep(650);
+    const alive = state.filter(n => !n.dead);
+    if (alive.length * 2 > 3) { alive[0].leader = true; paint(); say(st, `Replica ${state.indexOf(alive[0]) + 1} elected leader. Clients re-route automatically.`, 'ok'); }
+  }
+  async function killQuorum() {
+    state.forEach((n, i) => { if (i < 2) n.dead = true; n.leader = false; });
+    paint();
+    say(st, 'Majority of replicas are down. The survivor can\'t safely elect a leader — the cluster refuses writes rather than risk a split-brain.', 'bad');
+  }
+  $('[data-act=killleader]', root).onclick = killLeader;
+  $('[data-act=killquorum]', root).onclick = killQuorum;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { killLeader(); } });
+})();
+
+/* ---------- 3. CAP partition ---------- */
+(() => {
+  const root = $('#fig-cap'), link = $('#cap-link'), aVal = $('#cap-a-val'), bVal = $('#cap-b-val'), aNode = $('#cap-a'), bNode = $('#cap-b'), st = $('#cap-status');
+  let partitioned, a, b, ver;
+  function mode() { return $('input[name=cap-mode]:checked', root).value; }
+  function paint() {
+    aVal.textContent = 'v' + a; bVal.textContent = 'v' + b;
+    link.textContent = partitioned ? '✂️' : '━━';
+    link.style.color = partitioned ? C.bad : C.mut;
+    aNode.classList.toggle('bad', partitioned && mode() === 'cp');
+    bNode.classList.toggle('bad', partitioned && mode() === 'cp');
+  }
+  function reset() { partitioned = false; a = 0; b = 0; ver = 0; paint(); say(st, 'Not partitioned — a write on either side reaches both.'); }
+  function partition() { partitioned = true; paint(); say(st, mode() === 'cp' ? 'Partitioned. CP mode: writes to either side will be refused until it can confirm the other side agrees.' : 'Partitioned. AP mode: both sides will keep accepting writes — they can now diverge.', 'warn'); }
+  function write(side) {
+    if (partitioned && mode() === 'cp') { say(st, `Write refused on node ${side.toUpperCase()} — partitioned, and CP mode won't risk an inconsistent read.`, 'bad'); return; }
+    ver++;
+    if (!partitioned) { a = ver; b = ver; paint(); pulse(aNode); pulse(bNode); say(st, `Write v${ver} reached both nodes.`, 'ok'); return; }
+    if (side === 'a') { a = ver; pulse(aNode); } else { b = ver; pulse(bNode); }
+    paint();
+    say(st, `AP mode: write v${ver} accepted on node ${side.toUpperCase()} only. Nodes now disagree (A=v${a}, B=v${b}) — reconcile after heal.`, 'warn');
+  }
+  function heal() {
+    if (!partitioned) return;
+    partitioned = false;
+    const merged = Math.max(a, b);
+    a = merged; b = merged; paint();
+    say(st, `Healed. Reconciled to the latest version (v${merged}) — real systems need a merge rule (last-write-wins, vector clocks, CRDT) to do this safely.`, 'ok');
+  }
+  $('[data-act=partition]', root).onclick = partition;
+  $('[data-act=writea]', root).onclick = () => write('a');
+  $('[data-act=writeb]', root).onclick = () => write('b');
+  $('[data-act=heal]', root).onclick = heal;
+  $('[data-act=reset]', root).onclick = reset;
+  $$('input[name=cap-mode]', root).forEach(r => r.onchange = paint);
+  reset();
+  registerFig(root, { first() { partition(); write('a'); } });
+})();
+
+/* ---------- 4. load balancing ---------- */
+(() => {
+  const root = $('#fig-lb'), nodesEl = $('#lb-nodes'), st = $('#lb-status'), algoSel = $('#lb-algo');
+  let nodes, rr, keySeq;
+  function paint() {
+    nodesEl.innerHTML = '';
+    nodes.forEach((n, i) => {
+      const cls = 'node' + (n.dead ? ' dead' : '');
+      H('div', cls, `Node ${i + 1}<span class="sub">${n.dead ? 'down' : n.load + ' req'}</span>`, nodesEl);
+    });
+  }
+  function reset() { nodes = [{ load: 0, dead: false }, { load: 0, dead: false }, { load: 0, dead: false }, { load: 0, dead: false }]; rr = 0; keySeq = 0; paint(); say(st, 'Pick an algorithm, then send a few requests.'); }
+  function pick() {
+    const alive = nodes.map((n, i) => ({ n, i })).filter(x => !x.n.dead);
+    if (!alive.length) return -1;
+    const algo = algoSel.value;
+    if (algo === 'rr') { rr = rr % alive.length; const idx = alive[rr].i; rr++; return idx; }
+    if (algo === 'lc') { return alive.reduce((best, x) => x.n.load < nodes[best].load ? x.i : best, alive[0].i); }
+    keySeq++;
+    const hash = (keySeq * 2654435761) % 4;
+    const target = alive.find(x => x.i === hash) || alive[0];
+    return target.i;
+  }
+  function send() {
+    const idx = pick();
+    if (idx < 0) { say(st, 'All nodes are down.', 'bad'); return; }
+    nodes[idx].load++; paint();
+    const cards = $$('.node', nodesEl); pulse(cards[idx]);
+    say(st, `Request routed to Node ${idx + 1} (${algoSel.options[algoSel.selectedIndex].text}).`, 'ok');
+  }
+  function kill() {
+    const alive = nodes.map((n, i) => i).filter(i => !nodes[i].dead);
+    if (!alive.length) return;
+    const victim = alive[Math.floor(Math.random() * alive.length)];
+    nodes[victim].dead = true; paint();
+    say(st, `Node ${victim + 1} killed. ${algoSel.value === 'ch' ? 'Consistent hashing: only keys that hashed to it need to remap.' : 'Traffic redistributes across the remaining nodes.'}`, 'warn');
+  }
+  $('[data-act=send]', root).onclick = send;
+  $('[data-act=kill]', root).onclick = kill;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { send(); send(); send(); } });
+})();
+
+/* ---------- 5. cache-aside ---------- */
+(() => {
+  const root = $('#fig-cache'), cacheSub = $('#ca-cache-sub'), dbLoad = $('#ca-dbload'), log = $('#ca-log'), cacheNode = $('#ca-cache'), dbNode = $('#ca-db');
+  let cached, load, run = 0;
+  const enqueue = makeQueue();
+  function reset() { run++; cached = false; load = 0; cacheSub.textContent = 'empty'; paintMeter(dbLoad, 0); log.innerHTML = ''; }
+  async function req() {
+    if (cached) { logLine(log, 'GET product:42 → cache HIT', 'g'); pulse(cacheNode); return; }
+    logLine(log, 'GET product:42 → cache MISS', 'e');
+    pulse(dbNode); load += 20; paintMeter(dbLoad, load);
+    await sleep(300);
+    cached = true; cacheSub.textContent = 'product:42 (TTL 60s)';
+    logLine(log, 'DB read → cache populated', 'u');
+  }
+  async function stampede() {
+    cached = false; cacheSub.textContent = 'expired';
+    logLine(log, '--- key "product:42" just expired ---');
+    const locked = $('#ca-lock', root).checked;
+    if (locked) {
+      logLine(log, '6 requests arrive at once → singleflight lock lets 1 through', 'u');
+      load += 20; paintMeter(dbLoad, load); pulse(dbNode);
+      await sleep(300);
+      cached = true; cacheSub.textContent = 'product:42 (TTL 60s)';
+      logLine(log, '1 DB read; other 5 requests wait and reuse that result', 'g');
+    } else {
+      logLine(log, '6 requests arrive at once, all miss simultaneously', 'e');
+      for (let i = 0; i < 6; i++) { load += 20; }
+      paintMeter(dbLoad, load); pulse(dbNode);
+      logLine(log, '6 simultaneous DB reads → database spikes (stampede)', 'e');
+      await sleep(300);
+      cached = true; cacheSub.textContent = 'product:42 (TTL 60s)';
+    }
+  }
+  $('[data-act=req]', root).onclick = () => enqueue(req);
+  $('[data-act=stampede]', root).onclick = () => enqueue(stampede);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(req); } });
+})();
+
+/* ---------- 6. sharding ---------- */
+(() => {
+  const root = $('#fig-shard'), nodesEl = $('#sh-nodes'), keysEl = $('#sh-keys'), st = $('#sh-status');
+  let shardCount, keys, salted;
+  function shardOf(k) { return k % shardCount; }
+  function paint() {
+    nodesEl.innerHTML = '';
+    const loads = new Array(shardCount).fill(0);
+    keys.forEach(k => loads[shardOf(k.hash)] += k.hot ? 4 : 1);
+    for (let i = 0; i < shardCount; i++) H('div', 'node ok2' + (loads[i] > 5 ? ' bad' : ''), `Shard ${i}<span class="sub">${loads[i]} req</span>`, nodesEl);
+    keysEl.innerHTML = '';
+    keys.forEach(k => { const p = H('span', 'pill' + (k.moved ? ' moved' : ''), `${k.name}→s${shardOf(k.hash)}`, keysEl); });
+  }
+  function reset() {
+    shardCount = 2; salted = false;
+    keys = [{ name: 'userA', hash: 0 }, { name: 'userB', hash: 1 }, { name: 'userC', hash: 2 }, { name: 'userD', hash: 3 }];
+    keys.forEach(k => k.moved = false);
+    paint(); st.textContent = 'Four keys, two shards. Add a shard and see how few keys move.';
+  }
+  function addShard() {
+    const before = keys.map(k => shardOf(k.hash));
+    shardCount++;
+    keys.forEach((k, i) => { k.moved = shardOf(k.hash) !== before[i]; });
+    paint();
+    const moved = keys.filter(k => k.moved).length;
+    say(st, `Now ${shardCount} shards. ${moved} of ${keys.length} keys moved (consistent hashing minimizes remaps vs. plain modulo).`, 'ok');
+  }
+  function hotkey() {
+    keys[0].hot = true; paint();
+    say(st, `"${keys[0].name}" is now a hot key — its shard is overloaded no matter how many shards exist.`, 'bad');
+  }
+  function salt() {
+    if (!keys[0].hot) { say(st, 'Create a hot key first.', 'warn'); return; }
+    keys[0].hash = keys[0].hash + 10; keys[0].hot = false; keys[0].name = 'userA#salted'; paint();
+    say(st, 'Salted the key (appended a random suffix, fan out reads, merge results) — traffic now spreads across shards.', 'ok');
+  }
+  $('[data-act=addshard]', root).onclick = addShard;
+  $('[data-act=hotkey]', root).onclick = hotkey;
+  $('[data-act=salt]', root).onclick = salt;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { addShard(); } });
+})();
+
+/* ---------- 7. replication & quorum ---------- */
+(() => {
+  const root = $('#fig-repl'), nodesEl = $('#rp-nodes'), st = $('#rp-status');
+  let replicas, val, run = 0;
+  const enqueue = makeQueue();
+  function W() { return +$('#rp-w', root).value; }
+  function R() { return +$('#rp-r', root).value; }
+  function paint() {
+    nodesEl.innerHTML = '';
+    replicas.forEach((r, i) => H('div', 'node ok2', `Replica ${i + 1}<span class="sub">x=${r}</span>`, nodesEl));
+  }
+  function reset() { run++; replicas = [0, 0, 0]; val = 0; paint(); say(st, 'N=3. Try W=1,R=1 (fast, can read stale) vs W=2,R=2 (W+R&gt;N, always fresh).'); }
+  async function write() {
+    val = 7; const w = W(); const my = run;
+    say(st, `Writing x=${val}, waiting for ${w} of 3 acks…`);
+    for (let i = 0; i < 3; i++) {
+      await sleep(220 + i * 150);
+      if (my !== run) return;
+      replicas[i] = val; paint(); pulse($$('.node', nodesEl)[i]);
+      if (i + 1 === w) say(st, `Write acknowledged after ${w} replicas (W=${w}). Client sees success now — replica ${w < 3 ? 3 : ''} may still be catching up.`, 'ok');
+    }
+  }
+  function read() {
+    const r = R();
+    const indices = [...Array(3).keys()].slice(0, r);
+    const seen = indices.map(i => replicas[i]);
+    const stale = seen.some(v => v !== val);
+    const overlap = W() + r > 3;
+    say(st, `Read queried ${r} replica(s): [${seen.join(', ')}]. ${overlap ? 'W+R>N, so this is guaranteed to include the latest write.' : stale ? 'W+R≤N — this read could miss the latest write (and here it did).' : 'W+R≤N — got lucky this time, but it is not guaranteed.'}`, overlap ? 'ok' : stale ? 'bad' : 'warn');
+  }
+  $('[data-act=write]', root).onclick = () => enqueue(write);
+  $('[data-act=read]', root).onclick = read;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(write); } });
+})();
+
+/* ---------- 8. circuit breaker ---------- */
+(() => {
+  const root = $('#fig-cb'), states = $('#cb-states'), log = $('#cb-log');
+  const STATES = ['Closed', 'Open', 'Half-Open'];
+  let state, fails;
+  function paint() {
+    states.innerHTML = '';
+    STATES.forEach(s => {
+      const cur = s === STATES[state];
+      const cls = 'state-box' + (cur ? ' cur' + (state === 1 ? ' bad3' : state === 2 ? ' warn3' : '') : '');
+      H('div', cls, s, states);
+    });
+  }
+  function reset() { state = 0; fails = 0; log.innerHTML = ''; paint(); }
+  function ok() {
+    if (state === 1) { logLine(log, 'Call blocked — breaker is OPEN, failing fast without touching downstream.', 'e'); return; }
+    logLine(log, 'Call succeeded.', 'g');
+    if (state === 2) { state = 0; fails = 0; paint(); logLine(log, 'Half-open test call succeeded → breaker CLOSED again.', 'g'); }
+  }
+  function fail() {
+    if (state === 1) { logLine(log, 'Call blocked — breaker is OPEN, failing fast without touching downstream.', 'e'); return; }
+    fails++;
+    logLine(log, `Call failed (${fails}/3).`, 'e');
+    if (state === 2) { state = 1; paint(); logLine(log, 'Half-open test call failed → breaker re-OPENS.', 'e'); return; }
+    if (fails >= 3) { state = 1; paint(); logLine(log, 'Failure threshold hit → breaker trips OPEN. Downstream gets a break.', 'e'); }
+  }
+  async function wait() {
+    if (state !== 1) { logLine(log, 'Breaker is not open — nothing to wait for.'); return; }
+    logLine(log, 'Cooldown elapsed → breaker moves to HALF-OPEN, allows one test call.');
+    state = 2; paint();
+  }
+  $('[data-act=ok]', root).onclick = ok;
+  $('[data-act=fail]', root).onclick = fail;
+  $('[data-act=wait]', root).onclick = wait;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { fail(); fail(); fail(); } });
+})();
+
+/* ---------- 9. idempotency ---------- */
+(() => {
+  const root = $('#fig-idem'), ordersEl = $('#id-orders'), st = $('#id-status');
+  let orders, sent, lastKey;
+  function paint() { ordersEl.innerHTML = ''; orders.forEach((o, i) => H('span', 'pill', `order#${i + 1}`, ordersEl)); if (!orders.length) H('span', 'pill gone', 'none yet', ordersEl); }
+  function reset() { orders = []; sent = false; lastKey = 'k-' + Math.random().toString(36).slice(2, 7); paint(); say(st, 'Send a request, then simulate the client retrying after a timeout.'); }
+  function request() {
+    const useKey = $('#id-key', root).checked;
+    if (useKey && sent) { say(st, `Server already has a response stored for key ${lastKey} — returns it without creating another order.`, 'warn'); return; }
+    orders.push(1); sent = true; paint();
+    say(st, `Order created (order#${orders.length}).${useKey ? ` Stored under idempotency key ${lastKey}.` : ''}`, 'ok');
+  }
+  function retry() {
+    const useKey = $('#id-key', root).checked;
+    say(st, 'Client never got the response (timeout) — it retries the exact same request…');
+    if (useKey) { orders_noop(); }
+    else { orders.push(1); paint(); }
+    setTimeout(() => {
+      if (useKey) say(st, `Retry arrived with the same idempotency key ${lastKey} → server returns the stored response, no new order. Total orders: ${orders.length}.`, 'ok');
+      else say(st, `Retry created a second order — the server had no way to know it was a duplicate. Total orders: ${orders.length}.`, 'bad');
+    }, 50);
+  }
+  function orders_noop() {}
+  $('[data-act=request]', root).onclick = request;
+  $('[data-act=retry]', root).onclick = retry;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { request(); } });
+})();
+
+/* ---------- 10. REST status codes ---------- */
+(() => {
+  const root = $('#fig-rest'), chip = $('#rs-chip'), path = $('#rs-path'), body = $('#rs-body');
+  const scenarios = {
+    ok: [201, '#2f9e63', 'POST /orders', '{\n  "id": "ord_1a2b",\n  "status": "created"\n}\n// Location: /orders/ord_1a2b'],
+    notfound: [404, '#d64545', 'GET /orders/xyz', '{\n  "error": { "code": "not_found", "message": "No order with that id." }\n}'],
+    validation: [400, '#c98a00', 'POST /orders', '{\n  "error": { "code": "bad_request", "message": "\\"quantity\\" must be a positive integer." }\n}'],
+    auth: [401, '#d64545', 'GET /orders/ord_1a2b', '{\n  "error": { "code": "unauthorized", "message": "Missing or invalid credentials." }\n}'],
+    conflict: [409, '#c98a00', 'POST /orders', '{\n  "error": { "code": "conflict", "message": "An order with this idempotency key already exists." }\n}'],
+    ratelimit: [429, '#d64545', 'POST /orders', '{\n  "error": { "code": "rate_limited", "message": "Too many requests. Retry after 2s." }\n}\n// Retry-After: 2'],
+  };
+  function set(key) {
+    const [code, color, p, b] = scenarios[key];
+    chip.textContent = code; chip.style.background = color;
+    path.textContent = p; body.textContent = b;
+    pulse(chip);
+  }
+  $$('[data-act]', root).forEach(btn => btn.onclick = () => set(btn.dataset.act));
+  registerFig(root, { first() { set('ok'); } });
+})();
+
+/* ---------- 11. pagination ---------- */
+(() => {
+  const root = $('#fig-page'), listEl = $('#pg-list'), st = $('#pg-status');
+  let items, page1;
+  function mode() { return $('input[name=pg-mode]:checked', root).value; }
+  function reset() {
+    items = [8, 7, 6, 5, 4, 3, 2, 1];
+    page1 = items.slice(0, 4);
+    paint(page1, []);
+    say(st, 'Page 1 fetched (items 8–5, newest first). Now insert an item, then fetch page 2.');
+  }
+  function paint(shown, flashIds) {
+    listEl.innerHTML = '';
+    shown.forEach(id => { const p = H('span', 'pill' + (flashIds.includes(id) ? ' moved' : ''), '#' + id, listEl); });
+  }
+  function insert() {
+    items.unshift(9);
+    say(st, 'New item #9 arrives at the top of the feed.', 'warn');
+    paint(page1, []);
+  }
+  function next() {
+    let page2, note;
+    if (mode() === 'offset') {
+      page2 = items.slice(4, 8);
+      const dup = page1.filter(x => page2.includes(x));
+      note = dup.length ? `Offset page 2 = items.slice(4,8) → repeats #${dup.join(', ')} because the new item shifted everyone down.` : 'Offset page 2 fetched cleanly this time (no insert happened).';
+      paint(page2, dup);
+      say(st, note, dup.length ? 'bad' : 'ok');
+    } else {
+      const lastId = page1[page1.length - 1];
+      const idx = items.indexOf(lastId);
+      page2 = items.slice(idx + 1, idx + 5);
+      paint(page2, []);
+      say(st, `Cursor page 2 = items after id=${lastId} → correct next 4 items regardless of what got inserted at the top.`, 'ok');
+    }
+  }
+  $('[data-act=next]', root).onclick = next;
+  $('[data-act=insert]', root).onclick = insert;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { next(); } });
+})();
+
+/* ---------- 12. schema compatibility ---------- */
+(() => {
+  const root = $('#fig-schema'), producer = $('#sch-producer'), oldC = $('#sch-old'), st = $('#sch-status');
+  const RULES = {
+    addopt: ['ok', 'Backward compatible', 'Old consumer ignores the new optional field and keeps working.'],
+    addreq: ['bad', 'Breaking', 'Old data has no value for this new required field — old consumer (or old data under new code) can\'t satisfy it.'],
+    remove: ['bad', 'Breaking', 'The old consumer still reads this field — it now gets nothing, or an error.'],
+    rename: ['bad', 'Breaking', 'Same data, different key — the old consumer looks for a field name that no longer exists.'],
+    type: ['bad', 'Breaking', 'A field changing type (e.g. string → int) can make old parsing logic throw or misread it.'],
+  };
+  function check() {
+    const key = $('#sch-change', root).value;
+    const [verdict, label, why] = RULES[key];
+    oldC.classList.toggle('bad', verdict === 'bad');
+    oldC.classList.toggle('ok2', verdict === 'ok');
+    pulse(oldC);
+    say(st, `<b>${label}.</b> ${why}`, verdict);
+  }
+  $('[data-act=check]', root).onclick = check;
+  registerFig(root, { first() { check(); } });
+})();
+
+/* ---------- 13. event schema evolution ---------- */
+(() => {
+  const root = $('#fig-evolve'), oldC = $('#ev-old'), newC = $('#ev-new'), st = $('#ev-status');
+  function clear() { [oldC, newC].forEach(n => n.classList.remove('bad', 'ok2')); }
+  function v1() { clear(); oldC.classList.add('ok2'); newC.classList.add('ok2'); pulse(oldC); pulse(newC); say(st, 'v1 published: both consumers understand it fine.', 'ok'); }
+  function v2ok() { clear(); oldC.classList.add('ok2'); newC.classList.add('ok2'); pulse(oldC); pulse(newC); say(st, 'v2 adds an optional trackingUrl. Consumer A ignores the new field; Consumer B uses it. Both fine — backward compatible.', 'ok'); }
+  function v2break() { clear(); oldC.classList.add('bad'); newC.classList.add('ok2'); pulse(oldC); say(st, 'v2 removed the "carrier" field. Consumer A (built for v1) breaks — it still reads that field. This is why removals need a deprecation window, not a same-day cut.', 'bad'); }
+  $('[data-act=v1]', root).onclick = v1;
+  $('[data-act=v2ok]', root).onclick = v2ok;
+  $('[data-act=v2break]', root).onclick = v2break;
+  $('[data-act=reset]', root).onclick = () => { clear(); say(st, 'Two consumers subscribed to the same topic, built at different times.'); };
+  registerFig(root, { first() { v1(); } });
+})();
+
+/* ---------- 14. outbox pattern ---------- */
+(() => {
+  const root = $('#fig-outbox'), log = $('#ob-log'), dbBadge = $('#ob-db'), evBadge = $('#ob-event'), st = $('#ob-status');
+  const enqueue = makeQueue();
+  function setBadge(el, text, cls) { el.textContent = text; el.className = 'badge' + (cls ? ' ' + cls : ''); }
+  function reset() { log.innerHTML = ''; setBadge(dbBadge, 'DB: —'); setBadge(evBadge, 'Event published: —'); say(st, 'Save an order normally, then try crashing right after the commit.'); }
+  async function save() {
+    const useOutbox = $('#ob-use', root).checked;
+    if (useOutbox) {
+      logLine(log, 'BEGIN TRANSACTION');
+      logLine(log, '  INSERT INTO orders (...)');
+      logLine(log, '  INSERT INTO outbox (event=OrderCreated)');
+      logLine(log, 'COMMIT', 'g');
+      setBadge(dbBadge, 'DB: committed', 'on');
+      await sleep(250);
+      logLine(log, 'relay: polls outbox, publishes OrderCreated to broker', 'u');
+      setBadge(evBadge, 'Event published: yes (eventually)', 'on');
+      say(st, 'Both the order row and the outbox row committed atomically — the relay guarantees the event follows.', 'ok');
+    } else {
+      logLine(log, 'INSERT INTO orders (...) → COMMIT', 'g');
+      setBadge(dbBadge, 'DB: committed', 'on');
+      await sleep(250);
+      logLine(log, 'publish(OrderCreated) to broker', 'u');
+      setBadge(evBadge, 'Event published: yes', 'on');
+      say(st, 'Worked this time — but the DB write and the publish are two separate steps with a gap between them. Try crashing in that gap.', 'warn');
+    }
+  }
+  async function crash() {
+    const useOutbox = $('#ob-use', root).checked;
+    if (useOutbox) {
+      logLine(log, 'BEGIN TRANSACTION');
+      logLine(log, '  INSERT INTO orders (...)');
+      logLine(log, '  INSERT INTO outbox (event=OrderCreated)');
+      logLine(log, 'COMMIT', 'g');
+      setBadge(dbBadge, 'DB: committed', 'on');
+      logLine(log, '💥 process crashes right here', 'e');
+      await sleep(250);
+      logLine(log, 'process restarts; relay finds the unpublished outbox row and publishes it', 'u');
+      setBadge(evBadge, 'Event published: yes (after restart)', 'on');
+      say(st, 'The outbox row survived the crash inside the same committed transaction — the relay still delivers the event once the process comes back.', 'ok');
+    } else {
+      logLine(log, 'INSERT INTO orders (...) → COMMIT', 'g');
+      setBadge(dbBadge, 'DB: committed', 'on');
+      logLine(log, '💥 process crashes before publish() runs', 'e');
+      setBadge(evBadge, 'Event published: NO', 'bad2');
+      say(st, 'Dual-write bug: the order exists in the database, but the event was never sent — downstream systems (shipping, billing) never find out. This is exactly what the outbox pattern prevents.', 'bad');
+    }
+  }
+  $('[data-act=save]', root).onclick = () => enqueue(save);
+  $('[data-act=crash]', root).onclick = () => enqueue(crash);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(save); } });
+})();
+
+/* ---------- 15. design walkthrough ---------- */
+(() => {
+  const root = $('#fig-walk'), holder = $('#wf-stages');
+  const STAGES = [
+    ['1. Clarify & estimate', 'URL shortener: ~100M new short links/month, ~10:1 read/write ratio, links live "forever." → roughly 40 writes/sec, ~400 reads/sec average (illustrative), so a single well-tuned database can likely handle it without sharding yet.'],
+    ['2. Define the API contract (Ch. 10–12)', '<code>POST /links {longUrl}</code> → 201 with the short code. <code>GET /{code}</code> → 302 redirect, or 404. Idempotency key on create so a client retry doesn\'t mint two codes for one link.'],
+    ['3. Pick the consistency trade-off (Ch. 3)', 'Redirects need to be fast and available far more than perfectly fresh — favor AP for reads. Creating a link needs to avoid duplicate codes — that write path favors consistency locally (e.g. a unique constraint).'],
+    ['4. Design the data model & storage', 'One table: code → longUrl, created_at. Codes generated via a counter or hash+collision-check, not scanned sequentially.'],
+    ['5. Add caching (Ch. 5)', 'Redirects are read-heavy and repeat: cache-aside in front of the DB, short TTL, cuts DB load dramatically for popular links.'],
+    ['6. Scale it (Ch. 1, 4, 6, 7)', 'Read path: horizontal scale-out behind a load balancer, replicate the DB with followers for read traffic. Only shard the write path if the estimate in step 1 actually demands it.'],
+    ['7. Design for failure (Ch. 2, 8, 9)', 'Timeouts + circuit breaker around the DB call. Idempotent create so retries are safe. Redundant replicas across zones so one dead node isn\'t an outage.'],
+    ['8. Plan for events, if any (Ch. 13–14)', 'A "LinkCreated" event (for analytics, abuse scanning) published via the outbox pattern so it can\'t silently disappear if the write succeeds and the publish step crashes.'],
+  ];
+  STAGES.forEach(([title, body], i) => {
+    const stage = H('div', 'acc-stage', null, holder);
+    const btn = H('button', 'acc-h', `<span><span class="n">${i + 1}.</span> ${title.replace(/^\d+\.\s*/, '')}</span><span>+</span>`, stage);
+    const b = H('div', 'acc-b', body, stage);
+    btn.onclick = () => { const open = b.classList.toggle('open'); $('span:last-child', btn).textContent = open ? '−' : '+'; };
+  });
+  registerFig(root, { first() { $('.acc-h', holder).click(); } });
+})();
+
+/* ---------- quiz ---------- */
+(() => {
+  const Q = [
+    ['You need to survive traffic 10x growth with no hard ceiling. What do you reach for first?', ['A single much bigger server', 'Horizontal scaling behind a load balancer', 'A bigger cache TTL'], 1, 'Vertical scaling has a ceiling; horizontal scaling (with statelessness) scales further, which is why it\'s the default answer for open-ended growth.'],
+    ['During a network partition, a CP system will most likely…', ['Answer every request, even with stale data', 'Refuse requests on the side that can\'t confirm the latest state', 'Automatically fix itself with no trade-off'], 1, 'CP chooses Consistency during a partition — it sacrifices availability on the cut-off side rather than risk a stale or conflicting answer.'],
+    ['Why does consistent hashing beat plain "hash mod N" for load balancing or sharding?', ['It\'s faster to compute', 'Adding/removing a node only remaps a small slice of keys, not almost all of them', 'It guarantees perfectly equal load'], 1, 'Plain modulo reshuffles nearly every key when N changes; consistent hashing keeps most key→node mappings stable.'],
+    ['A cache stampede happens when…', ['The cache is too small', 'A hot key expires and many requests miss simultaneously, all hitting the database at once', 'TTLs are set too long'], 1, 'It\'s specifically the simultaneous-miss-on-expiry case — fixed with a singleflight lock or early refresh, not just a bigger cache.'],
+    ['With N=3 replicas, W=1 and R=1, what do you get?', ['Guaranteed fresh reads, slow writes', 'Fast reads and writes, but reads can return stale data', 'The system refuses to start'], 1, 'W+R (2) is not greater than N (3), so there\'s no guaranteed overlap between the acking replica and the read replica — a read can miss the latest write.'],
+    ['What does a circuit breaker do once it trips Open?', ['Retries the downstream call twice as fast', 'Fails fast without calling the downstream service at all', 'Silently queues all requests forever'], 1, 'Open means calls are rejected immediately, giving the struggling dependency room to recover instead of piling on more load.'],
+    ['Why is POST not idempotent by default, and what fixes that?', ['It can\'t be fixed — never retry a POST', 'The server naturally deduplicates all POSTs', 'An idempotency key the client attaches, which the server uses to dedupe retries'], 2, 'Retrying a naive POST can create duplicates; an idempotency key lets the server recognize "I already did this" and return the stored result instead of repeating the side effect.'],
+    ['A request is well-formed JSON but violates a business rule (e.g. negative price). Best status code?', ['404 Not Found', '422 Unprocessable Entity (or 400)', '500 Internal Server Error'], 1, '422/400 signals "the request syntax is fine, but the content is semantically invalid" — distinct from a missing resource (404) or a server bug (500).'],
+    ['Why does offset pagination drift under concurrent inserts, while cursor pagination doesn\'t?', ['Offset pagination is just slower', 'Offset counts positions, so a new item at the top shifts every later page by one; cursor pagination anchors to a stable key', 'Cursor pagination refuses to work with new data'], 1, 'A position-based offset shifts when the list changes ahead of it; a cursor keyed to "after this id" doesn\'t care what got inserted elsewhere.'],
+    ['Which schema change is backward compatible (new code reading old data)?', ['Adding a new optional field', 'Removing a field old consumers still read', 'Renaming an existing field'], 0, 'Optional additions are safely ignorable by anyone not yet using them; removals and renames break consumers that still expect the old shape.'],
+    ['What\'s the difference between an event and a command?', ['No real difference, just naming', 'An event is a fact anyone can subscribe to; a command instructs one specific receiver to act', 'A command is always faster than an event'], 1, 'Events are broadcast facts with no expected reply; commands target one handler and imply an outcome.'],
+    ['What problem does the outbox pattern solve?', ['Slow database writes', 'The gap between committing a DB write and publishing an event, where a crash can lose one of them', 'Duplicate messages arriving at a consumer'], 1, 'Writing the business row and the outbox row in the same transaction guarantees the event is eventually published if and only if the DB write committed — closing the dual-write gap. (Consumer-side duplicates are a separate problem, solved by idempotent consumers.)'],
+  ];
+  const box = $('#quiz'); let answered = 0, good = 0; const scoreEl = $('#score');
+  function upd() { scoreEl.textContent = `Score: ${good} / ${answered}`; }
+  Q.forEach(([q, opts, ok, why], n) => {
+    const d = H('div', 'quiz-q reveal', `<h4>${n + 1}. ${q}</h4><div class="opts"></div><div class="why">💡 ${why}</div>`, box);
+    opts.forEach((t, i) => {
+      const b = H('button', '', null, $('.opts', d)); b.textContent = t;
+      b.onclick = () => {
+        if (d.classList.contains('done')) return;
+        d.classList.add('done'); answered++;
+        if (i === ok) good++; else b.classList.add('wrong');
+        $('.opts', d).children[ok].classList.add('right');
+        $$('button', d).forEach(x => x.disabled = true);
+        upd();
+      };
+    });
+    revealIO.observe(d);
+  });
+})();
+</script>
+</body>
+</html>
