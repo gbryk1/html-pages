@@ -2,7 +2,7 @@
 
 Copy-and-adapt material for the steps in `SKILL.md`. Everything in §1–7, §9 and §12 already exists, working, in
 [templates/shell.html](templates/shell.html). Copy that file first instead of retyping these snippets.
-§10–11 cover facts and double validation, §13 the deep-mode depth question, §14 browser setup, and §15 parallel authoring.
+§10–11 cover facts and double validation, §13 the deep-mode depth question, §14 browser setup, §15 parallel authoring, and §16 token spend.
 
 Worked examples (public repo `gbryk1/html-tools-local-llm`, `src/`):
 - `cassandra-course.html`: distributed-systems internals. Token ring, gossip, Canvas figures, and randomness forced by a button.
@@ -319,9 +319,40 @@ Use this after the plan is approved and the shell is filled (tokens, helpers, st
 - Assemble the page yourself: insert the CSS into the per-figure slot, the HTML into `main` before the final chapter,
   and the JS before the quiz. Run `node --check`, `check-page.cjs` and `click-through.cjs`, then the validation loop (§11).
   Screenshot fixes stay with you, because layout is shared.
+- Budget rules for authors (SKILL.md "Token budget"): cap every command's output (`grep -m`, `cut -c1-200`, `head`),
+  never print whole doc pages or the shell, write the part with Write in 1–3 calls, run `node --check` plus at most one
+  `click-through.cjs` on a throwaway page, and **fill pass 1 before returning**: assemble the part into a test page,
+  run `extract-claims.cjs <test> <dir> --split`, fill every `pass 1` line from the notes, and hand back the ledger dir.
+  Report in ≤ 15 lines. After returning, the author is finished — fixes go to you or a fresh agent.
 - Prompt skeleton:
 
   > Write Part <N> of an animated knowledge page. Output exactly three files: <paths>. Follow the attached
   > contract: element types, level attributes, prefixed classes, one figure per mechanism chapter with a break-it
   > action and a reset, and a `.status` narration per step. Use only these helpers: <list>. Every factual claim must
   > come from the attached sources. Return a notes file with claim → source → quote. Don't invent flags, defaults or numbers.
+
+## 16. Token spend: what a large deep page costs, and where
+
+Measured on the Kafka internals guide (27 chapters, 28 figures, 1653 claims, `max`-style run with 5 authors and
+12 verifiers on one model). "Weighted" is an input-equivalent proxy (input 1×, cache write 1.25×, cache read 0.1×,
+output 5×); plan limits are not published per token type, so treat it as relative, not absolute.
+
+| Who | Calls | Avg context per call | Cache writes | Cache reads | Share of weighted |
+|---|---|---|---|---|---|
+| 5 author subagents | 681 | ~200k (max 400k) | 9.6M | 127M | ~51% |
+| 12 verifier subagents | 669 | ~90k | 1.9M | 59M | ~17% |
+| main session | ~220 | ~235k | 1.7M | 50M | ~16% |
+| an unrelated session in the same account | 347 | ~140k | 1.8M | 46M | ~16% |
+
+Where it went, and the rule that fixes it:
+- Author contexts grew to 300–400k because the same agents were brought back four more times (pass 1, two fix
+  batches, a missing chapter) and ran their own headless QA. → one job per agent; authors fill pass 1 while warm.
+- 29 cold resumes after rate-limit pauses re-wrote ~8M tokens of cache. → never resume a big idle agent.
+- Five Opus authors in parallel hit the 5-hour window in ~1.5 h; verifiers then hit it again. → concurrency cap,
+  `model: "sonnet"` for checking.
+- The main context reached ~235k per call from subagent reports, screenshots (~1.5k tokens each) and debugging
+  of the check script. → short reports, screenshots only of changed figures, ledger tools instead of ad-hoc scripts.
+- Output tokens (the HTML itself, ~1.3 MB written) were a small share. Writing less text saves little; re-reading context saves a lot.
+
+Rough planning numbers for a `lean` run of the same page: one authoring context (you), 5–6 sequential Sonnet verifiers,
+one Sonnet re-verification round — expect well under half of the spend above, at the price of a longer wall-clock time.

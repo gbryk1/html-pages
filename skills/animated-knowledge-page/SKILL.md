@@ -1,7 +1,7 @@
 ---
 name: animated-knowledge-page
-description: "Build an animated course, interactive guide, scrollytelling explainer or 'from zero to expert' knowledge page (\"animowany kurs\", \"strona wiedzy\", \"przewodnik\", Head First style) on one technical topic, tool or product. Two modes: simple (build what was asked) and deep (plan first, user picks how deep, multi-level content). Produces a single self-contained HTML file with scroll-triggered SVG/HTML/Canvas diagrams, Head First boxes, a quiz and a cheat sheet. Every claim is validated twice (by the author against sources, then by an independent verifier), and the page is verified headless."
-argument-hint: "[simple|deep] <topic>"
+description: "Build an animated course, interactive guide, scrollytelling explainer or 'from zero to expert' knowledge page (\"animowany kurs\", \"strona wiedzy\", \"przewodnik\", Head First style) on one technical topic, tool or product. Two modes: simple (build what was asked) and deep (plan first, user picks how deep, multi-level content), and three token budgets: lean (token-saving), standard, max. Produces a single self-contained HTML file with scroll-triggered SVG/HTML/Canvas diagrams, Head First boxes, a quiz and a cheat sheet. Every claim is validated twice (by the author against sources, then by an independent verifier), and the page is verified headless."
+argument-hint: "[simple|deep] [lean|standard|max] <topic>"
 ---
 
 # Animated Knowledge Page
@@ -20,7 +20,7 @@ the reader picks a reading depth.
 
 ## Two modes
 
-Take the mode from the arguments or the request ("quick", "simple" → simple; "deep", "thorough", "complete guide",
+Take the mode (and the budget, see Token budget) from the arguments or the request ("quick", "simple" → simple; "deep", "thorough", "complete guide",
 "zero to expert" → deep). If it's unclear, ask once with AskUserQuestion: **Simple** — "build what I asked, now",
 or **Deep** — "plan first, choose the depth, multi-level".
 
@@ -33,6 +33,45 @@ or **Deep** — "plan first, choose the depth, multi-level".
 | Subagents | usually none, except the pass-2 verifier | research fan-out, verifiers, and optionally chapter authors (see Parallel work) |
 
 There is **no chapter limit** in either mode. Each chapter explains one mechanism, and the topic decides how many chapters there are.
+
+## Token budget
+
+Subscription limits run out on *context re-reads*, not on the HTML you write. Every subagent turn re-sends its whole
+context: an author at 300k tokens pays ~300k per tool call, and a resumed agent whose prompt cache expired (idle > 1 h,
+e.g. after a rate-limit pause) re-writes its whole context from scratch. Pick a budget together with the mode:
+
+| | `lean` (token-saving) | `standard` (default) | `max` |
+|---|---|---|---|
+| When | the user mentions limits, cost, "save tokens", "cheap", or is on a subscription plan with a large (15+ chapter) page | normal requests | the user explicitly wants the fastest wall-clock build |
+| Authoring | you write the page yourself, one part at a time; no author subagents | ≤ 3 author subagents, each ≤ ~6 chapters | one author per part |
+| Concurrent subagents | 1 | ≤ 3 | ≤ 5 |
+| Research | grep on disk yourself, capped output | one fact-sheet subagent per big source area, `model: "sonnet"` | same, per area |
+| Pass-2 verifiers | `model: "sonnet"`, ~300 claims each, run one after another | `model: "sonnet"`, ~200 claims each | inherit model, ~150 each |
+| Quiz | 1 question per chapter | 1–3 | 2–3 |
+| Screenshot rounds | one full round, then only the figures you changed | two full rounds | as needed |
+
+In deep mode, add the budget as a third question next to Depth and Extras (recommend `lean` for 15+ chapters).
+Double validation stays mandatory in every budget; only who does it and on which model changes.
+
+Rules for every budget (measured on a 27-chapter deep page, see reference §16):
+1. **Never resume a big idle subagent.** After a limit pause or > 1 h idle, a resume re-writes its whole context
+   (29 such re-writes cost ~8M tokens on the Kafka guide). Apply small fixes yourself (`sed`/Edit) or spawn a *fresh*
+   agent with a short brief and only the files it needs.
+2. **One job per subagent, then it ends.** Authors write their part *and* fill pass 1 in the same warm run: they
+   assemble a test page, run `extract-claims.cjs` on it, fill `pass 1` from their notes, and return. Your final
+   extraction carries those lines over with `--carry`. Don't bring authors back for pass 1 or fix rounds.
+3. **Authors don't run browser QA loops.** They run `node --check` and at most one `click-through.cjs`; screenshots
+   and layout fixes are yours, once, for the whole page.
+4. **Cap every tool output.** `grep -n -m 20`, `cut -c1-200`, `| head -40`; never `cat` a doc page or the template;
+   keep sources on disk and quote lines. Tell subagents the same in their brief.
+5. **Cheaper models for checking.** Verifiers, pass-1 fillers, fixers and fact-sheet researchers get `model: "sonnet"`;
+   keep the inherited model for authoring and assembly.
+6. **Watch concurrency and other sessions.** Parallel agents share one account-wide window: five parallel authors
+   exhausted a 5-hour window in ~1.5 h, and a second Claude session in the same account was consuming the same window.
+   If a limit hits, wait for the reset and restart with fresh, small briefs (rule 1) rather than resuming everything.
+7. **Keep your own context lean.** Read the template once (or only the parts you edit), never read subagent transcripts,
+   ask subagents for ≤ 15-line reports, and use the ledger tools (`--export`, `--merge`, `--carry`) instead of
+   ad-hoc scripts.
 
 ## Hard constraints
 
@@ -101,7 +140,13 @@ There is **no chapter limit** in either mode. Each chapter explains one mechanis
 8. **Validation pass 2: independent verification** (reference §11). Extract the ledger:
    ```bash
    node <skill-dir>/scripts/extract-claims.cjs page.html "$SCRATCH/claims" --split   # one file per chapter
+   node <skill-dir>/scripts/extract-claims.cjs --export "$SCRATCH/claims" "$SCRATCH/verify"   # pass-1 hidden, for verifiers
+   node <skill-dir>/scripts/extract-claims.cjs --merge  "$SCRATCH/verify" "$SCRATCH/claims"   # verdicts back by ID
+   # after fixing the page: re-extract and keep every verdict whose text didn't change
+   node <skill-dir>/scripts/extract-claims.cjs page.html "$SCRATCH/claims2" --split --carry "$SCRATCH/claims"
+   node <skill-dir>/scripts/extract-claims.cjs --export "$SCRATCH/claims2" "$SCRATCH/verify2" --open-only   # round 2
    ```
+   Headings and `<summary>` labels are pre-marked n/a (about 7% of a typical ledger).
    Fill in `pass 1` for every claim from your notes. Then have **someone who didn't write the page** fill in
    `pass 2`: a fresh verifier subagent that gets only the ledger files and the source list, never your notes or
    your reasoning. It re-finds evidence itself and marks each claim ✅ / ⚠️ / ❌ / ❓ / n/a. Fix every ⚠️, ❌ and ❓ in
@@ -130,14 +175,14 @@ There is **no chapter limit** in either mode. Each chapter explains one mechanis
 
 ## Parallel work: subagents only when they pay off
 
-Spawning costs context and coordination. Use subagents for these:
+Spawning costs context and coordination, and the budget (above) caps how many run at once. Use subagents for these:
 
-- **Pass-2 verifier: always**, even for a small page. Independence is the point, not speed. When the ledger has more
-  than ~150 claims, run one verifier per part or per group of chapter files, in parallel.
+- **Pass-2 verifier: always**, even for a small page. Independence is the point, not speed. Split the ledger into
+  groups of the size your budget sets and run them within its concurrency cap, on `model: "sonnet"` unless the budget is `max`.
 - **Research fan-out (deep mode):** when there are 5 or more independent source areas (for example settings, hooks,
   MCP and CI docs), use one subagent per area. Each returns a fact sheet of claim → source → quote. This keeps raw
   docs out of your context.
-- **Parallel chapter authoring:** only for large deep-mode pages, around 12 or more chapters, and only after the plan
+- **Parallel chapter authoring (`standard`/`max` only):** only for large deep-mode pages, around 12 or more chapters, and only after the plan
   and shell are fixed. Each author owns separate files: `part-N.html` (sections), `part-N.js` (figure IIFEs) and
   `part-N.css` (classes prefixed `pN-`). Authors get the shell contract and the plan excerpt, and return pass-1
   notes. You assemble the page and run all checks. See reference §15 for prompts.
@@ -162,6 +207,9 @@ Don't use subagents for:
   comment style.
 - **Levels leaking.** An L1 chapter that uses an L2-only term breaks depth-1 reading. Define terms at the lowest level
   that uses them. `check-page.cjs` runs depth 1, but only your reading catches gaps in meaning.
+- **Figures taller than the phone viewport** never became "stable" for element screenshots, and `check-page.cjs`
+  timed out on mobile; the script now grows the viewport for such shots. Still keep mobile figures compact.
+- **Resuming agents after a limit pause** re-read 300–400k tokens each; see Token budget rule 1.
 - **Blank screenshots / Chromium crashes** in a font-less sandbox. A "no JS errors" run with blank screenshots is not a pass (reference §14).
 - **`pkill -f` matched its own shell** and killed a chained commit. Kill by PID, and never chain cleanup with commit or push.
 - **Layout collisions only show up in screenshots.** Put labels on a larger radius than nodes, reserve space for badges,

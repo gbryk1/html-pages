@@ -50,7 +50,12 @@ async function run(browser, name, opts, shots, depth1 = false) {
       return false;
     }), id);
     if (!moved && !canvasInk) dead.push(id);
-    if (shots) await p.locator('#' + id).screenshot({ path: `${out}/${name}-${id}.png` });
+    if (shots) {  // a figure taller than the viewport never becomes "stable" for locator.screenshot: grow the viewport for the shot
+      const vp = p.viewportSize(); const h = await p.evaluate(id => document.getElementById(id).getBoundingClientRect().height, id);
+      if (h > vp.height - 20) await p.setViewportSize({ width: vp.width, height: Math.ceil(h) + 60 });
+      await p.locator('#' + id).screenshot({ path: `${out}/${name}-${id}.png` });
+      if (h > vp.height - 20) await p.setViewportSize(vp);
+    }
   }
   await p.evaluate(() => scrollTo(0, 0));
   await p.waitForTimeout(500);

@@ -6,6 +6,14 @@
 //   correct answer + explanation) and prose-like string literals in the inline script (status narrations, etc.).
 //   Writes <outDir>/claims.md (or one file per chapter with --split, for parallel verifiers) + claims.json.
 //
+// Carry:  node extract-claims.cjs <page.html> <outDir> [--split] --carry <oldDir>
+//   After extracting, copies pass-1/pass-2 lines from an older ledger for every claim whose text is unchanged,
+//   so only new or edited claims need checking again.
+// Verifier export / merge (keeps pass-1 notes away from the independent verifier):
+//   node extract-claims.cjs --export <ledgerDir> <outDir> [--open-only]   pass-1 hidden; --open-only = only claims whose pass 2 is empty/⚠️/❌/❓
+//   node extract-claims.cjs --merge  <verifierDir> <ledgerDir>             copies filled pass-2 lines back by claim ID
+// Headings (h3) and <summary> lines are pre-marked n/a in both passes: they are labels, not claims.
+//
 // Status: node extract-claims.cjs --status <outDir>
 //   Counts verdicts in the ledger files. Exit 1 while any claim is unchecked, ❌ wrong, ❓ unverifiable or ⚠️ imprecise.
 //
@@ -15,6 +23,36 @@
 // n/a is for pedagogy, opinion, or numbers already labelled illustrative on the page.
 const path = require('path');
 const fs = require('fs');
+
+
+const BLOCK = /### (C\d+) ([^\n]*)\n((?:>[^\n]*\n)+)- pass 1:([^\n]*)\n- pass 2:([^\n]*)/g;
+const mdFiles = d => fs.readdirSync(d).filter(f => f.endsWith('.md')).map(f => path.join(d, f));
+const isOpen2 = v => { v = v.trim(); return !v || ['⚠️', '❌', '❓'].some(t => v.startsWith(t)); };
+if (process.argv[2] === '--export') {
+  const [src, dst] = [path.resolve(process.argv[3]), path.resolve(process.argv[4])];
+  const openOnly = process.argv.includes('--open-only');
+  fs.mkdirSync(dst, { recursive: true }); let n = 0;
+  for (const f of mdFiles(src)) {
+    const blocks = [];
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(BLOCK)) {
+      if (openOnly && !isOpen2(m[5])) continue;
+      blocks.push(`### ${m[1]} ${m[2]}\n${m[3]}- pass 1: (hidden from verifier)\n- pass 2:${openOnly ? '' : m[5]}\n`); n++;
+    }
+    if (blocks.length) fs.writeFileSync(path.join(dst, path.basename(f)), `# ${path.basename(f)} — for verifier\n\n` + blocks.join('\n'));
+  }
+  console.log(`${n} claims exported → ${dst}`); process.exit(0);
+}
+if (process.argv[2] === '--merge') {
+  const [src, dst] = [path.resolve(process.argv[3]), path.resolve(process.argv[4])];
+  const p2 = {};
+  for (const f of mdFiles(src)) for (const m of fs.readFileSync(f, 'utf8').matchAll(BLOCK)) if (m[5].trim()) p2[m[1]] = m[5].trim();
+  let n = 0;
+  for (const f of mdFiles(dst)) {
+    const s = fs.readFileSync(f, 'utf8').replace(BLOCK, (all, id, h, q, a, b) => p2[id] ? (n++, `### ${id} ${h}\n${q}- pass 1:${a}\n- pass 2: ${p2[id]}`) : all);
+    fs.writeFileSync(f, s);
+  }
+  console.log(`merged ${n} pass-2 verdicts into ${dst}`); process.exit(0);
+}
 
 if (process.argv[2] === '--status') {
   const dir = path.resolve(process.argv[3] || 'claims');
@@ -89,6 +127,7 @@ function scriptStrings(src) {
 const file = path.resolve(process.argv[2] || 'index.html');
 const out = path.resolve(process.argv[3] || 'claims');
 const split = process.argv.includes('--split');
+const carryDir = process.argv.includes('--carry') ? path.resolve(process.argv[process.argv.indexOf('--carry') + 1]) : null;
 fs.mkdirSync(out, { recursive: true });
 
 (async () => {
@@ -125,14 +164,23 @@ fs.mkdirSync(out, { recursive: true });
   items.push(...scriptStrings(src));
   items.forEach((it, i) => { it.id = 'C' + String(i + 1).padStart(4, '0'); });
   fs.writeFileSync(path.join(out, 'claims.json'), JSON.stringify(items, null, 1));
+  const carried = {}; let nCarried = 0;
+  if (carryDir) for (const f of mdFiles(carryDir)) for (const m of fs.readFileSync(f, 'utf8').matchAll(BLOCK))
+    if (m[4].trim() || m[5].trim()) carried[m[3]] = [m[4].trim(), m[5].trim()];
   const groups = split ? items.reduce((g, it) => ((g[it.where.replace(/[^\w-]+/g, '_')] ||= []).push(it), g), {}) : { claims: items };
   for (const [name, list] of Object.entries(groups)) {
     const md = [`# Claims ledger — ${path.basename(file)} — ${name}`, '',
       'Verdicts: ✅ confirmed · ⚠️ imprecise (give fix) · ❌ wrong (give fix) · ❓ unverifiable (soften or remove) · n/a pedagogy/opinion/labelled illustrative', ''];
-    for (const it of list) md.push(`### ${it.id} · ${it.where} · L${it.level} · ${it.kind}`, `> ${it.text}`, '- pass 1:', '- pass 2:', '');
+    for (const it of list) {
+      const auto = ['h3', 'summary'].includes(it.kind) ? ' n/a (heading, auto)' : '';
+      const old = carried[`> ${it.text}\n`];
+      md.push(`### ${it.id} · ${it.where} · L${it.level} · ${it.kind}`, `> ${it.text}`,
+        '- pass 1:' + (old ? ' ' + old[0] : auto), '- pass 2:' + (old ? ' ' + old[1] : auto), '');
+      if (old) nCarried++;
+    }
     fs.writeFileSync(path.join(out, `${name}.md`), md.join('\n'));
   }
   const byWhere = items.reduce((a, it) => (a[it.where] = (a[it.where] || 0) + 1, a), {});
-  console.log(`${items.length} claims → ${out}`);
+  console.log(`${items.length} claims → ${out}` + (carryDir ? ` (${nCarried} verdicts carried from ${carryDir})` : ''));
   Object.entries(byWhere).forEach(([k, v]) => console.log(`  ${k}: ${v}`));
 })().catch(e => { console.error(e); process.exit(2); });

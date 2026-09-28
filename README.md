@@ -40,7 +40,7 @@ Bajty modelu są mapowane po nazwie pliku plus aliasy (`encoder_model*.onnx` →
   animowanych, scrollytellingowych stron wiedzy w stylu „Head First” (jak `cassandra-course.html` czy
   `claude-code-course.html`): plan rozdziałów, weryfikacja faktów w aktualnej dokumentacji, gotowy szablon
   ([`templates/shell.html`](skills/animated-knowledge-page/templates/shell.html)), katalog boxów i typów diagramów,
-  quiz, ściąga, dwa tryby (prosty / głęboki z planem i wyborem głębokości), treści wielopoziomowe (części,
+  quiz, ściąga, dwa tryby (prosty / głęboki z planem i wyborem głębokości), trzy budżety tokenów (`lean` — oszczędny, `standard`, `max`; [raport zużycia](skills/animated-knowledge-page/token-report-kafka-session.md)), treści wielopoziomowe (części,
   poziomy L1–L3, przełącznik głębokości, mapa kursu), podwójna walidacja każdej tezy (autor + niezależny weryfikator,
   [`extract-claims.cjs`](skills/animated-knowledge-page/scripts/extract-claims.cjs)), testy headless
   ([`check-page.cjs`](skills/animated-knowledge-page/scripts/check-page.cjs),
