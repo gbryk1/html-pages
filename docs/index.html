@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HTML tools z lokalnym modelem w przeglądarce</title>
+<title>Animowane strony wiedzy — HTML tools</title>
 <style>
   :root { color-scheme: light dark; --accent:#2563eb; --bg:#fff; --fg:#111827; --mut:#6b7280; --card:#f3f4f6; }
   @media (prefers-color-scheme: dark) { :root { --bg:#0b0f19; --fg:#e5e7eb; --mut:#9ca3af; --card:#151b28; } }
@@ -24,26 +24,14 @@
 </head>
 <body>
 <main>
-  <h1>🧪 HTML tools z lokalnym modelem</h1>
+  <h1>🧪 Animowane strony wiedzy</h1>
   <p class="note">
     Samodzielne narzędzia HTML w duchu
     <a href="https://simonwillison.net/2025/Dec/10/html-tools/" target="_blank" rel="noopener">„HTML tools” Simona Willisona</a>:
-    zero backendu, zero build-stepu, modele neuronowe wbudowane w strony jako <strong>base64</strong>
-    i uruchamiane w przeglądarce przez WebAssembly / WebGPU (<code>transformers.js</code>).
-    Dane nie opuszczają urządzenia.
+    zero backendu, zero build-stepu — animowane strony wiedzy w stylu „Head First”, każda w jednym pliku HTML.
   </p>
 
   <div class="tools">
-    <a class="tool" href="speech-to-text.html">
-      <h2>🎙️ Speech-to-Text</h2>
-      <p>Whisper tiny (wielojęzyczny, q8) wbudowany w jeden plik HTML (58 MB).
-         Nagrywaj z mikrofonu lub wgraj plik audio — transkrypcja liczona lokalnie.</p>
-    </a>
-    <a class="tool" href="chat.html">
-      <h2>💬 Chat</h2>
-      <p>SmolLM2-135M-Instruct (q4f16, 117 MB) w plikach base64 obok strony.
-         Prosty czat z modelem językowym działającym w Twojej przeglądarce.</p>
-    </a>
     <a class="tool" href="cassandra-course.html">
       <h2>👁️ Cassandra od środka</h2>
       <p>Animowany kurs architektury Apache Cassandra w stylu Head First: pierścień tokenów, gossip,
@@ -56,8 +44,13 @@
     </a>
     <a class="tool" href="claude-code-course.html">
       <h2>⌨️ Claude Code od zera do eksperta</h2>
-      <p>Animowany przewodnik (EN) po Claude Code: pętla agenta, okno kontekstu, CLAUDE.md, tryby uprawnień, plan mode,
+      <p>Animowany przewodnik (EN, oryginał) po Claude Code: pętla agenta, okno kontekstu, CLAUDE.md, tryby uprawnień, plan mode,
          skille, subagenci, hooki, MCP, pluginy, równoległe sesje, CI, modele i dobre praktyki.</p>
+    </a>
+    <a class="tool" href="claude-code-course-pl.html">
+      <h2>⌨️ Claude Code od zera do eksperta (PL)</h2>
+      <p>Polskie tłumaczenie tego samego animowanego przewodnika po Claude Code: pętla agenta, okno kontekstu, CLAUDE.md,
+         tryby uprawnień, plan mode, skille, subagenci, hooki, MCP, pluginy, równoległe sesje, CI, modele i dobre praktyki.</p>
     </a>
     <a class="tool" href="kafka-course.html">
       <h2>📜 Kafka od środka: od zera do eksperta</h2>
@@ -73,14 +66,8 @@
     </a>
   </div>
 
-  <p class="note">
-    Dlaczego model czatu nie jest w jednym pliku? GitHub Pages nie pozwala na plik większy niż 100&nbsp;MB,
-    a 117&nbsp;MB wag po zakodowaniu base64 daje ~156&nbsp;MB. Jest więc podzielony na części i sklejany w pamięci.
-    Narzędzie speech-to-text mieści się w jednym pliku.
-  </p>
-
   <footer>
-    <a href="https://github.com/gbryk1/html-tools-local-llm" target="_blank" rel="noopener">Źródło na GitHubie</a> · zbudowano 2026-09-24 08:11 UTC
+    <a href="https://github.com/gbryk1/html-tools-local-llm" target="_blank" rel="noopener">Źródło na GitHubie</a> · zbudowano 2026-09-28 09:00 UTC
   </footer>
 </main>
 </body>
