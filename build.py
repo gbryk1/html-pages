@@ -15,7 +15,7 @@ ROOT = pathlib.Path(__file__).resolve().parent
 SRC = ROOT / "src"
 OUT = ROOT / "docs"
 
-STATIC_PAGES = ["cassandra-course.html", "copilot-pm-course.html", "claude-code-course.html", "claude-code-course-pl.html", "kafka-course.html", "system-design-course.html"]  # plain pages, copied verbatim
+STATIC_PAGES = ["cassandra-course.html", "copilot-pm-course.html", "claude-code-course.html", "claude-code-course-pl.html", "kafka-course.html", "system-design-course.html", "spark-course.html"]  # plain pages, copied verbatim
 
 
 def main() -> None:

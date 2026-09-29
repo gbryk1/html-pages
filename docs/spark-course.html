@@ -1,0 +1,1978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spark from the inside — core engine and Kafka with DStreams</title>
+<meta name="description" content="Animated guide to Apache Spark internals (driver, lineage, stages, shuffle, memory, Catalyst) and processing Kafka topics with DStreams.">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper:#fbf8f1; --paper2:#ffffff; --ink:#1c1c22; --mut:#5d5f6b; --line:#d9d3c4; --shadow:#1c1c22;
+  --accent:#1b6fa8; --accent2:#e39b2d; --ok:#2f9e63; --bad:#d64545; --warn:#c98a00;
+  --pen:#b8431f; --note:#fff4c2; --card:#f1ece0; --code:#f3efe6; --dim:#9aa0ab;
+  --hand:"Segoe Print","Bradley Hand","Comic Neue","Comic Sans MS","Chalkboard SE","Marker Felt",cursive;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,"Palatino Linotype",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#15171c; --paper2:#1d2027; --ink:#e7e5df; --mut:#a3a6b1; --line:#383c49; --shadow:#000;
+          --accent:#5aa9e6; --accent2:#f0b34f; --ok:#4cc38a; --bad:#f06b6b; --warn:#f0c040;
+          --pen:#ff9a6b; --note:#3a3420; --card:#232730; --code:#22262e; --dim:#5d6270; }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.68 var(--serif); }
+a { color:var(--accent); }
+code, kbd { font:.86em var(--mono); background:var(--code); padding:.08em .35em; border-radius:4px; }
+pre { font:14px/1.5 var(--mono); background:var(--code); border-left:4px solid var(--accent); padding:.9rem 1rem; overflow:auto; border-radius:4px; }
+pre code { background:none; padding:0; font-size:inherit; }
+h1,h2,h3,h4 { font-family:var(--sans); line-height:1.2; }
+h3 { font-size:1.28rem; margin:2.2rem 0 .6rem; }
+strong, b { font-weight:700; }
+.hand { font-family:var(--hand); color:var(--pen); }
+.mut { color:var(--mut); }
+
+/* progress + toc */
+#progress { position:fixed; inset:0 0 auto 0; height:5px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform-origin:0 50%; transform:scaleX(0); z-index:50; }
+#toc { position:fixed; top:1.4rem; left:1rem; width:205px; font:13.5px/1.35 var(--sans); z-index:40; display:none; opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #toc { opacity:1; pointer-events:auto; }
+#toc b { display:block; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.5rem; }
+#toc a { display:block; padding:.28rem .55rem; border-left:3px solid var(--line); color:var(--mut); text-decoration:none; }
+#toc a:hover { color:var(--ink); }
+#toc a.active { border-color:var(--accent2); color:var(--ink); font-weight:700; background:var(--card); }
+@media (min-width:1440px) { #toc { display:block; } }
+
+/* cover */
+.cover { min-height:96vh; display:grid; place-items:center; padding:3rem 1.2rem; position:relative; overflow:hidden;
+         background:radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 55%), var(--paper); }
+.cover-inner { max-width:1040px; width:100%; display:grid; gap:2rem; grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px) { .cover-inner { grid-template-columns:1.1fr .9fr; } }
+.cover .kicker { font:700 .85rem var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); }
+.cover h1 { font-size:clamp(2.4rem,5.6vw,4.2rem); margin:.3rem 0 .6rem; letter-spacing:-.02em; }
+.cover h1 span { display:inline-block; background:var(--ink); color:var(--paper); padding:0 .25em; transform:rotate(-1.5deg); }
+.cover .sub { font-size:1.2rem; color:var(--mut); max-width:34em; }
+.cover .stamp { display:inline-block; margin-top:1.2rem; font:700 1rem var(--hand); color:var(--pen); border:3px solid var(--pen); padding:.3rem .8rem; border-radius:8px; transform:rotate(-4deg); }
+.cover svg { width:100%; max-width:400px; justify-self:center; overflow:visible; }
+.spin { animation:spin 50s linear infinite; transform-origin:200px 200px; }
+.spin-rev { animation:spin 34s linear infinite reverse; transform-origin:200px 200px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.cover .scroll-hint { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); font:1rem var(--hand); color:var(--mut); animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob { 50% { transform:translate(-50%,8px); } }
+
+/* layout */
+main { max-width:800px; margin:0 auto; padding:0 1.2rem 6rem; }
+.chapter { padding-top:4.5rem; }
+.chap-head { display:flex; gap:1.1rem; align-items:center; margin-bottom:1rem; }
+.chap-num { flex:none; width:4.2rem; height:4.2rem; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font:800 1.7rem var(--sans); transform:rotate(-6deg); box-shadow:4px 4px 0 var(--accent2); }
+.chap-head h2 { font-size:clamp(1.6rem,3.8vw,2.2rem); margin:0; }
+.chap-head .tag { font:1.02rem var(--hand); color:var(--pen); display:block; margin-top:.3rem; }
+
+/* reveal */
+.js .reveal { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.js .reveal.shown { opacity:1; transform:none; }
+
+/* head-first boxes */
+.box { position:relative; margin:2rem 0; padding:1.1rem 1.25rem 1rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper2); box-shadow:5px 5px 0 var(--shadow); }
+.box > .lbl { position:absolute; top:-1rem; left:1rem; font:800 .82rem var(--sans); letter-spacing:.06em; text-transform:uppercase; background:var(--ink); color:var(--paper); padding:.25rem .65rem; border-radius:4px; transform:rotate(-2deg); }
+.box.brain { border-style:dashed; background:color-mix(in srgb, var(--accent) 8%, var(--paper2)); }
+.box.brain > .lbl { background:var(--accent); color:#fff; }
+.box.pencil { background:color-mix(in srgb, var(--accent2) 10%, var(--paper2)); }
+.box.pencil > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.watch { border-color:var(--bad); box-shadow:5px 5px 0 var(--bad); }
+.box.watch > .lbl { background:var(--bad); color:#fff; }
+.box.geek { background:var(--card); font-size:.95em; }
+.box.geek > .lbl { background:var(--mut); }
+.box.relax { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); }
+.box.relax > .lbl { background:var(--ok); color:#fff; }
+.box.bullets { background:var(--note); transform:rotate(-.4deg); }
+.box.bullets ul { margin:.3rem 0 0; padding-left:1.2rem; }
+.box.bullets li { margin:.35rem 0; }
+.box.bullets li::marker { content:"▸ "; color:var(--pen); }
+.box.usecase { border-color:var(--accent); box-shadow:5px 5px 0 var(--accent); }
+.box.usecase > .lbl { background:var(--accent); color:#fff; }
+.box.usecase ol { margin:.5rem 0 .3rem; padding-left:1.3rem; }
+.box.usecase li { margin:.4rem 0; }
+.box p:first-of-type { margin-top:.4rem; }
+.box p:last-child { margin-bottom:0; }
+.qa { display:grid; grid-template-columns:auto 1fr; gap:.4rem .8rem; margin:.8rem 0 1rem; }
+.qa .q, .qa .a { font:800 1.15rem var(--sans); }
+.qa .q { color:var(--accent); } .qa .a { color:var(--pen); }
+.qa div { margin:0; }
+details { margin-top:.8rem; }
+summary { cursor:pointer; font:700 .95rem var(--sans); color:var(--pen); }
+.fire { display:grid; gap:.7rem; margin-top:.5rem; }
+.fire .who { font:800 .85rem var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.fire .line { display:grid; grid-template-columns:7.5rem 1fr; gap:.8rem; }
+.fire .line.l2 .who { color:var(--accent); } .fire .line.l1 .who { color:var(--pen); }
+@media (max-width:560px) { .fire .line { grid-template-columns:1fr; gap:.1rem; } }
+.anno { font:1.05rem/1.35 var(--hand); color:var(--pen); display:block; margin:.4rem 0 .4rem 1.2rem; transform:rotate(-1.2deg); }
+.anno::before { content:"↖ "; }
+.pull { font:italic 1.35rem/1.45 var(--serif); border-left:6px solid var(--accent2); padding:.2rem 0 .2rem 1rem; margin:1.6rem 0; }
+.prompt-ex { font:13.5px/1.5 var(--mono); background:var(--code); border:1.5px dashed var(--line); border-radius:6px; padding:.7rem .85rem; margin-top:.7rem; white-space:pre-wrap; }
+.prompt-ex b { font-family:var(--sans); color:var(--pen); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+
+/* figures (generic) */
+.fig { margin:2.2rem -1rem; padding:1rem 1rem .9rem; background:var(--paper2); border:2px solid var(--ink); border-radius:8px; box-shadow:6px 6px 0 var(--shadow); position:relative; }
+@media (min-width:1000px) { .fig.wide { margin-left:-6rem; margin-right:-6rem; } }
+.fig .ftitle { font:800 .95rem var(--sans); margin:0 0 .6rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.fig .ftitle span { font:400 .85rem var(--sans); color:var(--mut); }
+.fig figcaption, .fig .cap { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.6rem; }
+.fig svg { display:block; width:100%; height:auto; }
+.fig svg text { fill:var(--ink); font-family:var(--sans); }
+.ctrl { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.4rem 0 .6rem; font:14px var(--sans); }
+.btn { font:700 13.5px var(--sans); color:var(--ink); background:var(--paper2); border:2px solid var(--ink); border-radius:999px; padding:.33rem .85rem; box-shadow:2px 2px 0 var(--shadow); cursor:pointer; transition:transform .08s; }
+.btn:hover { background:var(--card); }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.on { background:var(--ink); color:var(--paper); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.ctrl input[type=text], .ctrl select, .calc input { font:14px var(--mono); padding:.3rem .5rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); }
+.ctrl input[type=text] { width:9rem; }
+.ctrl label { display:inline-flex; gap:.35rem; align-items:center; }
+.scroll-x { overflow-x:auto; }
+.scroll-x > svg { min-width:620px; }
+.two { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:720px) { .two { grid-template-columns:1.2fr 1fr; align-items:start; } }
+table.mini { width:100%; border-collapse:collapse; font:13.5px var(--sans); }
+table.mini th, table.mini td { text-align:left; padding:.28rem .4rem; border-bottom:1px solid var(--line); }
+table.mini th { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+table.mini tr.flash td { animation:flashbg 1.2s ease; }
+@keyframes flashbg { 0%{ background:color-mix(in srgb, var(--accent2) 45%, transparent);} 100%{ background:transparent;} }
+.chip { display:inline-block; min-width:1.6em; text-align:center; font:800 12px var(--sans); color:#fff; padding:.1rem .4rem; border-radius:999px; }
+.status { font:14px/1.45 var(--sans); padding:.55rem .75rem; border-radius:6px; background:var(--card); margin-top:.5rem; min-height:2.2rem; }
+.status.ok { background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.status.bad { background:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.status.warn { background:color-mix(in srgb, var(--warn) 20%, var(--paper2)); }
+.fly { pointer-events:none; }
+.small { font-size:11px; }
+.tiny { font-size:9.5px; }
+.edge { stroke:var(--line); stroke-width:2; }
+.nd circle, .nd rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2.2; transition:fill .3s, opacity .3s; }
+.nd text { font-weight:800; font-size:12px; pointer-events:none; }
+.nd.off circle, .nd.off rect { fill:var(--dim); opacity:.5; stroke-dasharray:4 3; }
+.nd.hot circle, .nd.hot rect { fill:var(--accent2); }
+.nd.pulse circle, .nd.pulse rect, .pop { animation:pulse .6s ease; transform-box:fill-box; transform-origin:center; }
+@keyframes pulse { 40% { transform:scale(1.3); } }
+
+
+/* ---- generic extras: meters, legends, logs, stacked token bars ---- */
+main, footer { overflow-wrap:break-word; }   /* long URLs / identifiers in prose must not widen the page */
+.two > * { min-width:0; }
+.ctrl label { flex-wrap:wrap; max-width:100%; }
+.ctrl select { max-width:100%; min-width:0; }
+.meter { height:12px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.meter > i { display:block; height:100%; width:0; background:var(--ok); transition:width .6s ease, background .4s; }
+.legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.3rem; background:var(--c); vertical-align:-1px; }
+.log { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; height:190px; overflow-y:auto; }
+.log div { opacity:0; transform:translateX(-6px); transition:opacity .3s, transform .3s; white-space:pre-wrap; }
+.log div.shown { opacity:1; transform:none; }
+.log .u { color:var(--accent); font-weight:700; } .log .e { color:var(--bad); } .log .g { color:var(--ok); }
+.stack { position:relative; height:34px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:var(--paper); display:flex; }
+.stack .seg { height:100%; transition:width .7s ease; overflow:hidden; white-space:nowrap; font:700 10.5px/34px var(--sans); color:#fff; text-indent:4px; }
+
+/* ---- multi-level structure: parts, level chips, depth switch, "go deeper", course map ---- */
+.part { margin:5rem 0 0; padding:1.4rem 1.3rem 1.2rem; border-radius:10px; background:var(--ink); color:var(--paper); box-shadow:6px 6px 0 var(--accent2); }
+.part .part-no { font:800 .8rem var(--sans); letter-spacing:.18em; text-transform:uppercase; color:var(--accent2); }
+.part h2 { margin:.2rem 0 .35rem; font-size:clamp(1.7rem,4vw,2.4rem); }
+.part p { margin:0; font-size:1rem; opacity:.85; }
+.lvl-chip { display:inline-block; vertical-align:middle; margin-left:.5rem; font:800 10.5px/1.5 var(--sans); letter-spacing:.06em; text-transform:uppercase; padding:.08rem .5rem; border-radius:999px; color:#fff; background:var(--ok); }
+.lvl-chip.l2 { background:var(--accent); } .lvl-chip.l3 { background:#8e44ad; } .lvl-chip.l4 { background:var(--bad); }
+.lvl-off { display:none !important; }
+details.deeper { border:2px dashed #8e44ad; border-radius:8px; padding:.6rem .9rem; margin:1.8rem 0; background:color-mix(in srgb, #8e44ad 6%, var(--paper2)); }
+details.deeper > summary { font:700 1rem var(--sans); color:var(--ink); }
+details.deeper > summary .lvl-chip { margin:0 .4rem 0 0; }
+details.deeper[open] > summary { margin-bottom:.5rem; }
+.lvl-hint { display:block; width:100%; text-align:left; margin:1.4rem 0 0; font:700 13px var(--sans); color:var(--accent); background:none; border:2px dashed var(--accent); border-radius:8px; padding:.45rem .8rem; cursor:pointer; }
+#depth { position:fixed; left:1rem; bottom:1rem; z-index:45; display:flex; gap:.2rem; align-items:center; font:700 12px var(--sans); background:var(--paper2); color:var(--ink); border:2px solid var(--ink); border-radius:999px; padding:.22rem .3rem .22rem .75rem; box-shadow:3px 3px 0 var(--shadow); opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #depth { opacity:1; pointer-events:auto; }
+#depth button { font:700 12px var(--sans); border:0; border-radius:999px; padding:.25rem .6rem; background:transparent; color:var(--ink); cursor:pointer; }
+#depth button.on { background:var(--ink); color:var(--paper); }
+@media (max-width:640px) { #depth .nm { display:none; } }
+#toc { max-height:calc(100vh - 5.5rem); overflow-y:auto; }
+.toc-part { font:800 .7rem var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:.8rem 0 .2rem .2rem; }
+#map { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.7rem; margin:1.5rem 0; }
+.map-part { border:2px solid var(--line); border-radius:10px; padding:.55rem .6rem; background:var(--paper2); }
+.map-part > b { display:block; font:800 11.5px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin-bottom:.35rem; }
+.map-ch { display:flex; gap:.45rem; align-items:baseline; font:13px/1.3 var(--sans); color:var(--ink); text-decoration:none; padding:.22rem .4rem; border-radius:6px; border-left:4px solid var(--ok); margin:.15rem 0; transition:background .3s; }
+.map-ch.l2 { border-left-color:var(--accent); } .map-ch.l3 { border-left-color:#8e44ad; } .map-ch.l4 { border-left-color:var(--bad); }
+.map-ch i { font:800 11px var(--mono); font-style:normal; color:var(--mut); min-width:1.4em; }
+.map-ch:hover { background:var(--card); }
+.map-ch.here { background:var(--accent2); color:#1c1c22; font-weight:700; }
+.map-ch.seen::after { content:"✓"; margin-left:auto; color:var(--ok); font-weight:800; }
+.map-ch.dim, #toc a.dim { opacity:.4; }
+
+/* ==== per-figure CSS goes here — prefix every class with the figure name (.ex-…) to avoid collisions ==== */
+.cl-slot { transition:fill .3s; }
+.lin-grid { display:grid; grid-template-columns:3.2rem repeat(4,minmax(0,1fr)); gap:.35rem; font:12.5px var(--sans); }
+.lin-grid .lin-h { font-weight:800; text-align:center; color:var(--mut); font-size:11.5px; overflow-wrap:anywhere; }
+.lin-grid .lin-r { font:700 11px var(--mono); color:var(--mut); align-self:center; }
+.lin-c { height:2rem; border:2px dashed var(--line); border-radius:6px; opacity:.35; display:grid; place-items:center; font:700 11px var(--sans); transition:all .35s; }
+.lin-c.ghost { opacity:1; border-color:var(--mut); }
+.lin-c.work { opacity:1; border-style:solid; border-color:var(--accent2); background:color-mix(in srgb,var(--accent2) 35%,var(--paper2)); }
+.lin-c.done { opacity:1; border-style:solid; border-color:var(--ink); background:var(--card); }
+.lin-c.cached { opacity:1; border-style:solid; border-color:var(--ok); background:color-mix(in srgb,var(--ok) 30%,var(--paper2)); }
+.lin-c.lost { opacity:1; border-style:solid; border-color:var(--bad); background:color-mix(in srgb,var(--bad) 30%,var(--paper2)); }
+.dag-row { display:flex; flex-wrap:wrap; gap:.35rem; align-items:center; min-height:2.4rem; margin:.3rem 0 .6rem; }
+.dag-op { font:700 12.5px var(--mono); padding:.25rem .55rem; border-radius:6px; border:2px solid var(--ink); background:var(--st,var(--card)); color:#1c1c22; }
+.dag-cut { font:800 11px var(--sans); color:var(--bad); padding:0 .2rem; }
+.dag-lanes { display:grid; gap:.35rem; }
+.dag-lane { display:grid; grid-template-columns:6.8rem repeat(4,minmax(0,1fr)); gap:.3rem; align-items:center; font:12px var(--sans); }
+.dag-lane b { font-size:11.5px; }
+.dag-t { height:1.5rem; border-radius:5px; border:2px solid var(--line); background:var(--paper); display:grid; place-items:center; font:700 10.5px var(--sans); transition:background .3s,border-color .3s; }
+.dag-t.run { background:var(--accent2); border-color:var(--ink); color:#1c1c22; }
+.dag-t.ok { background:var(--ok); border-color:var(--ink); color:#fff; }
+.dag-t.bad { background:var(--bad); border-color:var(--ink); color:#fff; }
+.sh-wrap, .of-out { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+.sh-wrap > *, .of-out > *, .di-grid > * { min-width:0; }
+.sh-h { font:800 11.5px var(--sans); text-transform:uppercase; letter-spacing:.05em; color:var(--mut); margin-bottom:.3rem; }
+.sh-card { border:2px solid var(--ink); border-radius:6px; padding:.3rem .4rem; margin-bottom:.4rem; background:var(--paper); min-height:2.2rem; }
+.sh-card i { font:700 10.5px var(--sans); font-style:normal; color:var(--mut); display:block; }
+.sh-chip { display:inline-block; font:700 10.5px var(--mono); color:#fff; border-radius:4px; padding:0 .3rem; margin:1px; transition:opacity .3s; }
+.sh-a { background:#1b6fa8; } .sh-b { background:#c2570c; } .sh-c { background:#2f9e63; }
+.sh-load { height:6px; border-radius:3px; background:var(--bad); margin-top:.25rem; transition:width .6s; }
+.mem-nums { display:flex; flex-wrap:wrap; gap:.3rem 1rem; font:12.5px var(--mono); margin-top:.4rem; }
+.mem-r { position:absolute; top:-3px; bottom:-3px; width:0; border-left:3px dashed var(--ink); transition:left .5s; }
+.mem-r::after { content:"R"; position:absolute; top:-1px; left:3px; font:800 11px var(--sans); color:var(--ink); background:var(--paper); padding:0 2px; }
+.pl-steps { display:flex; flex-wrap:wrap; gap:.3rem; margin-bottom:.4rem; }
+.pl-steps span { font:700 11.5px var(--sans); padding:.15rem .5rem; border-radius:999px; border:2px solid var(--line); color:var(--mut); }
+.pl-steps span.on { border-color:var(--ink); background:var(--ink); color:var(--paper); }
+.pl-steps span.aqe { border-color:var(--bad); background:var(--bad); color:#fff; }
+.pl-tree { min-height:12rem; font-size:12.5px; white-space:pre; }
+.pl-tree mark { background:color-mix(in srgb,var(--accent2) 45%,transparent); color:inherit; border-radius:3px; }
+.di-grid { display:grid; grid-template-columns:1fr; gap:.7rem; }
+@media (min-width:720px) { .di-grid { grid-template-columns:.9fr 1.3fr 1fr; } }
+.di-p { display:grid; grid-template-columns:2.2rem 1fr 4.2rem; gap:.3rem; align-items:center; font:12px var(--mono); margin:.2rem 0; }
+.di-bar { height:.8rem; border-radius:3px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.di-bar i { display:block; height:100%; background:var(--accent); transition:width .5s; }
+.di-e { border:2px solid var(--ink); border-radius:6px; padding:.25rem .4rem; margin-bottom:.35rem; font:12px var(--sans); background:var(--paper); }
+.di-e.off { opacity:.45; border-style:dashed; }
+.di-e b { display:block; font-size:11.5px; }
+.di-k { display:inline-block; font:700 10.5px var(--mono); border-radius:4px; padding:0 .3rem; margin:1px; color:#fff; background:var(--ok); }
+.di-k.new { background:var(--accent2); color:#1c1c22; }
+.of-steps { display:flex; flex-wrap:wrap; gap:.35rem; margin:.3rem 0 .6rem; }
+.of-s { font:700 12px var(--sans); padding:.3rem .6rem; border:2px solid var(--line); border-radius:6px; background:var(--paper); transition:all .3s; }
+.of-s.ok { border-color:var(--ok); background:color-mix(in srgb,var(--ok) 22%,var(--paper2)); }
+.of-s.run { border-color:var(--accent2); background:color-mix(in srgb,var(--accent2) 30%,var(--paper2)); }
+.of-s.bad { border-color:var(--bad); background:color-mix(in srgb,var(--bad) 25%,var(--paper2)); }
+.of-sink { min-height:2.2rem; border:2px solid var(--ink); border-radius:6px; padding:.3rem; background:var(--paper); }
+.of-sink span { display:inline-block; font:700 11px var(--mono); padding:.05rem .35rem; border-radius:4px; background:var(--ok); color:#fff; margin:2px; }
+.of-sink span.dup { background:var(--bad); }
+.of-sink span.gap { background:transparent; color:var(--bad); border:2px dashed var(--bad); }
+.of-big { font:800 1.6rem var(--mono); }
+.wn-row { display:grid; grid-template-columns:repeat(9,minmax(0,1fr)); gap:.25rem; margin:.5rem 0; }
+.wn-c { border:2px solid var(--line); border-radius:6px; text-align:center; padding:.25rem 0; font:12px var(--sans); background:var(--paper); transition:all .35s; }
+.wn-c b { display:block; font:800 1rem var(--mono); }
+.wn-c.in { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 22%,var(--paper2)); }
+.wn-c.enter { border-color:var(--ok); background:color-mix(in srgb,var(--ok) 30%,var(--paper2)); }
+.wn-c.leave { border-color:var(--bad); background:color-mix(in srgb,var(--bad) 22%,var(--paper2)); }
+.wn-c.shake { animation:wnshake .4s; }
+@keyframes wnshake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+@media (max-width:560px) { .sh-wrap, .of-out { grid-template-columns:1fr; } .wn-c { font-size:10px; } .wn-c b { font-size:.85rem; } }
+/* quiz */
+.quiz-q { margin:1.2rem 0; padding:.9rem 1rem; border:2px solid var(--ink); border-radius:8px; background:var(--paper2); }
+.quiz-q h4 { margin:0 0 .6rem; font-size:1rem; }
+.quiz-q .opts { display:grid; gap:.4rem; }
+.quiz-q button { text-align:left; font:14px/1.4 var(--sans); color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:6px; padding:.45rem .7rem; cursor:pointer; }
+.quiz-q button:hover:not(:disabled) { border-color:var(--ink); }
+.quiz-q button.right { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+.quiz-q button.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); }
+.quiz-q .why { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.5rem; display:none; }
+.quiz-q.done .why { display:block; }
+.score { position:sticky; bottom:1rem; margin-left:auto; width:max-content; font:800 1rem var(--sans); background:var(--ink); color:var(--paper); padding:.45rem .9rem; border-radius:999px; box-shadow:3px 3px 0 var(--accent2); }
+.cheat td:first-child { font-family:var(--mono); font-size:12.5px; white-space:nowrap; }
+footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var(--sans); color:var(--mut); border-top:2px solid var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+  html { scroll-behavior:auto; }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Chapters"></nav>   <!-- built from parts/chapters by JS -->
+<div id="depth" role="group" aria-label="Reading depth"></div>   <!-- built by JS when any data-level > 1 exists -->
+<header class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="kicker">Animated guide · Apache Spark 4.2</div>
+      <h1>Spark from the <span>inside</span></h1>
+      <p class="sub">How a Spark program really runs — driver, executors, lineage, stages, shuffle, memory, the SQL optimizer —
+        and then how to consume Kafka topics with DStreams without losing or duplicating a record. Scroll — the diagrams start by themselves.</p>
+      <div class="stamp">jobs → stages → tasks 🧠</div>
+    </div>
+    <svg viewBox="0 0 400 400" aria-hidden="true">
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <g id="cover-nodes"></g>
+      </g>
+      <g class="spin-rev">
+        <circle cx="200" cy="200" r="95" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 10"/>
+      </g>
+      <circle cx="200" cy="200" r="46" fill="var(--accent)" stroke="var(--ink)" stroke-width="4"/>
+      <text x="200" y="208" text-anchor="middle" font-size="22" font-weight="800" fill="#fff" font-family="system-ui,sans-serif">DAG</text>
+    </svg>
+  </div>
+  <div class="scroll-hint">scroll ↓</div>
+</header>
+
+<main>
+
+<section class="chapter" id="intro" data-title="How to read this">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>How to read this guide</h2><span class="tag">mechanisms first, API second</span></div></div>
+  <p class="reveal">You can write Spark code for months by copying snippets. Then one day a job that took 4 minutes takes 4 hours,
+    or your Kafka stream is 3 million records behind, and the snippets stop helping. What helps is knowing the machine:
+    <em>who</em> runs your lambda, <em>when</em> it runs, and <em>what</em> moves across the network.</p>
+  <p class="reveal">So every chapter explains one mechanism and gives you a diagram you can poke. Each diagram has a
+    💥 button that breaks something on purpose — because you learn a system fastest by watching it fail.</p>
+  <p class="reveal">The guide has levels. Chapters and blocks carry a chip —
+    <span class="lvl-chip">L1</span> essentials, <span class="lvl-chip l2">L2</span> practitioner,
+    <span class="lvl-chip l3">L3</span> internals. Choose your depth with the switch in the bottom-left corner; deeper
+    material hides until you want it. The map below jumps anywhere and ticks off what you've read.</p>
+  <div id="map" class="reveal"></div>
+  <p class="reveal mut" style="font-size:.9em">Facts checked against the Apache Spark 4.2.0 documentation and the Spark source code
+    (tag v4.0.0) in September 2026. Code examples are Java. DStreams (Spark Streaming) is the <b>legacy</b> streaming engine:
+    the docs say it gets no more updates and recommend Structured Streaming for new pipelines. You still meet DStream jobs
+    in production — this guide is for running and understanding them.</p>
+  <div class="box brain reveal"><span class="lbl">🧠 Brain power</span>
+    <p>A DStream job reads a Kafka topic every 10 seconds. Each batch takes 12 seconds to process. Nothing crashes,
+      no error appears in the log. What happens over the next hour — and which two numbers in the UI tell you?
+      Keep your guess; the finale answers it.</p>
+  </div>
+</section>
+
+<section class="part" id="part-1" data-level="1">
+  <span class="part-no">Part I</span><h2>The core engine</h2><p>Driver and executors, RDDs and lineage, how an action becomes jobs, stages and tasks, the shuffle, memory, and the SQL optimizer.</p>
+</section>
+
+<!-- ============ 1. Cluster ============ -->
+<section class="chapter" id="cluster" data-level="1" data-title="Driver & executors">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Anatomy of a Spark application</h2><span class="tag">one brain, many hands</span></div></div>
+  <p class="reveal">A Spark application is two kinds of processes. The <b>driver</b> runs your <code>main()</code> and owns the
+    <code>SparkContext</code>. It plans the work and hands it out. The <b>executors</b> are JVM processes on worker nodes. They run
+    <b>tasks</b> in threads and keep data in memory or on disk for your application.</p>
+  <p class="reveal">Between them sits a <b>cluster manager</b> — Spark's own standalone manager, YARN or Kubernetes. The driver asks it
+    for executors; after that, the driver talks to the executors directly. Each application gets its <em>own</em> executors, which live
+    as long as the application does. Two applications therefore cannot share cached data without writing it to external storage.</p>
+
+  <figure class="fig wide" id="fig-cluster">
+    <div class="ftitle">▶ Submitting an application <span>then lose an executor</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="run">▶ Submit &amp; run 6 tasks</button>
+      <button class="btn bad" data-act="kill">💥 Kill executor 2 mid-job</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="scroll-x"><svg viewBox="0 0 640 300" id="cl-svg"></svg></div>
+    <div class="status" id="cl-status">Press ▶ to submit.</div>
+    <figcaption>Simplified: real executors have many task slots (cores), the driver also needs heartbeats and a block manager,
+      and the cluster manager starts executors through its own agents. Task counts are illustrative.</figcaption>
+  </figure>
+
+  <p class="reveal">The <b>deploy mode</b> decides where the driver runs: in <code>cluster</code> mode the framework launches it inside
+    the cluster; in <code>client</code> mode it runs where you ran <code>spark-submit</code>. Either way, executors must be able to connect
+    back to the driver for its whole life, so keep the driver close to the workers. Each driver serves a web UI, typically on port 4040.</p>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ There are no dumb questions</span>
+    <div class="qa">
+      <div class="q">Q:</div><div>Does my <code>map</code> lambda run on the driver?</div>
+      <div class="a">A:</div><div>No. The driver serializes the function and ships it inside tasks. It runs on executors, against
+        <em>copies</em> of any variables it captured. Changing a captured variable on an executor never changes the driver's copy.</div>
+      <div class="q">Q:</div><div>Then what does run on the driver?</div>
+      <div class="a">A:</div><div>Everything outside the lambdas: building the plan, scheduling, and receiving results of actions like
+        <code>collect()</code> — which is why <code>collect()</code> on a huge dataset can kill the driver.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Driver = plans and schedules. Executors = run tasks and store data.</li>
+      <li>The cluster manager only allocates executors; it does not schedule your tasks.</li>
+      <li>A task is the unit of work sent to one executor.</li></ul>
+  </div>
+</section>
+
+<!-- ============ 2. RDD ============ -->
+<section class="chapter" id="rdd" data-level="1" data-title="RDDs & lineage">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>RDDs: lazy recipes with a memory</h2><span class="tag">nothing happens until you ask</span></div></div>
+  <p class="reveal">An <b>RDD</b> (Resilient Distributed Dataset) is an immutable collection split into <b>partitions</b>. One task
+    processes one partition. You never change an RDD; each <b>transformation</b> (<code>map</code>, <code>filter</code>,
+    <code>reduceByKey</code>…) returns a new RDD that remembers its parent and the function to apply.</p>
+  <p class="reveal">Transformations are <b>lazy</b>: Spark only records them. Work starts when an <b>action</b> —
+    <code>count()</code>, <code>collect()</code>, <code>saveAsTextFile()</code> — needs a result. The chain of recorded steps is the
+    <b>lineage</b>, and it is the "resilient" in RDD: if an executor dies and a partition is lost, Spark recomputes just that partition
+    from its lineage.</p>
+
+  <figure class="fig wide" id="fig-lineage">
+    <div class="ftitle">▶ Lineage in action <span>define, run, lose a partition</span></div>
+    <div class="ctrl">
+      <button class="btn" data-act="define">① Define transformations</button>
+      <button class="btn primary" data-act="action">② count()</button>
+      <button class="btn bad" data-act="lose">💥 Lose partition 2</button>
+      <label><input type="checkbox" data-act="cache"> cache() the last RDD</label>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div id="lin-grid" class="lin-grid"></div>
+    <div class="status" id="lin-status">Press ① — then ②.</div>
+    <figcaption>Dashed = only a recipe, solid = computed, green = cached. Simplified: real recovery is driven by the scheduler
+      when a task fails or an executor is lost; with <code>cache()</code> only the lost cached block is rebuilt.</figcaption>
+  </figure>
+
+<pre class="reveal"><code>SparkConf conf = new SparkConf().setAppName("word-count");
+JavaSparkContext sc = new JavaSparkContext(conf);
+
+JavaRDD&lt;String&gt; lines = sc.textFile("hdfs:///logs/*.txt");       // nothing is read yet
+JavaPairRDD&lt;String, Integer&gt; counts = lines
+    .flatMap(l -&gt; Arrays.asList(l.split(" ")).iterator())      // narrow
+    .mapToPair(w -&gt; new Tuple2&lt;&gt;(w, 1))                           // narrow
+    .reduceByKey(Integer::sum);                                   // wide: needs a shuffle
+
+counts.cache();                        // a marker, still nothing computed
+long distinct = counts.count();        // action → job 0, fills the cache
+List&lt;Tuple2&lt;String, Integer&gt;&gt; some = counts.take(10);  // job 1, reads cached partitions
+System.out.println(counts.toDebugString());          // prints the lineage</code></pre>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p>Without <code>cache()</code>/<code>persist()</code>, <em>every</em> action recomputes the whole lineage — re-reading the files
+      and re-running every step. Two actions on an expensive RDD = twice the work. Cache what you reuse, and
+      <code>unpersist()</code> it when done; otherwise Spark evicts old cached partitions in least-recently-used (LRU) order.</p>
+  </div>
+
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Storage levels</span>
+    <div class="scroll-x"><table class="mini">
+      <thead><tr><th>Level</th><th>What it does</th><th>Use it when</th></tr></thead>
+      <tbody>
+        <tr><td><code>MEMORY_ONLY</code></td><td>Deserialized objects in the JVM; partitions that do not fit are recomputed when needed. The default for <code>cache()</code> on RDDs.</td><td>Data fits comfortably; fastest access.</td></tr>
+        <tr><td><code>MEMORY_AND_DISK</code></td><td>Partitions that do not fit go to disk and are read from there.</td><td>Recomputing is more expensive than a disk read.</td></tr>
+        <tr><td><code>MEMORY_ONLY_SER</code> / <code>MEMORY_AND_DISK_SER</code></td><td>Stored as serialized bytes: smaller, more CPU to read.</td><td>Memory is tight or GC is a problem.</td></tr>
+        <tr><td><code>DISK_ONLY</code></td><td>Only on disk.</td><td>Very large, rarely re-read data.</td></tr>
+        <tr><td><code>…_2</code> (e.g. <code>MEMORY_ONLY_2</code>)</td><td>Each partition replicated on two nodes.</td><td>You cannot wait for recomputation after a node loss.</td></tr>
+      </tbody></table></div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Transformations build a recipe (lineage); actions run it.</li>
+      <li>Lost partitions are recomputed from lineage — only the lost ones.</li>
+      <li>Each action recomputes from the source unless you persist.</li></ul>
+  </div>
+</section>
+
+<!-- ============ 3. Stages ============ -->
+<section class="chapter" id="stages" data-level="1" data-title="Jobs, stages, tasks">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Jobs, stages and tasks</h2><span class="tag">where the DAG gets cut</span></div></div>
+  <p class="reveal">Each action submits a <b>job</b>. The job is split into <b>stages</b>, and each stage into <b>tasks</b> — one task per
+    partition. Where does one stage end? At a <b>shuffle</b>.</p>
+  <p class="reveal">Dependencies come in two kinds. <b>Narrow</b>: each output partition needs one parent partition (<code>map</code>,
+    <code>filter</code>, <code>flatMap</code>). Spark pipelines narrow steps inside one task — a record flows through
+    <code>flatMap → mapToPair</code> without any intermediate collection. <b>Wide</b> (shuffle): an output partition needs data from
+    <em>many</em> parent partitions (<code>reduceByKey</code>, <code>groupByKey</code>, <code>join</code>, <code>repartition</code>).
+    That needs an all-to-all exchange, so the stage must finish writing before the next can read: a <b>barrier</b>.</p>
+
+  <figure class="fig wide" id="fig-dag">
+    <div class="ftitle">▶ DAG builder <span>add operations, watch the stage cuts</span></div>
+    <div class="ctrl">
+      <button class="btn" data-op="map">+ map</button>
+      <button class="btn" data-op="filter">+ filter</button>
+      <button class="btn" data-op="reduceByKey">+ reduceByKey</button>
+      <button class="btn" data-op="repartition">+ repartition</button>
+      <button class="btn primary" data-act="run">▶ count()</button>
+      <button class="btn bad" data-act="fetch">💥 Lose shuffle files</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div id="dag-row" class="dag-row"></div>
+    <div id="dag-lanes" class="dag-lanes"></div>
+    <div class="status" id="dag-status">Add operations, then run the action.</div>
+    <figcaption>Each stage runs 4 tasks here (4 partitions, illustrative). Simplified: a real re-run after lost shuffle files
+      recomputes only the missing map outputs.</figcaption>
+  </figure>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ There are no dumb questions</span>
+    <div class="qa">
+      <div class="q">Q:</div><div>How many tasks will a stage have?</div>
+      <div class="a">A:</div><div>As many as the partitions of the RDD that stage computes. A file read gets partitions from the input
+        splits. After a shuffle, it is the number you pass (<code>reduceByKey(f, 64)</code>) or <code>spark.default.parallelism</code>;
+        if that is unset, the largest partition count among the parent RDDs.</div>
+      <div class="q">Q:</div><div>Can two stages run at the same time?</div>
+      <div class="a">A:</div><div>Yes, if neither depends on the other — for example the two input sides of a <code>join</code>.
+        A stage only waits for its own parent stages.</div>
+    </div>
+  </div>
+
+  <details class="deeper" data-level="3">
+    <summary>🔬 Go deeper: DAGScheduler vs TaskScheduler</summary>
+    <p>The <code>DAGScheduler</code> (on the driver) implements <em>stage-oriented</em> scheduling. For each job it builds the DAG of
+      stages by cutting the RDD graph at shuffle boundaries. Stages come in two types: <code>ShuffleMapStage</code>s write map output files
+      for a shuffle; the final <code>ResultStage</code> runs the action. It tracks which RDDs are cached and which shuffle outputs already
+      exist, so a later job reuses them and skips stages (the UI shows them as "skipped").</p>
+    <p>It computes a <b>preferred location</b> for each task (from cached blocks, shuffle outputs or input splits) and submits each stage as
+      a <code>TaskSet</code> to the <code>TaskScheduler</code>. The TaskScheduler launches tasks on executors, honoring locality: it waits up
+      to <code>spark.locality.wait</code> (default <code>3s</code>) for a data-local slot before running the task somewhere less local.</p>
+    <p>Failure handling is split too. A task that fails for an ordinary reason is retried by the TaskScheduler; after
+      <code>spark.task.maxFailures</code> (default <code>4</code>) failures of the same task, the job is aborted. But if a task fails with
+      <b>FetchFailed</b> — a shuffle file from an earlier stage is gone — the DAGScheduler resubmits the <em>parent</em> stage to rebuild
+      the missing map outputs. Re-runs of a stage are called <em>attempts</em>.</p>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Action → job → stages (cut at shuffles) → tasks (one per partition).</li>
+      <li>Narrow steps are pipelined inside one task; wide steps need a shuffle and a barrier.</li>
+      <li>Count the shuffles in your code and you know the stage count.</li></ul>
+  </div>
+</section>
+
+<!-- ============ 4. Shuffle ============ -->
+<section class="chapter" id="shuffle" data-level="2" data-title="The shuffle">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>The shuffle, up close</h2><span class="tag">the most expensive line of your job</span></div></div>
+  <p class="reveal">A shuffle moves every record to the partition that owns its key. The Spark docs call it expensive because it costs
+    disk I/O, serialization and network I/O at once. It runs as two sets of tasks, named after MapReduce: <b>map tasks</b> organize
+    their output by target partition, <b>reduce tasks</b> fetch and aggregate it.</p>
+  <p class="reveal">On the map side, results are held in memory until they no longer fit, then sorted by target partition and
+    written to a <b>single file</b> per map task (plus an index telling where each target partition's block starts). Each reduce task
+    reads its block from every map task's file. These shuffle files stay on disk until the RDDs that need them are garbage collected — so
+    a lost executor does not always mean a full recompute, and a long-running job can fill <code>spark.local.dir</code>.</p>
+
+  <figure class="fig wide" id="fig-shuffle">
+    <div class="ftitle">▶ reduceByKey vs groupByKey <span>count what crosses the network</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="reduce">▶ reduceByKey (combine on map side)</button>
+      <button class="btn" data-act="group">▶ groupByKey</button>
+      <button class="btn bad" data-act="skew">💥 Skewed key</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="sh-wrap">
+      <div><div class="sh-h">Map tasks (3 input partitions)</div><div id="sh-map"></div></div>
+      <div><div class="sh-h">Reduce tasks (3 shuffle partitions)</div><div id="sh-red"></div></div>
+    </div>
+    <div class="status" id="sh-status">Pick an operation.</div>
+    <figcaption>Colored chips are records; the key decides the target partition (a = 0, b = 1, c = 2 here — real Spark uses
+      <code>hash(key) mod partitions</code>). Counts are illustrative.</figcaption>
+  </figure>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p><b>Skew</b>: one hot key sends most records to one reduce task. The stage is only done when its slowest task is done, so 199 tasks
+      finish in seconds and one runs for an hour — and may spill or run out of memory. Look for one long bar in the stage's task timeline.
+      Fixes: combine on the map side, salt the hot key, or (DataFrames) let AQE split skewed join partitions (chapter 6).</p>
+  </div>
+
+  <details class="deeper" data-level="3">
+    <summary>🔬 Go deeper: memory, spills and the bypass path</summary>
+    <p><code>reduceByKey</code> and <code>aggregateByKey</code> build in-memory tables on the <em>map</em> side; the <code>…ByKey</code>
+      operations build them on the reduce side. When a table does not fit, Spark <b>spills</b> it to disk, paying extra I/O and GC.
+      A spill is not an error, but many spills in the stage metrics mean the tasks are too big: raise the partition count.</p>
+    <p>The sort-based shuffle manager has a shortcut: with no map-side aggregation and at most
+      <code>spark.shuffle.sort.bypassMergeThreshold</code> (default <code>200</code>) reduce partitions, it writes one temporary file per
+      reduce partition and concatenates them instead of merge-sorting.</p>
+    <p>Element order after a shuffle is <em>not</em> deterministic. Need order? Use <code>sortBy</code>, or
+      <code>repartitionAndSortWithinPartitions</code> to sort while repartitioning.</p>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Shuffle = map tasks write sorted files, reduce tasks fetch their block from every file.</li>
+      <li><code>reduceByKey</code> combines before shipping; <code>groupByKey</code> ships every value.</li>
+      <li>A stage is as slow as its slowest task — skew kills.</li></ul>
+  </div>
+</section>
+
+<!-- ============ 5. Memory ============ -->
+<section class="chapter" id="memory" data-level="2" data-title="Memory & caching">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Unified memory: execution vs storage</h2><span class="tag">who may evict whom</span></div></div>
+  <p class="reveal">Executor memory has two main customers. <b>Execution</b> memory is for computation — shuffles, joins, sorts,
+    aggregations. <b>Storage</b> memory is for cached data and data propagated across the cluster, like broadcasts. Since the unified
+    memory manager, both share one region <b>M</b>, and each can borrow the other's free space.</p>
+  <p class="reveal">The rule that matters: <b>execution may evict storage</b>, but only until storage falls back to a protected region
+    <b>R</b> inside M. <b>Storage never evicts execution.</b> If execution still needs more, it spills to disk.</p>
+
+  <figure class="fig wide" id="fig-mem">
+    <div class="ftitle">▶ Executor heap <span>cache, then run a big sort</span></div>
+    <div class="ctrl">
+      <label>heap <select data-act="heap"><option value="1024">1g</option><option value="4096" selected>4g</option><option value="8192">8g</option></select></label>
+      <button class="btn" data-act="cache">+ cache RDD</button>
+      <button class="btn primary" data-act="exec">+ big sort</button>
+      <button class="btn bad" data-act="huge">💥 sort needs everything</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="stack" id="mem-bar"></div>
+    <div class="legend"><span style="--c:#6b7280">reserved 300 MiB</span><span style="--c:#8e7cc3">user (1 − fraction)</span><span style="--c:#2f9e63">storage</span><span style="--c:#1b6fa8">execution</span><span style="--c:#d9d3c4">free in M</span></div>
+    <div id="mem-nums" class="mem-nums"></div>
+    <div class="status" id="mem-status">Press + cache RDD.</div>
+    <figcaption>Region sizes are computed from the real formulas with defaults <code>spark.memory.fraction = 0.6</code> and
+      <code>spark.memory.storageFraction = 0.5</code>. The amounts cached and sorted are illustrative; off-heap and overhead memory are not shown.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal"><table class="mini">
+    <thead><tr><th>Setting</th><th>Default · what</th><th>Change it when</th></tr></thead>
+    <tbody>
+      <tr><td><code>spark.executor.memory</code></td><td><code>1g</code> · heap per executor</td><td>Always size it for your workload.</td></tr>
+      <tr><td><code>spark.memory.fraction</code></td><td><code>0.6</code> · M as a fraction of (heap − 300 MiB); the rest is for user data structures and Spark metadata</td><td>Rarely; lower it if you see OOMs from your own objects.</td></tr>
+      <tr><td><code>spark.memory.storageFraction</code></td><td><code>0.5</code> · R as a fraction of M, cached blocks immune to eviction</td><td>Rarely; raise it if a cache you depend on keeps getting evicted.</td></tr>
+    </tbody></table></div>
+
+  <div class="box relax reveal"><span class="lbl">😌 Relax</span>
+    <p>The Spark tuning guide says most users should not need to touch the two fractions. Tune <code>spark.executor.memory</code> and
+      your partition counts first.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>M = (heap − 300 MiB) × 0.6; R = M × 0.5.</li>
+      <li>Execution can evict cached blocks down to R; storage cannot evict execution.</li>
+      <li>When execution runs out, it spills.</li></ul>
+  </div>
+</section>
+
+<!-- ============ 6. SQL ============ -->
+<section class="chapter" id="sql" data-level="2" data-title="Catalyst & AQE">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>DataFrames: an optimizer between you and the RDDs</h2><span class="tag">you say what, Catalyst decides how</span></div></div>
+  <p class="reveal">With RDDs, Spark runs your lambdas as written — it cannot look inside them. A DataFrame query is different: it is a
+    tree of relational operators Spark <em>understands</em>. So the <b>Catalyst</b> optimizer can rewrite it before anything runs.
+    <code>df.explain(true)</code> prints the four phases: <b>Parsed Logical Plan</b> → <b>Analyzed Logical Plan</b> (names and types
+    resolved against the catalog) → <b>Optimized Logical Plan</b> (rule-based rewrites) → <b>Physical Plan</b> (concrete operators such as
+    a sort-merge join).</p>
+
+  <figure class="fig wide" id="fig-plan">
+    <div class="ftitle">▶ A query through Catalyst <span>step through the phases</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="next">Next phase ▶</button>
+      <button class="btn bad" data-act="aqe">💥 Runtime surprise: dim side is tiny</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="pl-steps" id="pl-steps"></div>
+    <pre class="pl-tree" id="pl-tree"></pre>
+    <div class="status" id="pl-status">Press Next.</div>
+    <figcaption>Plan text is simplified and shortened, not literal <code>explain()</code> output. The size of <code>countries</code> is illustrative.</figcaption>
+  </figure>
+
+  <p class="reveal">Two more layers work below the plan. <b>Whole-stage code generation</b> compiles a subtree of supported operators
+    into a single Java function, so rows are not passed through one virtual call per operator. And <b>Adaptive Query Execution (AQE)</b>,
+    on by default (<code>spark.sql.adaptive.enabled = true</code>), re-optimizes the plan <em>during</em> execution using real statistics from
+    finished shuffle stages.</p>
+
+  <div class="scroll-x reveal"><table class="mini">
+    <thead><tr><th>AQE feature</th><th>What it does</th><th>Helps when</th></tr></thead>
+    <tbody>
+      <tr><td>Coalesce post-shuffle partitions</td><td>Merges contiguous small shuffle partitions up to <code>spark.sql.adaptive.advisoryPartitionSizeInBytes</code>.</td><td>The default <code>spark.sql.shuffle.partitions = 200</code> is too many for your data.</td></tr>
+      <tr><td>Sort-merge → broadcast hash join</td><td>If a join side turns out smaller than the adaptive broadcast threshold at runtime, switches the join.</td><td>Filters made one side tiny, but estimates did not know.</td></tr>
+      <tr><td>Skew join</td><td>Splits (and replicates if needed) skewed partitions of a sort-merge join into evenly sized tasks.</td><td>One join key is hot.</td></tr>
+    </tbody></table></div>
+
+  <div class="box fireside reveal"><span class="lbl">🔥 Fireside chat</span>
+    <div class="fire">
+      <div class="line l1"><span class="who">RDD</span><span>I run exactly what they wrote. Honest. Predictable.</span></div>
+      <div class="line l2"><span class="who">DataFrame</span><span>You run a <code>filter</code> after a <code>join</code> because they wrote it that way. I push it below the join, so the join reads less data.</span></div>
+      <div class="line l1"><span class="who">RDD</span><span>My lambdas can do anything.</span></div>
+      <div class="line l2"><span class="who">DataFrame</span><span>Which is exactly why nobody can optimize them.</span></div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Catalyst: parsed → analyzed → optimized → physical plan.</li>
+      <li>Code generation fuses operators into one function.</li>
+      <li>AQE fixes the plan at runtime: fewer partitions, broadcast joins, skew splits.</li></ul>
+  </div>
+</section>
+
+<section class="part" id="part-2" data-level="1">
+  <span class="part-no">Part II</span><h2>Kafka with DStreams</h2><p>The micro-batch model, the direct Kafka stream, offsets and delivery guarantees, state and windows, and keeping up with the topic.</p>
+</section>
+
+<!-- ============ 7. DStream ============ -->
+<section class="chapter" id="dstream" data-level="1" data-title="DStream model">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>A DStream is a conveyor belt of RDDs</h2><span class="tag">streaming = many tiny batch jobs</span></div></div>
+  <p class="reveal">Spark Streaming does not process records one by one. It cuts time into <b>batch intervals</b> (say 10 s). Everything
+    that arrived during an interval becomes one RDD. A <b>DStream</b> (discretized stream) is just that series of RDDs, and every operation
+    on a DStream is applied to each RDD in it.</p>
+  <p class="reveal">So everything from Part I still holds — every batch is a normal Spark job with stages, tasks and shuffles. And like
+    RDDs, DStreams are lazy: only <b>output operations</b> (<code>foreachRDD</code>, <code>print</code>, <code>saveAs…Files</code>) make
+    Spark do the work. No output operation, no processing. By default, output operations run one at a time, in the order you defined them.</p>
+
+  <figure class="fig wide" id="fig-batches">
+    <div class="ftitle">▶ Batches on a timeline <span>processing time vs batch interval</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="ok">▶ Healthy: 7 s per 10 s batch</button>
+      <button class="btn bad" data-act="slow">💥 Slow sink: 12 s per batch</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="scroll-x"><svg viewBox="0 0 660 200" id="bt-svg"></svg></div>
+    <div class="status" id="bt-status">Pick a scenario.</div>
+    <figcaption>Batch interval 10 s. One batch job runs at a time; a new batch waits while the previous one is still running.
+      Durations are illustrative.</figcaption>
+  </figure>
+
+  <p class="reveal">The Streaming tab of the web UI shows the two numbers that matter. <b>Processing time</b> is how long each batch took.
+    <b>Scheduling delay</b> is how long a batch waited in the queue for earlier batches to finish. If processing time is consistently above
+    the batch interval, or scheduling delay keeps growing, the application is falling behind.</p>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it! — connections in foreachRDD</span>
+    <p>Code in <code>foreachRDD</code> runs on the <em>driver</em>; code inside <code>rdd.foreach…</code> runs on <em>executors</em>.
+      Creating a DB connection at the driver level and using it inside <code>rdd.foreach</code> fails (the connection is not serializable).
+      Creating one per record works but is slow. Create one per partition — or take one from a pool:</p>
+<pre><code>stream.foreachRDD(rdd -&gt; {                   // driver
+  rdd.foreachPartition(records -&gt; {           // executor, once per partition
+    Connection c = ConnectionPool.get();      // your own lazily created pool
+    while (records.hasNext()) c.send(records.next());
+    ConnectionPool.release(c);
+  });
+});</code></pre>
+  </div>
+
+  <details class="deeper" data-level="3">
+    <summary>🔬 Go deeper: the StreamingContext rules</summary>
+    <p>Once a <code>StreamingContext</code> is started, you cannot add new streaming computations to it. Once stopped, it cannot be
+      restarted. Only one can be active per JVM. <code>stop()</code> also stops the <code>SparkContext</code> unless you pass
+      <code>stopSparkContext = false</code>. The batch interval is fixed when you create the context and should come from your latency
+      needs and what the cluster can sustain.</p>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>DStream = one RDD per batch interval; each batch = ordinary Spark jobs.</li>
+      <li>Output operations trigger the work, one at a time by default.</li>
+      <li>Stable only if processing time &lt; batch interval.</li></ul>
+  </div>
+</section>
+
+<!-- ============ 8. Direct ============ -->
+<section class="chapter" id="direct" data-level="1" data-title="Direct Kafka stream">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>The direct Kafka stream</h2><span class="tag">one Kafka partition = one Spark partition</span></div></div>
+  <p class="reveal">The Kafka integration for Spark Streaming is <code>spark-streaming-kafka-0-10</code> (for Kafka brokers 0.10.0+).
+    It is a <b>direct</b> stream: there is no long-running receiver. At every batch the driver looks up the latest offsets for each
+    partition and defines the batch as a set of <b>offset ranges</b> — "partition 0 from 1 200 to 1 450". The resulting
+    <code>KafkaRDD</code> has exactly one Spark partition per Kafka partition, and executors read their range from Kafka when the task runs.</p>
+
+  <figure class="fig wide" id="fig-direct">
+    <div class="ftitle">▶ From topic to tasks <span>batch by batch</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="batch">▶ Next batch</button>
+      <button class="btn" data-act="addp">+ Add partition P4</button>
+      <button class="btn bad" data-act="kill">💥 Kill executor B</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="di-grid">
+      <div><div class="sh-h">Topic <code>orders</code></div><div id="di-topic"></div></div>
+      <div><div class="sh-h">Driver: offset ranges of this batch</div><div class="scroll-x"><table class="mini" id="di-ranges"></table></div></div>
+      <div><div class="sh-h">Executors (cached consumers)</div><div id="di-exec"></div></div>
+    </div>
+    <div class="status" id="di-status">Press ▶ Next batch.</div>
+    <figcaption>Offsets and message rates are illustrative. Partition-to-executor placement mimics <code>PreferConsistent</code> (an even spread),
+      not its exact algorithm.</figcaption>
+  </figure>
+
+<pre class="reveal"><code>SparkConf conf = new SparkConf().setAppName("orders-stream");
+JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(10));
+
+Map&lt;String, Object&gt; kafkaParams = new HashMap&lt;&gt;();
+kafkaParams.put("bootstrap.servers", "broker1:9092,broker2:9092");
+kafkaParams.put("key.deserializer", StringDeserializer.class);
+kafkaParams.put("value.deserializer", StringDeserializer.class);
+kafkaParams.put("group.id", "orders-stream");         // one group.id per stream
+kafkaParams.put("auto.offset.reset", "latest");
+kafkaParams.put("enable.auto.commit", false);          // we commit ourselves (next chapter)
+
+JavaInputDStream&lt;ConsumerRecord&lt;String, String&gt;&gt; stream =
+    KafkaUtils.createDirectStream(
+        jssc,
+        LocationStrategies.PreferConsistent(),
+        ConsumerStrategies.&lt;String, String&gt;Subscribe(List.of("orders"), kafkaParams));
+
+stream.mapToPair(r -&gt; new Tuple2&lt;&gt;(r.key(), r.value()))
+      .foreachRDD(rdd -&gt; { /* output */ });
+
+jssc.start();
+jssc.awaitTermination();</code></pre>
+  <p class="reveal">Depend only on <code>org.apache.spark:spark-streaming-kafka-0-10_2.13</code>; the docs warn not to add
+    <code>kafka-clients</code> yourself, because mismatched versions fail in hard-to-diagnose ways. Mark <code>spark-core</code> and
+    <code>spark-streaming</code> as <code>provided</code>.</p>
+
+  <div class="scroll-x reveal"><table class="mini">
+    <thead><tr><th>Option</th><th>What it does</th><th>Use it when</th></tr></thead>
+    <tbody>
+      <tr><td><code>LocationStrategies.PreferConsistent</code></td><td>Spreads partitions evenly across available executors.</td><td>Almost always.</td></tr>
+      <tr><td><code>LocationStrategies.PreferBrokers</code></td><td>Prefers the executor on the host of the partition's Kafka leader.</td><td>Executors run on the same hosts as the brokers.</td></tr>
+      <tr><td><code>LocationStrategies.PreferFixed</code></td><td>Your explicit partition → host map; unlisted partitions use a consistent location.</td><td>Load is heavily skewed between partitions.</td></tr>
+      <tr><td><code>ConsumerStrategies.Subscribe</code></td><td>Fixed collection of topics; reacts to partitions added while running.</td><td>The normal case.</td></tr>
+      <tr><td><code>ConsumerStrategies.SubscribePattern</code></td><td>Topics matching a regex.</td><td>Topic-per-tenant or similar naming schemes.</td></tr>
+      <tr><td><code>ConsumerStrategies.Assign</code></td><td>Fixed collection of partitions, optionally with starting offsets.</td><td>You store offsets yourself (next chapter).</td></tr>
+    </tbody></table></div>
+
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Cached consumers</span>
+    <p>A Kafka consumer pre-fetches messages into buffers, so creating one per batch would waste them. Executors therefore keep
+      <b>cached consumers</b>, keyed by topic-partition and <code>group.id</code> — which is why each <code>createDirectStream</code> call
+      should have its own <code>group.id</code>. The cache holds 64 consumers per executor by default
+      (<code>spark.streaming.kafka.consumer.cache.maxCapacity</code>); raise it if you have more than 64 × executors partitions.
+      <code>spark.streaming.kafka.consumer.cache.enabled = false</code> turns caching off.</p>
+  </div>
+
+  <details class="deeper" data-level="3">
+    <summary>🔬 Go deeper: what the driver does each batch</summary>
+    <p>In <code>DirectKafkaInputDStream.compute()</code>, the driver's own consumer is polled (the source calls it
+      <code>paranoidPoll</code>) and asked for the latest offsets with <code>seekToEnd</code>; newly assigned partitions are picked up here.
+      The latest offsets are <em>clamped</em> by the rate limit (chapter 11), turned into <code>OffsetRange(topic, partition, from, until)</code>
+      objects, and wrapped in a <code>KafkaRDD</code> with preferred hosts from the location strategy. The ranges are reported to the UI's
+      input info, and <code>currentOffsets</code> moves to the until-offsets. Last, queued offset commits are sent (<code>commitAll()</code>).
+      Also in the source: persisting or windowing the raw stream logs an error, because a <code>ConsumerRecord</code> is not
+      serializable — <code>map</code> to your own fields first.</p>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Direct stream: the driver defines offset ranges; tasks read them from Kafka.</li>
+      <li>1 Kafka partition = 1 RDD partition = 1 task per batch.</li>
+      <li>More Kafka partitions = more parallelism per batch.</li></ul>
+  </div>
+</section>
+
+<!-- ============ 9. Offsets ============ -->
+<section class="chapter" id="offsets" data-level="1" data-title="Offsets & guarantees">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Offsets and delivery guarantees</h2><span class="tag">when you save the bookmark decides everything</span></div></div>
+  <p class="reveal">Spark output operations are <b>at-least-once</b>: after a failure, a batch may be written again. What you get end to end
+    depends on <em>where and when</em> you store the offsets. The docs list three options, in order of increasing reliability and code
+    complexity — plus one trap.</p>
+
+  <figure class="fig wide" id="fig-offsets">
+    <div class="ftitle">▶ Crash simulator <span>pick a strategy, crash at a bad moment</span></div>
+    <div class="ctrl">
+      <label>strategy <select data-act="strat">
+        <option value="auto">enable.auto.commit = true (trap)</option>
+        <option value="ckpt">Checkpoint</option>
+        <option value="commit" selected>commitAsync after output</option>
+        <option value="tx">Offsets in the same DB transaction</option>
+      </select></label>
+      <button class="btn primary" data-act="ok">▶ Normal batch</button>
+      <button class="btn bad" data-act="crash">💥 Crash after output</button>
+      <button class="btn bad" data-act="early">💥 Crash before output</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="of-steps" id="of-steps"></div>
+    <div class="of-out"><div><div class="sh-h">Sink (rows written)</div><div id="of-sink" class="of-sink"></div></div>
+      <div><div class="sh-h">Stored offset</div><div id="of-stored" class="of-big"></div></div></div>
+    <div class="status" id="of-status">Pick a strategy and run a batch.</div>
+    <figcaption>One batch = offsets 100–200 of one partition (illustrative). Auto-commit timing is shown as "committed early"; in reality the
+      Kafka consumer commits on its own schedule, which is exactly why the result is undefined.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal"><table class="mini">
+    <thead><tr><th>Strategy</th><th>How</th><th>Result after a crash</th><th>Catch</th></tr></thead>
+    <tbody>
+      <tr><td>Checkpoint</td><td><code>jssc.checkpoint(dir)</code>; offsets are saved in the checkpoint</td><td>Repeated output → output must be idempotent</td><td>Cannot recover from a checkpoint after changing application code.</td></tr>
+      <tr><td>Kafka <code>commitAsync</code></td><td>Commit offset ranges after the output succeeded</td><td>Repeated output → idempotent</td><td>Kafka is durable across code changes, but not transactional with your sink.</td></tr>
+      <tr><td>Your own transactional store</td><td>Write results and offsets in one transaction; start with <code>Assign</code> from stored offsets</td><td>Equivalent of exactly-once</td><td>Most code; you must detect repeated or skipped ranges.</td></tr>
+      <tr><td><code>enable.auto.commit = true</code></td><td>Consumer commits periodically by itself</td><td>Undefined: polled ≠ written</td><td>Do not use; set it to <code>false</code>.</td></tr>
+    </tbody></table></div>
+
+<pre class="reveal"><code>// Option 2: commit to Kafka after the output is stored
+stream.foreachRDD(rdd -&gt; {
+  OffsetRange[] ranges = ((HasOffsetRanges) rdd.rdd()).offsetRanges();  // first call on the stream!
+  rdd.foreachPartition(records -&gt; {
+    OffsetRange o = ranges[TaskContext.get().partitionId()];            // this task's range
+    writeIdempotently(records);                                        // e.g. upsert by key
+  });
+  ((CanCommitOffsets) stream.inputDStream()).commitAsync(ranges);
+});</code></pre>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p>The cast to <code>HasOffsetRanges</code> (and to <code>CanCommitOffsets</code>) only works on the stream returned by
+      <code>createDirectStream</code>, as the <em>first</em> method in the chain — not after <code>map</code>. And after anything that
+      shuffles or repartitions (<code>reduceByKey</code>, <code>window</code>), RDD partition <i>i</i> is no longer Kafka partition <i>i</i>.
+      Grab the ranges first, transform after.</p>
+  </div>
+
+  <details class="deeper" data-level="2">
+    <summary>🔬 Go deeper: the transactional pattern (Java sketch)</summary>
+<pre><code>Map&lt;TopicPartition, Long&gt; from = db.loadOffsets("orders-stream");      // your table
+JavaInputDStream&lt;ConsumerRecord&lt;String, String&gt;&gt; stream =
+    KafkaUtils.createDirectStream(jssc, LocationStrategies.PreferConsistent(),
+        ConsumerStrategies.&lt;String, String&gt;Assign(from.keySet(), kafkaParams, from));
+
+stream.foreachRDD(rdd -&gt; {
+  OffsetRange[] ranges = ((HasOffsetRanges) rdd.rdd()).offsetRanges();
+  List&lt;Result&gt; results = compute(rdd);          // e.g. an aggregate collected to the driver
+  db.inTransaction(tx -&gt; {
+    tx.save(results);
+    // update only where stored offset == range.fromOffset(); otherwise roll back
+    tx.advanceOffsets(ranges);
+  });
+});</code></pre>
+    <p>This works even for aggregated outputs, which are hard to make idempotent. The offset check inside the transaction is what detects
+      repeated or skipped ranges.</p>
+    <p data-level="3"><b>L3 detail:</b> <code>commitAsync</code> only <em>queues</em> the ranges (it is thread-safe). The driver sends queued
+      commits the next time the stream computes a batch. So a crash right after <code>commitAsync</code> can still replay the last batch —
+      one more reason to write idempotently.</p>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Always <code>enable.auto.commit = false</code>.</li>
+      <li>Store offsets <em>after</em> output (idempotent sink) or <em>with</em> output (one transaction).</li>
+      <li>Read offset ranges on the direct stream before any transformation.</li></ul>
+  </div>
+</section>
+
+<!-- ============ 10. State ============ -->
+<section class="chapter" id="state" data-level="2" data-title="State, windows, checkpoints">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>State, windows and checkpointing</h2><span class="tag">remembering across batches</span></div></div>
+  <p class="reveal"><b>Window</b> operations compute over the last <i>N</i> batches. Two parameters: <b>window length</b> (how much time) and
+    <b>sliding interval</b> (how often). Both must be multiples of the batch interval — the source code rejects the DStream otherwise.
+    <code>reduceByKeyAndWindow(f, Durations.seconds(30), Durations.seconds(10))</code> gives per-key totals over 30 s, every 10 s.</p>
+
+  <figure class="fig wide" id="fig-window">
+    <div class="ftitle">▶ Sliding window <span>length 3 batches, slide 2</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="slide">▶ Slide</button>
+      <label><input type="checkbox" data-act="inv" checked> inverse function (add new, subtract old)</label>
+      <button class="btn bad" data-act="bad">💥 Slide = 1.5 batches</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div id="wn-row" class="wn-row"></div>
+    <div class="status" id="wn-status">Press ▶ Slide.</div>
+    <figcaption>Batch interval 1 unit, window 3, slide 2 — the same shape as the Spark docs' figure. Counts are illustrative.</figcaption>
+  </figure>
+
+  <p class="reveal">With an <b>inverse function</b> — <code>reduceByKeyAndWindow(f, invF, 30 s, 10 s)</code> — Spark updates the previous
+    window result: add what entered, subtract what left. Cheaper for long windows, but it needs checkpointing. Windowed DStreams are
+    persisted in memory automatically.</p>
+  <p class="reveal"><b>State</b> across the whole stream: <code>updateStateByKey(func)</code> calls your function every batch for every
+    key, with the new values and the previous state. It requires a checkpoint directory.</p>
+
+  <h3 class="reveal">Two kinds of checkpoint</h3>
+  <div class="scroll-x reveal"><table class="mini">
+    <thead><tr><th>Kind</th><th>What is saved</th><th>Needed for</th></tr></thead>
+    <tbody>
+      <tr><td>Metadata checkpoint</td><td>Configuration, DStream operations, incomplete batches</td><td>Recovering from driver failure</td></tr>
+      <tr><td>Data (RDD) checkpoint</td><td>Generated RDDs of stateful transformations</td><td>Cutting lineage that would grow forever; mandatory with <code>updateStateByKey</code> or inverse windows</td></tr>
+    </tbody></table></div>
+
+<pre class="reveal"><code>String checkpointDir = "hdfs:///checkpoints/orders-stream";
+
+JavaStreamingContext ctx = JavaStreamingContext.getOrCreate(checkpointDir, () -&gt; {
+  JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(10));
+  // create ALL DStreams and output operations here
+  jssc.checkpoint(checkpointDir);
+  return jssc;
+});
+ctx.start();
+ctx.awaitTermination();</code></pre>
+  <p class="reveal">If the directory exists, the context is rebuilt from it; otherwise the function creates a fresh one. The driver must
+    also be <em>restarted</em> automatically after a failure — that is the job of your deployment (cluster mode supervision, Kubernetes,
+    YARN attempts), not of <code>getOrCreate</code>.</p>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p>A checkpoint holds serialized Java objects of <em>your</em> code. After an upgrade, deserializing them with changed classes may fail.
+      The docs' options: run the new version in parallel and then stop the old one, or stop gracefully and start the new version with a
+      <em>new</em> checkpoint directory. With Kafka offsets stored outside the checkpoint (previous chapter), the new version knows where to start.</p>
+  </div>
+
+  <details class="deeper" data-level="3">
+    <summary>🔬 Go deeper: checkpoint interval</summary>
+    <p>Checkpointing RDDs costs a write to reliable storage, so batches that checkpoint take longer. For stateful DStreams the default interval
+      is a multiple of the batch interval of at least 10 s. The docs suggest trying 5–10 sliding intervals, set with
+      <code>dstream.checkpoint(interval)</code>. Accumulators and broadcast variables are <em>not</em> recovered from a checkpoint — create
+      them as lazily initialized singletons so they are rebuilt after a restart.</p>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Window length and slide are multiples of the batch interval.</li>
+      <li>Stateful ops and inverse windows require <code>jssc.checkpoint(dir)</code>.</li>
+      <li>Code changes break checkpoint recovery — plan upgrades.</li></ul>
+  </div>
+</section>
+
+<!-- ============ 11. Rate ============ -->
+<section class="chapter" id="rate" data-level="2" data-title="Backpressure & ops">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Keeping up: rate limits, backpressure, operations</h2><span class="tag">never bite off a 1-hour backlog</span></div></div>
+  <p class="reveal">A direct stream, left alone, takes <em>everything</em> between the last offset and the latest one in a single batch. After
+    a restart with an hour of backlog, that one batch is enormous. Two settings bound it.
+    <code>spark.streaming.kafka.maxRatePerPartition</code> is a hard ceiling in records per second per partition, so the batch size is at most
+    <i>rate × partitions × batch seconds</i>. <code>spark.streaming.backpressure.enabled</code> makes Spark estimate, from recent batch
+    delays and processing times, how fast it can go, and set the rate dynamically — still capped by <code>maxRatePerPartition</code> if set.</p>
+
+  <figure class="fig wide" id="fig-rate">
+    <div class="ftitle">▶ Restart after downtime <span>batch sizes over time</span></div>
+    <div class="ctrl">
+      <label><input type="checkbox" data-act="cap"> maxRatePerPartition = 1 000</label>
+      <label><input type="checkbox" data-act="bp"> backpressure</label>
+      <button class="btn primary" data-act="run">▶ Run 12 batches</button>
+      <button class="btn bad" data-act="backlog">💥 Restart with 1 h backlog</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="scroll-x"><svg viewBox="0 0 660 230" id="rt-svg"></svg></div>
+    <div class="status" id="rt-status">Tick options, then run.</div>
+    <figcaption>Illustrative numbers: 4 partitions, 10 s batches, incoming 2 000 rec/s, capacity 5 000 rec/s. The backpressure estimator is
+      simplified to "last batch's observed throughput"; Spark's default estimator is a PID controller.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal"><table class="mini">
+    <thead><tr><th>Setting</th><th>Default · what</th><th>Use it when</th></tr></thead>
+    <tbody>
+      <tr><td><code>spark.streaming.kafka.maxRatePerPartition</code></td><td>not set · max records/s read from each partition</td><td>Always in production — it bounds the worst batch.</td></tr>
+      <tr><td><code>spark.streaming.kafka.minRatePerPartition</code></td><td><code>1</code> · min records/s per partition</td><td>Rarely changed.</td></tr>
+      <tr><td><code>spark.streaming.backpressure.enabled</code></td><td><code>false</code> · adapt the rate to processing speed</td><td>Load or processing speed varies.</td></tr>
+      <tr><td><code>spark.streaming.backpressure.initialRate</code></td><td>not set · max rate for the first batch when backpressure is on</td><td>The first batch after a restart must be small.</td></tr>
+      <tr><td><code>spark.streaming.stopGracefullyOnShutdown</code></td><td><code>false</code> · on JVM shutdown, finish received data before stopping</td><td>Deployments that stop the app with a signal.</td></tr>
+      <tr><td><code>spark.streaming.ui.retainedBatches</code></td><td><code>1000</code> · batches kept by the Streaming UI</td><td>You need a longer history in the UI.</td></tr>
+    </tbody></table></div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Production checklist for a Kafka DStream job</span>
+    <ol>
+      <li>Batch interval from latency needs; confirm processing time stays well below it under peak load.</li>
+      <li>Kafka partitions ≥ the parallelism you want per batch — each batch has one task per partition.</li>
+      <li><code>enable.auto.commit = false</code>; offsets stored after (idempotent) or with (transactional) the output.</li>
+      <li><code>maxRatePerPartition</code> set; backpressure on if load varies.</li>
+      <li>If the batch interval exceeds the consumer's session timeout, raise <code>heartbeat.interval.ms</code> and
+        <code>session.timeout.ms</code>; for batches over 5 minutes the broker's <code>group.max.session.timeout.ms</code> too.</li>
+      <li>Checkpoint dir on reliable storage if you use state; driver restart handled by the deployment.</li>
+      <li>Alert on scheduling delay and consumer lag, not only on errors.</li>
+    </ol>
+  </div>
+
+  <div class="box geek reveal"><span class="lbl">🤓 Where next: Structured Streaming</span>
+    <p>For new pipelines the docs point to Structured Streaming: DataFrame queries over an unbounded table, with the Catalyst optimizer from
+      chapter 6 and its own Kafka source. The ideas from this guide — offsets as the source of truth, idempotent or transactional sinks,
+      bounded batch sizes — carry over directly.</p>
+  </div>
+
+  <details class="deeper" data-level="3">
+    <summary>🔬 Go deeper: how the rate limit is split across partitions</summary>
+    <p>In <code>DirectKafkaInputDStream.maxMessagesPerPartition</code>, the backpressure rate is a rate for the whole stream. It is divided
+      among partitions in proportion to their <b>lag</b> — a partition with 80% of the backlog gets 80% of the rate — then each share is capped
+      at <code>maxRatePerPartition</code>. Before the estimator has a value, <code>spark.streaming.backpressure.initialRate</code> is used.
+      The per-partition limit × batch seconds becomes the number of messages, never below <code>minRatePerPartition</code> records (default <code>1</code>) — the source compares that floor directly with the message count.</p>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Without limits, the first batch after downtime takes the whole backlog.</li>
+      <li><code>maxRatePerPartition</code> = hard ceiling; backpressure = adaptive rate below it.</li>
+      <li>Watch scheduling delay and lag.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="final" data-title="Exam + cheat sheet">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Exam + cheat sheet</h2><span class="tag">check what stuck</span></div></div>
+  <div id="quiz"></div>
+  <div class="score" id="score">Score: 0 / 0</div>
+  <h3 class="reveal">Cheat sheet</h3>
+  <div class="scroll-x reveal">
+  <table class="mini cheat">
+    <thead><tr><th>Parameter / API</th><th>Default / what it does</th><th>Use when</th></tr></thead>
+    <tbody>
+      <tr><td>rdd.cache() / persist(level)</td><td>keep computed partitions (<code>cache()</code> = <code>MEMORY_ONLY</code>)</td><td>an RDD feeds more than one action</td></tr>
+      <tr><td>rdd.toDebugString()</td><td>prints the lineage</td><td>finding shuffles in RDD code</td></tr>
+      <tr><td>df.explain(true)</td><td>parsed, analyzed, optimized, physical plans</td><td>checking joins and pushdowns</td></tr>
+      <tr><td>spark.default.parallelism</td><td>partitions after RDD shuffles if not given</td><td>RDD jobs with too few/many tasks</td></tr>
+      <tr><td>spark.sql.shuffle.partitions</td><td><code>200</code> · DataFrame shuffle partitions</td><td>AQE coalescing is not enough</td></tr>
+      <tr><td>spark.sql.adaptive.enabled</td><td><code>true</code> · runtime re-optimization</td><td>leave on</td></tr>
+      <tr><td>spark.sql.autoBroadcastJoinThreshold</td><td><code>10MB</code> · broadcast smaller join sides</td><td>small dimension tables</td></tr>
+      <tr><td>spark.executor.memory</td><td><code>1g</code> · executor heap</td><td>always size it</td></tr>
+      <tr><td>spark.memory.fraction / storageFraction</td><td><code>0.6</code> / <code>0.5</code></td><td>rarely</td></tr>
+      <tr><td>spark.task.maxFailures</td><td><code>4</code> · failures of one task before the job fails</td><td>flaky environments</td></tr>
+      <tr><td>spark.locality.wait</td><td><code>3s</code> · wait for a data-local slot</td><td>tasks idle waiting for locality</td></tr>
+      <tr><td>KafkaUtils.createDirectStream</td><td>one RDD partition per Kafka partition</td><td>every Kafka DStream</td></tr>
+      <tr><td>HasOffsetRanges / CanCommitOffsets</td><td>offset ranges of a batch / queue a commit</td><td>first call on the direct stream</td></tr>
+      <tr><td>enable.auto.commit</td><td>set to <code>false</code></td><td>always with DStreams</td></tr>
+      <tr><td>spark.streaming.kafka.maxRatePerPartition</td><td>not set · rec/s per partition</td><td>always in production</td></tr>
+      <tr><td>spark.streaming.backpressure.enabled</td><td><code>false</code></td><td>varying load</td></tr>
+      <tr><td>spark.streaming.kafka.consumer.cache.maxCapacity</td><td><code>64</code> cached consumers per executor</td><td>more than 64 × executors partitions</td></tr>
+      <tr><td>JavaStreamingContext.getOrCreate</td><td>rebuild from checkpoint or create</td><td>driver recovery, stateful ops</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box relax reveal"><span class="lbl">🎓 Congratulations</span>
+    <p>Back to the opening question. A 10-second batch that takes 12 seconds is never done before the next one is due. Batches queue up:
+      every batch waits about 2 s longer than the one before, so after an hour (360 batches) the newest one waits roughly 12 minutes
+      before it even starts, and the Kafka lag grows the whole time. Nothing crashes — the Streaming tab shows it: <b>processing time</b>
+      above the batch interval, and <b>scheduling delay</b> climbing without end. The fix is to make batches faster (more partitions and
+      executors, a cheaper sink, fewer shuffles) and to bound them with <code>maxRatePerPartition</code> and backpressure. Next step: open
+      the Spark UI of a real job and find its stages, shuffles and slowest task.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  Educational guide in a single HTML file — no frameworks, no build step, no network dependencies.
+  Facts checked in September 2026 against the Apache Spark 4.2.0 documentation (spark.apache.org/docs/latest: RDD programming guide,
+  cluster overview, configuration, tuning, SQL performance tuning, Spark Streaming guide, Kafka 0-10 integration guide) and the Spark source
+  code (tag v4.0.0: DAGScheduler, DirectKafkaInputDStream, WindowedDStream, JavaStreamingContext). Apache Spark, Spark and Apache Kafka are
+  trademarks of the Apache Software Foundation.
+</footer>
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sleep = ms => new Promise(r => setTimeout(r, REDUCE ? 0 : ms));
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, text, attrs = {}) {
+  const t = S('text', Object.assign({ x, y, 'text-anchor': 'middle' }, attrs), parent);
+  t.textContent = text;
+  return t;
+}
+function H(tag, cls, html, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const ease = k => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (REDUCE || ms <= 0) { fn(1); return res(); }
+    const t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / ms);
+      fn(ease(k));
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+function flyDot(parent, x0, y0, x1, y1, { ms = 600, color, r = 5 } = {}) {
+  const c = S('circle', { cx: x0, cy: y0, r, class: 'fly' }, parent);
+  c.style.fill = color || C.accent;
+  return tween(ms, k => { c.setAttribute('cx', x0 + (x1 - x0) * k); c.setAttribute('cy', y0 + (y1 - y0) * k); }).then(() => c.remove());
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function readColors() { for (const k of ['ink', 'paper', 'paper2', 'mut', 'line', 'accent', 'accent2', 'ok', 'bad', 'warn', 'dim', 'card']) C[k] = cssVar('--' + k); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function ringXY(cx, cy, r, f) { const a = f * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+
+/* ---------- structure: auto numbering, TOC, course map, level chips, depth switch ---------- */
+const LEVELS = ['Essentials', 'Practitioner', 'Internals'];
+const lvlOf = el => +(el.dataset.level || 1);
+const levelled = (root = document) => $$('main [data-level]', root).filter(e => !e.closest('#map'));   // content, not the map's own links
+const DEPTH_KEY = 'akp-depth:' + location.pathname;
+const blocks = $$('main > section.part, main > section.chapter');
+const chapters = blocks.filter(b => b.classList.contains('chapter'));
+chapters.forEach((s, i) => { const n = $('.chap-num', s); if (n && !n.textContent.trim()) n.textContent = i; });
+const titleOf = s => s.dataset.title || $('h2', s).textContent.trim();
+(() => {
+  const toc = $('#toc'), map = $('#map');
+  if (toc) toc.innerHTML = '<b>Contents</b>';
+  let grp = null;
+  for (const b of blocks) {
+    const lv = lvlOf(b);
+    if (b.classList.contains('part')) {
+      const name = `${$('.part-no', b)?.textContent || ''} · ${$('h2', b).textContent}`;
+      if (toc) H('div', 'toc-part', null, toc).textContent = name;
+      if (map) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = name; grp.dataset.level = lv; }
+      continue;
+    }
+    const num = $('.chap-num', b)?.textContent || '';
+    if (toc) { const a = H('a', '', null, toc); a.href = '#' + b.id; a.textContent = `${num} · ${titleOf(b)}`; a.dataset.level = lv; }
+    if (map) {
+      if (!grp) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = 'Start'; }
+      const a = H('a', 'map-ch l' + lv, `<i>${num}</i><span></span>`, grp); a.href = '#' + b.id; a.dataset.level = lv;
+      $('span', a).textContent = titleOf(b);
+    }
+  }
+  const multi = levelled().some(e => lvlOf(e) > 1);
+  // level chips on chapter headings and "go deeper" summaries
+  chapters.forEach(s => { if (multi && s.dataset.level) { const h = $('.chap-head h2', s); if (h) H('span', 'lvl-chip l' + lvlOf(s), `L${lvlOf(s)} · ${LEVELS[lvlOf(s) - 1] || ''}`, h); } });
+  $$('details.deeper').forEach(d => { const sm = $('summary', d); if (sm) sm.insertAdjacentHTML('afterbegin', `<span class="lvl-chip l${lvlOf(d)}">L${lvlOf(d)}</span>`); });
+  // jumping to a chapter deeper than the current depth raises the depth first
+  $$('#toc a, #map a').forEach(a => a.addEventListener('click', () => { if (+a.dataset.level > depth) setDepth(+a.dataset.level); }));
+  const dEl = $('#depth');
+  if (!multi || !dEl) { if (dEl) dEl.remove(); return; }
+  dEl.innerHTML = '<span>Depth</span>';
+  LEVELS.forEach((n, i) => { const b = H('button', '', `${i + 1}<span class="nm"> ${n}</span>`, dEl); b.title = n; b.onclick = () => setDepth(i + 1); });
+})();
+let depth = LEVELS.length;
+try { const d = +localStorage.getItem(DEPTH_KEY); if (d >= 1 && d <= LEVELS.length) depth = d; } catch (e) { }
+function setDepth(d) {
+  depth = d;
+  try { localStorage.setItem(DEPTH_KEY, d); } catch (e) { }
+  levelled().forEach(el => el.classList.toggle('lvl-off', lvlOf(el) > depth));
+  $$('#toc a, #map a, .map-part').forEach(a => a.classList.toggle('dim', lvlOf(a) > depth));
+  $$('#depth button').forEach((b, i) => b.classList.toggle('on', i + 1 === depth));
+  $$('.lvl-hint').forEach(h => h.remove());
+  chapters.forEach(s => {
+    if (s.classList.contains('lvl-off')) return;
+    const hid = levelled(s).filter(e => e.classList.contains('lvl-off'));
+    if (!hid.length) return;
+    const need = Math.min(...hid.map(lvlOf));
+    const b = H('button', 'lvl-hint', `＋ ${hid.length} deeper block${hid.length > 1 ? 's' : ''} hidden here — show level ${need} (${LEVELS[need - 1] || ''})`, s);
+    b.onclick = () => setDepth(need);
+  });
+}
+setDepth(depth);
+
+/* ---------- scroll machinery ---------- */
+const bar = $('#progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+    document.body.classList.toggle('past-cover', scrollY > innerHeight * .8);
+    ticking = false;
+  });
+}, { passive: true });
+
+const revealIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('shown'); revealIO.unobserve(e.target); }
+}), { threshold: 0.12 });
+$$('.reveal').forEach(el => revealIO.observe(el));
+
+const tocLinks = new Map($$('#toc a').map(a => [a.getAttribute('href').slice(1), a]));
+const tocIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove('active'));
+  const a = tocLinks.get(e.target.id); if (a) a.classList.add('active');
+  $$('#map a').forEach(m => { const on = m.getAttribute('href') === '#' + e.target.id; m.classList.toggle('here', on); if (on) m.classList.add('seen'); });
+}), { rootMargin: '-35% 0px -60% 0px' });
+$$('section.chapter').forEach(s => tocIO.observe(s));
+
+const figIO = new IntersectionObserver(es => es.forEach(e => {
+  const f = e.target._fig; if (!f) return;
+  if (e.isIntersecting) {
+    if (f.visible) return;
+    f.visible = true;
+    if (!f.seen) { f.seen = true; f.first && f.first(); }
+    f.enter && f.enter();
+  } else if (f.visible) {
+    f.visible = false; f.leave && f.leave();
+  }
+}), { threshold: 0.25 });
+function registerFig(el, api) { el._fig = api; figIO.observe(el); return api; }
+
+/* enqueue helper: serialize animation runs, drop excess clicks */
+function makeQueue() {
+  let queue = Promise.resolve(), pending = 0;
+  return fn => { if (pending >= 3) return; pending++; queue = queue.then(fn).catch(e => console.error(e)).finally(() => pending--); };
+}
+
+
+/* ---------- generic helpers ---------- */
+function paintBar(el, segs, cap) {           // stacked bar: segs = [{k, v, c, t}], widths as % of cap
+  for (const s of segs) {
+    let d = el.querySelector(`[data-k="${s.k}"]`);
+    if (!d) { d = H('div', 'seg', null, el); d.dataset.k = s.k; }
+    d.style.width = Math.min(100, 100 * s.v / cap) + '%';
+    d.style.background = s.c;
+    d.textContent = s.v >= cap * 0.07 ? s.t : '';
+  }
+}
+function logLine(box, text, cls = '') {      // append a fading-in line to a .log box (textContent: safe)
+  const d = H('div', cls, null, box); d.textContent = text;
+  requestAnimationFrame(() => d.classList.add('shown'));
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+function say(el, html, cls = '') { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = html; }
+const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase labels wrap between words, not mid-word
+
+/* ---------- cover ---------- */
+(() => {
+  const g = $('#cover-nodes');
+  const icons = ['🧠', '⚙️', '🧩', '🔀', '💾', '🧮', '📨', '⏱️'];
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = ringXY(200, 200, 150, i / 8);
+    const c = S('circle', { cx: x, cy: y, r: 17 }, g);
+    c.style.fill = C.paper2; c.style.stroke = C.ink; c.style.strokeWidth = 3;
+    T(g, x, y + 6, icons[i], { 'font-size': 16 });
+  }
+})();
+
+/* ---------- 1. cluster ---------- */
+(() => {
+  const root = $('#fig-cluster'), svg = $('#cl-svg'), st = $('#cl-status');
+  const enqueue = makeQueue();
+  let run = 0, execs, slots, fx;
+  const DR = { x: 20, y: 30, w: 190, h: 80 }, CM = { x: 20, y: 200, w: 190, h: 64 };
+  function box(g, r, label, sub, left) {
+    const n = S('g', { class: 'nd' }, g);
+    S('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: 8 }, n);
+    const tx = left ? r.x + 14 : r.x + r.w / 2, an = left ? 'start' : 'middle';
+    T(n, tx, r.y + 26, label, { 'text-anchor': an });
+    (sub || []).forEach((l, i) => { const t = T(n, tx, r.y + 44 + i * 15, l, { 'text-anchor': an }); t.style.fontSize = '10.5px'; t.style.fontWeight = 400; });
+    return n;
+  }
+  function draw() {
+    svg.innerHTML = '';
+    S('line', { x1: 115, y1: 110, x2: 115, y2: 200, class: 'edge', 'stroke-dasharray': '5 4' }, svg);
+    box(svg, DR, 'Driver', ['SparkContext', 'DAG + Task schedulers']);
+    box(svg, CM, 'Cluster manager', ['YARN / Kubernetes / standalone']);
+    execs = []; slots = [];
+    for (let i = 0; i < 3; i++) {
+      const r = { x: 300, y: 15 + i * 95, w: 320, h: 80 };
+      const n = box(svg, r, `Executor ${i + 1}`, [`JVM on worker node ${'ABC'[i]}`], true);
+      n.classList.add('off'); execs.push({ n, r });
+      for (let k = 0; k < 2; k++) {
+        const sx = r.x + 190 + k * 62, sy = r.y + 18;
+        const rc = S('rect', { x: sx, y: sy, width: 54, height: 44, rx: 6, class: 'cl-slot' }, svg);
+        rc.style.fill = C.card; rc.style.stroke = C.line; rc.style.strokeWidth = 2;
+        const tx = T(svg, sx + 27, sy + 27, '', { 'font-size': 12, 'font-weight': 800 });
+        slots.push({ rc, tx, ex: i, cx: sx + 27, cy: sy + 22 });
+      }
+    }
+    fx = S('g', {}, svg);
+  }
+  const setSlot = (s, text, col) => { s.tx.textContent = text; s.rc.style.fill = col || C.card; };
+  function reset() { run++; draw(); say(st, 'Press ▶ to submit. The driver starts first; executors do not exist yet.'); }
+  async function start(my) {
+    say(st, '<b>1.</b> <code>spark-submit</code> starts the driver. It asks the cluster manager for executors.');
+    await flyDot(fx, 115, 110, 115, 200, { ms: 500 }); if (my !== run) return false;
+    say(st, '<b>2.</b> The cluster manager launches executor JVMs on worker nodes. From now on the driver talks to them directly.');
+    await Promise.all(execs.map(e => flyDot(fx, 210, 232, e.r.x, e.r.y + 40, { ms: 600, color: C.mut })));
+    if (my !== run) return false;
+    execs.forEach(e => e.n.classList.remove('off'));
+    return true;
+  }
+  async function dispatch(my, tasks, order) {
+    await Promise.all(tasks.map((t, i) => flyDot(fx, 210, 70, slots[order[i]].cx, slots[order[i]].cy, { ms: 550 })));
+    if (my !== run) return false;
+    tasks.forEach((t, i) => setSlot(slots[order[i]], t, C.accent2));
+    return true;
+  }
+  async function runJob() {
+    reset(); const my = run;
+    if (!await start(my)) return;
+    say(st, '<b>3.</b> An action runs: the driver sends 6 tasks — one per partition — to free task slots.');
+    if (!await dispatch(my, ['T0', 'T1', 'T2', 'T3', 'T4', 'T5'], [0, 1, 2, 3, 4, 5])) return;
+    await sleep(700); if (my !== run) return;
+    slots.forEach(s => setSlot(s, s.tx.textContent + ' ✓', C.ok));
+    await Promise.all(slots.map(s => flyDot(fx, s.cx, s.cy, 210, 70, { ms: 500, color: C.ok })));
+    if (my !== run) return;
+    say(st, '<b>4.</b> Tasks finish and report results to the driver. The executors stay up for the next job of this application.', 'ok');
+  }
+  async function kill() {
+    reset(); const my = run;
+    if (!await start(my)) return;
+    if (!await dispatch(my, ['T0', 'T1', 'T2', 'T3', 'T4', 'T5'], [0, 1, 2, 3, 4, 5])) return;
+    await sleep(400); if (my !== run) return;
+    execs[1].n.classList.add('off'); setSlot(slots[2], 'T2 ✗', C.bad); setSlot(slots[3], 'T3 ✗', C.bad);
+    say(st, '<b>💥 Executor 2 dies.</b> Its running tasks T2 and T3 are lost, and so is any data cached in it.', 'bad');
+    await sleep(900); if (my !== run) return;
+    [0, 1, 4, 5].forEach(i => setSlot(slots[i], slots[i].tx.textContent + ' ✓', C.ok));
+    await sleep(500); if (my !== run) return;
+    say(st, 'The driver notices the lost executor and <b>resubmits T2 and T3</b> on surviving executors.', 'warn');
+    if (!await dispatch(my, ['T2', 'T3'], [0, 4])) return;
+    await sleep(700); if (my !== run) return;
+    setSlot(slots[0], 'T2 ✓', C.ok); setSlot(slots[4], 'T3 ✓', C.ok);
+    say(st, '<b>Job still succeeds.</b> Tasks are re-runnable because each one recomputes its partition from the lineage (next chapter).', 'ok');
+  }
+  $('[data-act=run]', root).onclick = () => enqueue(runJob);
+  $('[data-act=kill]', root).onclick = () => enqueue(kill);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(runJob); } });
+})();
+
+/* ---------- 2. lineage ---------- */
+(() => {
+  const root = $('#fig-lineage'), grid = $('#lin-grid'), st = $('#lin-status'), cb = $('[data-act=cache]', root);
+  const COLS = [0, 1, 2, 3], ROWS = 4;
+  const enqueue = makeQueue();
+  let run = 0, cells, defined, cached;
+  function build() {
+    grid.innerHTML = ''; H('div', '', '', grid);
+    ['textFile', 'flatMap', 'mapToPair', 'counts'].forEach(c => H('div', 'lin-h', c, grid));
+    cells = [];
+    for (let r = 0; r < ROWS; r++) {
+      H('div', 'lin-r', 'p' + r, grid);
+      cells.push(COLS.map(() => H('div', 'lin-c', '', grid)));
+    }
+  }
+  const set = (r, c, cls, txt = '') => { cells[r][c].className = 'lin-c ' + cls; cells[r][c].textContent = txt; };
+  function reset() { run++; defined = false; cached = false; build(); say(st, 'Press ① — then ②.'); }
+  function define() {
+    if (defined) return; defined = true;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < 4; c++) set(r, c, 'ghost');
+    say(st, '<b>① Defined.</b> Four RDDs exist — as recipes only. No file has been read, no task has run.');
+  }
+  async function computeRow(my, r, from = 0) {
+    for (let c = from; c < 4; c++) { set(r, c, 'work', '…'); await sleep(260); if (my !== run) return false; set(r, c, 'done', '✓'); }
+    return true;
+  }
+  async function action() {
+    const my = run;
+    if (!defined) { define(); await sleep(700); if (my !== run) return; }
+    if (cached) {
+      say(st, '<b>② count() again.</b> Partitions come from the cache — nothing upstream runs.', 'ok');
+      return;
+    }
+    say(st, '<b>② count() is an action.</b> Spark runs one task per partition; each task pipelines its row through the steps.');
+    const ok = await Promise.all([0, 1, 2, 3].map(r => computeRow(my, r)));
+    if (ok.includes(false)) return;
+    await sleep(400); if (my !== run) return;
+    for (let r = 0; r < ROWS; r++) { for (let c = 0; c < 3; c++) set(r, c, 'ghost'); set(r, 3, cb.checked ? 'cached' : 'ghost', cb.checked ? 'cached' : ''); }
+    cached = cb.checked;
+    say(st, cached ? '<b>Done.</b> Result returned; intermediate data is dropped, but the last RDD\'s partitions stay <b>cached</b>.'
+                   : '<b>Done.</b> Result returned to the driver — and nothing is kept. A second action would re-read the files.', 'ok');
+  }
+  async function lose() {
+    const my = run;
+    if (!defined) define();
+    if (cached) {
+      set(2, 3, 'lost', 'lost');
+      say(st, '<b>💥 Executor holding cached p2 died.</b> Only that block is gone.', 'bad');
+      await sleep(800); if (my !== run) return;
+      say(st, 'Next action: p0, p1, p3 come from the cache; <b>only p2 is recomputed</b> from its lineage.', 'warn');
+      if (!await computeRow(my, 2)) return;
+      for (let c = 0; c < 3; c++) set(2, c, 'ghost'); set(2, 3, 'cached', 'cached');
+      say(st, '<b>Recovered.</b> One partition recomputed, three read from memory.', 'ok');
+      return;
+    }
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < 4; c++) set(r, c, 'ghost');
+    say(st, '<b>count() runs…</b>');
+    const rows = [0, 1, 3].map(r => computeRow(my, r));
+    set(2, 0, 'work', '…'); await sleep(260); set(2, 0, 'done', '✓'); set(2, 1, 'lost', '✗');
+    say(st, '<b>💥 The task for p2 dies mid-way</b> (its executor was lost).', 'bad');
+    if ((await Promise.all(rows)).includes(false)) return;
+    await sleep(600); if (my !== run) return;
+    say(st, 'Spark reruns <b>only p2</b>, from the start of its lineage: read the split again, then each step.', 'warn');
+    set(2, 1, 'ghost');
+    if (!await computeRow(my, 2)) return;
+    say(st, '<b>Recovered.</b> No replication needed — the recipe is enough to rebuild the lost piece.', 'ok');
+  }
+  $('[data-act=define]', root).onclick = () => enqueue(async () => define());
+  $('[data-act=action]', root).onclick = () => enqueue(action);
+  $('[data-act=lose]', root).onclick = () => enqueue(lose);
+  cb.onchange = () => { if (!cb.checked && cached) { reset(); } };
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(async () => define()); enqueue(action); } });
+})();
+
+/* ---------- 3. dag ---------- */
+(() => {
+  const root = $('#fig-dag'), row = $('#dag-row'), lanes = $('#dag-lanes'), st = $('#dag-status');
+  const WIDE = new Set(['reduceByKey', 'repartition']);
+  const COLS = ['#9cc9ea', '#f3c07a', '#9fdcb9', '#d6b3e6', '#f2a7a7'];
+  const enqueue = makeQueue();
+  let ops, run = 0, taskEls;
+  const stagesOf = () => { const s = [[]]; ops.forEach(o => { if (WIDE.has(o)) s.push([]); s[s.length - 1].push(o); }); return s; };
+  function paint() {
+    row.innerHTML = ''; lanes.innerHTML = ''; taskEls = [];
+    const stages = stagesOf();
+    stages.forEach((ops_, i) => {
+      if (i) H('span', 'dag-cut', '║ shuffle', row);
+      ops_.forEach(o => { const e = H('span', 'dag-op', null, row); e.textContent = o; e.style.setProperty('--st', COLS[i % 5]); });
+    });
+    const e = H('span', 'dag-op', 'count()', row); e.style.setProperty('--st', COLS[(stages.length - 1) % 5]);
+    stages.forEach((ops_, i) => {
+      const l = H('div', 'dag-lane', null, lanes);
+      const last = i === stages.length - 1;
+      H('b', '', `Stage ${i} <span class="mut">${last ? 'Result' : 'ShuffleMap'}</span>`, l);
+      taskEls.push([0, 1, 2, 3].map(k => H('div', 'dag-t', 't' + k, l)));
+    });
+  }
+  function reset() { run++; ops = ['textFile', 'map']; paint(); say(st, 'Add operations, then run the action. Narrow ops join the current stage; wide ops start a new one.'); }
+  function add(o) {
+    if (ops.length >= 8) { say(st, 'Enough for one diagram — press ↺ Reset.', 'warn'); return; }
+    run++; ops.push(o); paint();
+    const n = stagesOf().length;
+    say(st, WIDE.has(o) ? `<b>${o}</b> is <b>wide</b>: it needs a shuffle, so the DAG is cut here. Stages now: ${n}.`
+                        : `<b>${o}</b> is <b>narrow</b>: pipelined into the same stage and task. Stages: ${n}.`, WIDE.has(o) ? 'warn' : '');
+  }
+  async function runStage(my, i, cls = 'ok') {
+    taskEls[i].forEach(t => { t.className = 'dag-t run'; });
+    await sleep(700); if (my !== run) return false;
+    taskEls[i].forEach(t => { t.className = 'dag-t ' + cls; });
+    return true;
+  }
+  async function runJob() {
+    run++; const my = run; paint();
+    const n = taskEls.length;
+    for (let i = 0; i < n; i++) {
+      say(st, `<b>Stage ${i}</b>: 4 tasks run in parallel${i < n - 1 ? ', each writing its map output for the shuffle' : ' and send results to the driver'}.`);
+      if (!await runStage(my, i)) return;
+      if (i < n - 1) { say(st, `<b>Barrier.</b> Stage ${i + 1} starts only after every task of stage ${i} has finished writing.`, 'warn'); await sleep(700); if (my !== run) return; }
+    }
+    say(st, `<b>Job done:</b> ${n} stage${n > 1 ? 's' : ''}, ${4 * n} tasks. The number of shuffles decided the number of stages.`, 'ok');
+  }
+  async function fetchFail() {
+    if (stagesOf().length < 2) add('reduceByKey');
+    run++; const my = run; paint();
+    const n = taskEls.length;
+    for (let i = 0; i < n - 1; i++) if (!await runStage(my, i)) return;
+    taskEls[n - 1].forEach(t => { t.className = 'dag-t run'; });
+    say(st, `Stage ${n - 1} starts reading shuffle files…`); await sleep(600); if (my !== run) return;
+    taskEls[n - 2][1].className = 'dag-t bad'; taskEls[n - 2][1].textContent = 'lost';
+    taskEls[n - 1].forEach((t, k) => { if (k % 2) { t.className = 'dag-t bad'; t.textContent = 'Fetch✗'; } });
+    say(st, `<b>💥 FetchFailed.</b> The executor holding stage ${n - 2}'s output died. Reading tasks cannot get their blocks.`, 'bad');
+    await sleep(1100); if (my !== run) return;
+    say(st, `The DAGScheduler <b>resubmits stage ${n - 2}</b> (a new attempt) to rebuild the missing map output — not the whole job.`, 'warn');
+    taskEls[n - 2][1].textContent = 't1'; taskEls[n - 2][1].className = 'dag-t run';
+    await sleep(700); if (my !== run) return; taskEls[n - 2][1].className = 'dag-t ok';
+    taskEls[n - 1].forEach((t, k) => { t.textContent = 't' + k; });
+    if (!await runStage(my, n - 1)) return;
+    say(st, '<b>Recovered.</b> Stage retried, job completed. In the UI this shows as a second attempt of the stage.', 'ok');
+  }
+  $$('[data-op]', root).forEach(b => b.onclick = () => add(b.dataset.op));
+  $('[data-act=run]', root).onclick = () => enqueue(runJob);
+  $('[data-act=fetch]', root).onclick = () => enqueue(fetchFail);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { add('reduceByKey'); add('filter'); enqueue(runJob); } });
+})();
+
+/* ---------- 4. shuffle ---------- */
+(() => {
+  const root = $('#fig-shuffle'), mapEl = $('#sh-map'), redEl = $('#sh-red'), st = $('#sh-status');
+  const NORMAL = ['abacab', 'bacca', 'acbaa'], SKEW = ['aaaaabaa', 'aaaacaaa', 'aabaaaaa'];
+  const enqueue = makeQueue();
+  let run = 0;
+  const chip = (k, n) => `<span class="sh-chip sh-${k}">${k}${n > 1 ? '×' + n : ''}</span>`;
+  const count = s => { const m = { a: 0, b: 0, c: 0 }; for (const k of s) m[k]++; return m; };
+  function drawMaps(data, mode) {
+    mapEl.innerHTML = '';
+    data.forEach((s, i) => {
+      let html;
+      if (mode === 'raw') html = [...s].map(k => chip(k, 1)).join('');
+      else if (mode === 'sorted') html = [...s].sort().map(k => chip(k, 1)).join('');
+      else { const m = count(s); html = Object.keys(m).filter(k => m[k]).map(k => chip(k, m[k])).join(''); }
+      H('div', 'sh-card', `<i>map task ${i}${mode === 'raw' ? '' : ' · file sorted by target partition'}</i>${html}`, mapEl);
+    });
+  }
+  function drawReds(parts, max) {
+    redEl.innerHTML = '';
+    ['a', 'b', 'c'].forEach((k, i) => {
+      const items = parts[k];
+      const n = items.length;
+      const d = H('div', 'sh-card', `<i>reduce task ${i} · key ${k} · ${n} record${n === 1 ? '' : 's'} fetched</i>${items.map(x => chip(k, x)).join('')}`, redEl);
+      const w = max ? Math.max(4, 100 * items.reduce((a, b) => a + b, 0) / max) : 0;
+      H('div', 'sh-load', null, d).style.width = w + '%';
+    });
+  }
+  function reset() { run++; drawMaps(NORMAL, 'raw'); drawReds({ a: [], b: [], c: [] }, 0); say(st, 'Pick an operation. Every map task holds a mix of keys a, b, c.'); }
+  async function go(combine, data) {
+    run++; const my = run;
+    drawMaps(data, 'raw'); drawReds({ a: [], b: [], c: [] }, 0);
+    await sleep(400); if (my !== run) return;
+    drawMaps(data, combine ? 'combined' : 'sorted');
+    say(st, combine ? '<b>Map side:</b> reduceByKey merges values per key <em>inside</em> each map task first, then writes one sorted file.'
+                    : '<b>Map side:</b> groupByKey cannot pre-aggregate — every single value is written to the shuffle file.');
+    await sleep(1100); if (my !== run) return;
+    const parts = { a: [], b: [], c: [] };
+    data.forEach(s => { const m = count(s); for (const k in m) if (m[k]) { if (combine) parts[k].push(m[k]); else for (let j = 0; j < m[k]; j++) parts[k].push(1); } });
+    const total = data.join('').length, sent = parts.a.length + parts.b.length + parts.c.length;
+    drawReds(parts, Math.max(...['a', 'b', 'c'].map(k => parts[k].reduce((x, y) => x + y, 0))));
+    return { parts, total, sent };
+  }
+  async function reduce() { const r = await go(true, NORMAL); if (!r) return; say(st, `<b>Reduce side:</b> each task fetches its block from every map file. <b>${r.sent} records crossed the network</b> instead of ${r.total}.`, 'ok'); }
+  async function group() { const r = await go(false, NORMAL); if (!r) return; say(st, `<b>All ${r.sent} records crossed the network</b>, and each reduce task must hold all values of its keys in memory. Fine for grouping, wasteful for sums.`, 'warn'); }
+  async function skew() {
+    const r = await go(false, SKEW); if (!r) return;
+    say(st, `<b>💥 Skew:</b> key a owns ${r.parts.a.length} of ${r.total} records, so reduce task 0 does almost all the work while tasks 1 and 2 idle. The red bars are task load. (With reduceByKey the combine would shrink a's block to 3 records.)`, 'bad');
+  }
+  $('[data-act=reduce]', root).onclick = () => enqueue(reduce);
+  $('[data-act=group]', root).onclick = () => enqueue(group);
+  $('[data-act=skew]', root).onclick = () => enqueue(skew);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(reduce); } });
+})();
+
+/* ---------- 5. memory ---------- */
+(() => {
+  const root = $('#fig-mem'), bar = $('#mem-bar'), nums = $('#mem-nums'), st = $('#mem-status'), sel = $('[data-act=heap]', root);
+  let heap, M, R, user, s, e, spilled, marker;
+  const f = x => x >= 1024 ? (x / 1024).toFixed(2) + ' GiB' : Math.round(x) + ' MiB';
+  function paint() {
+    paintBar(bar, [
+      { k: 'res', v: 300, c: '#6b7280', t: 'reserved' },
+      { k: 'usr', v: user, c: '#8e7cc3', t: 'user' },
+      { k: 'sto', v: s, c: '#2f9e63', t: 'storage' },
+      { k: 'exe', v: e, c: '#1b6fa8', t: 'execution' },
+      { k: 'free', v: M - s - e, c: '#d9d3c4', t: 'free' }], heap);
+    if (!marker) marker = H('div', 'mem-r', null, bar);
+    marker.style.left = (100 * (300 + user + R) / heap) + '%';
+    nums.innerHTML = `<span>M = ${f(M)}</span><span>R = ${f(R)}</span><span>storage ${f(s)}</span><span>execution ${f(e)}</span><span>spilled ${f(spilled)}</span>`;
+  }
+  function reset() {
+    heap = +sel.value; M = (heap - 300) * 0.6; user = (heap - 300) * 0.4; R = M * 0.5;
+    s = 0; e = 0; spilled = 0; bar.innerHTML = ''; marker = null; paint();
+    say(st, `Heap ${f(heap)}: M = (heap − 300 MiB) × 0.6 = ${f(M)}; R = M × 0.5 = ${f(R)}. Press + cache RDD.`);
+  }
+  function cache() {
+    const want = M * 0.35, got = Math.min(want, M - s - e);
+    s += got; paint();
+    say(st, got < want ? `Cache partially fits: only ${f(got)} stored. Storage <b>cannot evict execution</b>, so the rest is not cached (recomputed or put on disk, depending on the storage level).`
+      : `Cached ${f(got)}. Storage ${s > R ? '<b>now reaches past R</b> — it borrowed free space. Allowed while nobody else needs it.' : 'is within R.'}`, got < want ? 'warn' : 'ok');
+  }
+  function need(amount, label) {
+    let free = M - s - e, take = Math.min(amount, free); e += take; amount -= take;
+    let evicted = 0;
+    if (amount > 0 && s > R) { evicted = Math.min(amount, s - R); s -= evicted; e += evicted; amount -= evicted; }
+    spilled += amount; paint();
+    let msg = `${label} took ${f(take)} of free space`;
+    if (evicted) msg += `, then <b>evicted ${f(evicted)} of cached blocks</b> (only the part above R)`;
+    if (amount > 0) msg += `. Storage is down to R and cannot shrink further, so <b>${f(amount)} spills to disk</b>`;
+    say(st, msg + '.', amount > 0 ? 'bad' : evicted ? 'warn' : 'ok');
+  }
+  $('[data-act=cache]', root).onclick = cache;
+  $('[data-act=exec]', root).onclick = () => need(M * 0.3, 'The sort');
+  $('[data-act=huge]', root).onclick = () => need(M * 1.1, '💥 A huge sort');
+  sel.onchange = reset;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { cache(); setTimeout(cache, REDUCE ? 0 : 1200); } });
+})();
+
+/* ---------- 6. catalyst ---------- */
+(() => {
+  const root = $('#fig-plan'), steps = $('#pl-steps'), tree = $('#pl-tree'), st = $('#pl-status');
+  const P = [
+    ['Your code', `orders.join(countries, "cc")
+      .filter(col("country").equalTo("PL"))
+      .select("id", "amount")`, 'A DataFrame program: a description of <em>what</em> you want.'],
+    ['Parsed', `'Project ['id, 'amount]
++- 'Filter ('country = PL)
+   +- 'Join Inner, ('cc)
+      :- 'UnresolvedRelation [orders]
+      +- 'UnresolvedRelation [countries]`, '<b>Parsed logical plan:</b> names are still unresolved strings (the leading <code>\'</code>).'],
+    ['Analyzed', `Project [id#1, amount#3]
++- Filter (country#7 = PL)
+   +- Join Inner, (cc#2 = cc#6)
+      :- Relation orders[id#1, cc#2, amount#3, ts#4] parquet
+      +- Relation countries[cc#6, country#7] parquet`, '<b>Analyzed:</b> tables and columns resolved against the catalog, each column gets an ID and a type. Wrong column name? This is where it fails.'],
+    ['Optimized', `Project [id#1, amount#3]
++- Join Inner, (cc#2 = cc#6)
+   :- <mark>Project [id#1, cc#2, amount#3]</mark>
+   :  +- Filter isnotnull(cc#2)
+   :     +- Relation orders[…] parquet
+   +- <mark>Project [cc#6]</mark>
+      +- <mark>Filter (isnotnull(country#7) AND (country#7 = PL))</mark>
+         +- Relation countries[…] parquet`, '<b>Optimized:</b> rule-based rewrites. The filter is <b>pushed below the join</b>, unused columns (<code>ts</code>) are <b>pruned</b>.'],
+    ['Physical', `*(5) Project [id#1, amount#3]
++- *(5) SortMergeJoin [cc#2], [cc#6], Inner
+   :- Exchange hashpartitioning(cc#2, 200)
+   :  +- *(1) FileScan parquet orders[id,cc,amount] PushedFilters: [IsNotNull(cc)]
+   +- Exchange hashpartitioning(cc#6, 200)
+      +- *(2) Filter …
+         +- *(2) FileScan parquet countries[cc,country] PushedFilters: [EqualTo(country,PL)]`,
+      '<b>Physical:</b> concrete operators. <code>Exchange</code> = a shuffle (200 = <code>spark.sql.shuffle.partitions</code>). <code>*(n)</code> marks whole-stage codegen: those operators become one generated Java function.']
+  ];
+  const AQE = `AdaptiveSparkPlan isFinalPlan=true
++- *(5) Project [id#1, amount#3]
+   +- *(5) <mark>BroadcastHashJoin</mark> [cc#2], [cc#6], Inner, BuildRight
+      :- AQEShuffleRead local
+      :  +- ShuffleQueryStage 0   ← orders, already shuffled
+      +- BroadcastQueryStage 2
+         +- <mark>BroadcastExchange</mark>
+            +- ShuffleQueryStage 1   ← runtime stats: 1 row`;
+  let i = -1;
+  function paint() {
+    steps.innerHTML = P.map((p, k) => `<span class="${k === i ? 'on' : ''}">${p[0]}</span>`).join('') + `<span class="${i === 99 ? 'aqe' : ''}">AQE at runtime</span>`;
+  }
+  function show(k) { i = k; paint(); tree.innerHTML = P[k][1].replace(/<(?!\/?mark>)/g, '&lt;'); say(st, P[k][2]); }
+  function next() { show(i >= P.length - 1 || i === 99 ? 0 : i + 1); }
+  function aqe() {
+    i = 99; paint(); tree.innerHTML = AQE.replace(/<(?!\/?mark>)/g, '&lt;');
+    say(st, '<b>💥 Surprise:</b> after the filter, <code>countries</code> is one row. The planner did not know. AQE sees real statistics from the finished shuffle stage and <b>switches the sort-merge join to a broadcast hash join</b> — the big side no longer needs its sort.', 'bad');
+  }
+  $('[data-act=next]', root).onclick = next;
+  $('[data-act=aqe]', root).onclick = aqe;
+  $('[data-act=reset]', root).onclick = () => show(0);
+  show(0);
+  registerFig(root, { first() { setTimeout(next, REDUCE ? 0 : 900); } });
+})();
+
+/* ---------- 7. batches ---------- */
+(() => {
+  const root = $('#fig-batches'), svg = $('#bt-svg'), st = $('#bt-status');
+  const enqueue = makeQueue();
+  const X0 = 50, PX = 5.8, N = 8, INT = 10;
+  let run = 0;
+  const x = t => X0 + t * PX;
+  function axis() {
+    svg.innerHTML = '';
+    S('line', { x1: X0, y1: 180, x2: 650, y2: 180, class: 'edge' }, svg);
+    for (let t = 0; t <= 100; t += 10) { S('line', { x1: x(t), y1: 176, x2: x(t), y2: 184, class: 'edge' }, svg); T(svg, x(t), 196, t + 's', { class: 'tiny' }); }
+    for (let b = 0; b < N; b++) T(svg, 22, 25 + b * 19, 'B' + (b + 1), { class: 'small', 'font-weight': 700 });
+  }
+  function reset() { run++; axis(); say(st, 'Pick a scenario. Each batch collects 10 s of data, then becomes a job.'); }
+  async function sim(p) {
+    run++; const my = run; axis();
+    let prevEnd = 0, maxDelay = 0;
+    const plan = [];
+    for (let b = 0; b < N; b++) {
+      const ready = (b + 1) * INT, start = Math.max(ready, prevEnd), end = start + p;
+      plan.push({ b, ready, start, end }); prevEnd = end; maxDelay = start - ready;
+    }
+    const g = S('g', {}, svg);
+    for (const q of plan) {
+      const y = 16 + q.b * 19;
+      S('rect', { x: x(q.b * INT), y: y + 5, width: INT * PX - 2, height: 4, rx: 2, fill: C.mut, opacity: .5 }, g);
+      if (q.start > q.ready) {
+        const w = S('rect', { x: x(q.ready), y, width: 0, height: 14, rx: 3, fill: C.warn, opacity: .75 }, g);
+        await tween(200, k => w.setAttribute('width', (q.start - q.ready) * PX * k)); if (my !== run) return;
+      }
+      const r = S('rect', { x: x(q.start), y, width: 0, height: 14, rx: 3, fill: p > INT ? C.bad : C.ok }, g);
+      await tween(260, k => r.setAttribute('width', Math.min(650 - x(q.start), p * PX * k))); if (my !== run) return;
+      say(st, `B${q.b + 1}: data ready at ${q.ready} s, starts at ${q.start} s — scheduling delay <b>${q.start - q.ready} s</b>, processing ${p} s.`);
+    }
+    if (p <= INT) say(st, `<b>Stable.</b> Every batch finishes before the next is due; scheduling delay stays 0 s. Grey = data collection window, green = processing.`, 'ok');
+    else say(st, `<b>💥 Falling behind.</b> Each batch waits 2 s longer than the previous (orange). After 8 batches the delay is ${maxDelay} s and still growing — with no error anywhere.`, 'bad');
+  }
+  $('[data-act=ok]', root).onclick = () => enqueue(() => sim(7));
+  $('[data-act=slow]', root).onclick = () => enqueue(() => sim(12));
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => sim(7)); } });
+})();
+
+/* ---------- 8. direct stream ---------- */
+(() => {
+  const root = $('#fig-direct'), topic = $('#di-topic'), ranges = $('#di-ranges'), ex = $('#di-exec'), st = $('#di-status');
+  const RATE = [250, 180, 300, 120, 90];
+  const enqueue = makeQueue();
+  let run = 0, parts, end, cur, alive, cacheOf, batchNo, pendingP4;
+  function paintTopic() {
+    const max = Math.max(...end.slice(0, parts), 1);
+    topic.innerHTML = '';
+    for (let p = 0; p < parts; p++) {
+      const d = H('div', 'di-p', `<b>P${p}</b><div class="di-bar"><i></i></div><span>${end[p]}</span>`, topic);
+      $('i', d).style.width = (100 * end[p] / max) + '%';
+    }
+  }
+  function paintExec(assign) {
+    ex.innerHTML = '';
+    ['A', 'B', 'C'].forEach((n, i) => {
+      const d = H('div', 'di-e' + (alive[i] ? '' : ' off'), `<b>Executor ${n}${alive[i] ? '' : ' ✗'}</b>`, ex);
+      (assign ? assign[i] : []).forEach(({ p, fresh }) => H('span', 'di-k' + (fresh ? ' new' : ''), `P${p} ${fresh ? 'new consumer' : 'cached'}`, d));
+    });
+  }
+  function reset() {
+    run++; parts = 4; end = [1200, 800, 1500, 600, 0]; cur = end.slice(); alive = [1, 1, 1]; cacheOf = [new Set(), new Set(), new Set()]; batchNo = 0; pendingP4 = false;
+    paintTopic(); paintExec(); ranges.innerHTML = '<tr><th>partition</th><th>from</th><th>until</th><th>count</th></tr>';
+    say(st, 'Press ▶ Next batch. Numbers on the right of each partition are its latest offset.');
+  }
+  async function batch() {
+    const my = run;
+    if (pendingP4) { parts = 5; pendingP4 = false; }
+    for (let p = 0; p < parts; p++) end[p] += RATE[p];
+    paintTopic(); batchNo++;
+    say(st, `<b>Batch ${batchNo}:</b> the driver's consumer asks Kafka for the latest offsets…`);
+    await sleep(600); if (my !== run) return;
+    let html = '<tr><th>partition</th><th>from</th><th>until</th><th>count</th></tr>';
+    for (let p = 0; p < parts; p++) html += `<tr class="flash"><td>P${p}</td><td>${cur[p]}</td><td>${end[p]}</td><td>${end[p] - cur[p]}</td></tr>`;
+    ranges.innerHTML = html;
+    await sleep(600); if (my !== run) return;
+    const live = [0, 1, 2].filter(i => alive[i]);
+    const assign = [[], [], []];
+    for (let p = 0; p < parts; p++) {
+      const e = live[p % live.length];
+      const fresh = !cacheOf[e].has(p); cacheOf[e].add(p);
+      assign[e].push({ p, fresh });
+    }
+    paintExec(assign);
+    const fresh = assign.flat().filter(a => a.fresh).length;
+    for (let p = 0; p < parts; p++) cur[p] = end[p];
+    say(st, `<b>${parts} Kafka partitions → a KafkaRDD with ${parts} partitions → ${parts} tasks.</b> ` +
+      (fresh ? `${fresh} task${fresh > 1 ? 's' : ''} had to create a consumer (orange); from now on the executor reuses it.` : 'Every task reuses a cached consumer on its executor (green).'), 'ok');
+  }
+  function addp() {
+    if (parts === 5 || pendingP4) { say(st, 'P4 is already there.', 'warn'); return; }
+    pendingP4 = true;
+    say(st, 'Partition P4 added to the topic. With <code>Subscribe</code>, the driver picks it up at the next batch. Press ▶.', 'warn');
+  }
+  async function kill() {
+    if (!batchNo) await batch();
+    alive[1] = 0; cacheOf[1].clear();
+    paintExec();
+    say(st, '<b>💥 Executor B is gone</b>, with its cached consumers. Press ▶: its partitions move to A and C, which must create new consumers.', 'bad');
+  }
+  $('[data-act=batch]', root).onclick = () => enqueue(batch);
+  $('[data-act=addp]', root).onclick = addp;
+  $('[data-act=kill]', root).onclick = () => enqueue(kill);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(batch); enqueue(batch); } });
+})();
+
+/* ---------- 9. offsets ---------- */
+(() => {
+  const root = $('#fig-offsets'), stepsEl = $('#of-steps'), sink = $('#of-sink'), stored = $('#of-stored'), st = $('#of-status'), sel = $('[data-act=strat]', root);
+  const STEPS = {
+    auto: ['Poll 100–200 (auto-commit fires)', 'Write output'],
+    ckpt: ['Batch 100–200 saved in checkpoint', 'Write output', 'Batch marked complete'],
+    commit: ['Read 100–200', 'Write output', 'commitAsync(200)'],
+    tx: ['Read 100–200', 'BEGIN · write rows + offset 200 · COMMIT']
+  };
+  const enqueue = makeQueue();
+  let run = 0, off, written, els;
+  function paintSteps() { stepsEl.innerHTML = ''; els = STEPS[sel.value].map((t, i) => H('div', 'of-s', `${i + 1}. ${t}`, stepsEl)); }
+  function paintSink() {
+    sink.innerHTML = '';
+    const seen = new Set();
+    written.forEach(r => { const s = H('span', seen.has(r) ? 'dup' : '', null, sink); s.textContent = `rows ${r}–${r + 99}${seen.has(r) ? ' (dup)' : ''}`; seen.add(r); });
+    if (written.lost) { const s = H('span', 'gap', null, sink); s.textContent = `rows ${written.lost}–${written.lost + 99} missing`; }
+    stored.textContent = off;
+  }
+  function reset() { run++; off = 100; written = []; paintSteps(); paintSink(); say(st, 'Pick a strategy and run a batch. The stored offset is where a restart will begin.'); }
+  const mark = (i, c) => { els[i].className = 'of-s ' + c; };
+  async function step(my, i) { mark(i, 'run'); await sleep(550); if (my !== run) return false; mark(i, 'ok'); return true; }
+  async function doBatch(my, crashAt) {
+    const s = sel.value, from = off, L = STEPS[s].length;
+    paintSteps();
+    for (let i = 0; i < L; i++) {
+      if (crashAt === 'before' && i === 1) { mark(1, 'bad'); return 'crashed'; }
+      if (crashAt === 'after' && i === 2) { mark(2, 'bad'); return 'crashed'; }
+      if (!await step(my, i)) return null;
+      if (i === 1) written.push(from);
+      if ((s === 'auto' && i === 0) || (s === 'tx' && i === 1) || i === 2) off = from + 100;
+      paintSink();
+    }
+    return crashAt ? 'crashed' : 'ok';
+  }
+  async function normal() {
+    reset(); const my = run;
+    const r = await doBatch(my); if (r !== 'ok') return;
+    say(st, `<b>Batch done.</b> Output written, offset stored = ${off}. The next batch starts there.`, 'ok');
+  }
+  async function crash(when) {
+    reset(); const my = run; const s = sel.value;
+    const r = await doBatch(my, when); if (r === null) return;
+    say(st, `<b>💥 Crash ${when === 'after' ? 'after the output' : 'before the output'}.</b> Restarting from stored offset ${off}…`, 'bad');
+    await sleep(1100); if (my !== run) return;
+    if (off === 100) {
+      paintSteps(); const again = await doBatch(my); if (again !== 'ok') return;
+      const dup = written.length > 1;
+      say(st, dup ? `<b>Duplicate:</b> rows 100–199 were written twice. Harmless only if the sink is <b>idempotent</b> (e.g. upsert by key).`
+                  : '<b>No loss, no duplicate:</b> nothing had been written, so the batch simply ran again.', dup ? 'warn' : 'ok');
+      return;
+    }
+    if (s === 'auto' && when === 'before') {
+      written.lost = 100; paintSink();
+      say(st, '<b>Data loss:</b> the offset was auto-committed when the records were polled, but they were never written. The restart begins at 200.', 'bad');
+      return;
+    }
+    say(st, s === 'tx' ? '<b>Exactly-once effect:</b> rows and offset were committed atomically. A crash either rolls back both or keeps both.'
+                       : '<b>Looks fine this time</b> — auto-commit happened to fire before the crash. That is luck, not a guarantee: the semantics are undefined.', s === 'tx' ? 'ok' : 'warn');
+  }
+  $('[data-act=ok]', root).onclick = () => enqueue(normal);
+  $('[data-act=crash]', root).onclick = () => enqueue(() => crash('after'));
+  $('[data-act=early]', root).onclick = () => enqueue(() => crash('before'));
+  sel.onchange = reset;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => crash('after')); } });
+})();
+
+/* ---------- 10. window ---------- */
+(() => {
+  const root = $('#fig-window'), rowEl = $('#wn-row'), st = $('#wn-status'), inv = $('[data-act=inv]', root);
+  const V = [4, 7, 3, 6, 5, 8, 2, 6, 4];
+  let endIdx, prevSum, cells;
+  function build() { rowEl.innerHTML = ''; cells = V.map((v, i) => H('div', 'wn-c', `B${i + 1}<b>${v}</b>`, rowEl)); }
+  const sum = (a, b) => V.slice(a, b + 1).reduce((x, y) => x + y, 0);
+  function reset() { build(); endIdx = -1; prevSum = null; say(st, 'Press ▶ Slide. Each cell is one batch with its record count.'); }
+  function slide() {
+    const next = endIdx < 0 ? 2 : endIdx + 2;
+    if (next > 8) { reset(); return; }
+    const s = next - 2, prevS = endIdx - 2;
+    cells.forEach(c => c.className = 'wn-c');
+    for (let i = s; i <= next; i++) cells[i].classList.add('in');
+    const total = sum(s, next);
+    if (inv.checked && prevSum !== null) {
+      const entering = [endIdx + 1, next], leaving = [prevS, s - 1];
+      for (let i = entering[0]; i <= entering[1]; i++) cells[i].className = 'wn-c enter';
+      for (let i = leaving[0]; i <= leaving[1]; i++) cells[i].className = 'wn-c leave';
+      say(st, `Window B${s + 1}–B${next + 1} = previous ${prevSum} <b>+ ${sum(entering[0], entering[1])}</b> (entering) <b>− ${sum(leaving[0], leaving[1])}</b> (leaving) = <b>${total}</b>. Only the changed batches are touched.`, 'ok');
+    } else {
+      say(st, `Window B${s + 1}–B${next + 1}: reduce all 3 batches = <b>${total}</b>.${prevSum !== null ? ' Batch B' + (s + 1) + ' is counted again — windows overlap.' : ''}`, 'ok');
+    }
+    prevSum = total; endIdx = next;
+  }
+  function bad() {
+    cells.forEach(c => { c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); });
+    say(st, '<b>💥 Rejected.</b> A slide of 1.5 batch intervals would cut a batch in half. Window length and slide must be multiples of the parent DStream\'s interval; <code>WindowedDStream</code> throws an exception when it is created.', 'bad');
+  }
+  $('[data-act=slide]', root).onclick = slide;
+  $('[data-act=bad]', root).onclick = bad;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { slide(); setTimeout(slide, REDUCE ? 0 : 1300); } });
+})();
+
+/* ---------- 11. rate ---------- */
+(() => {
+  const root = $('#fig-rate'), svg = $('#rt-svg'), st = $('#rt-status'), cap = $('[data-act=cap]', root), bp = $('[data-act=bp]', root);
+  const P = 4, INT = 10, IN = 2000, CAPA = 5000, NB = 12, X0 = 60, BW = 46, Y0 = 190, YS = 4;   // YS px per second
+  const enqueue = makeQueue();
+  let run = 0, backlog = 0;
+  const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + ' M' : n >= 1e3 ? Math.round(n / 1e3) + ' k' : '' + n;
+  function axis() {
+    svg.innerHTML = '';
+    S('line', { x1: X0, y1: Y0, x2: 650, y2: Y0, class: 'edge' }, svg);
+    S('line', { x1: X0, y1: Y0 - INT * YS, x2: 650, y2: Y0 - INT * YS, stroke: C.bad, 'stroke-width': 2, 'stroke-dasharray': '6 4' }, svg);
+    T(svg, X0 - 6, Y0 - INT * YS + 4, '10 s', { class: 'tiny', 'text-anchor': 'end' });
+    T(svg, X0 - 6, Y0 + 4, '0', { class: 'tiny', 'text-anchor': 'end' });
+    T(svg, 355, 222, 'batches → (bar = processing time, label = records in batch)', { class: 'tiny' });
+  }
+  function reset() { run++; backlog = 0; axis(); say(st, 'Tick options, then run. Red dashed line = batch interval.'); }
+  async function sim() {
+    run++; const my = run; axis();
+    let lag = backlog, est = 0, t = 0, qEnd = 0, maxDelay = 0, worst = 0;
+    for (let b = 0; b < NB; b++) {
+      lag += IN * INT;
+      let limit = Infinity;
+      if (bp.checked && est > 0) limit = est * INT;
+      if (cap.checked) limit = Math.min(limit, 1000 * P * INT);
+      const n = Math.min(lag, limit); lag -= n;
+      const proc = n / CAPA; est = n / proc;
+      const ready = (b + 1) * INT, start = Math.max(ready, qEnd); qEnd = start + proc; maxDelay = Math.max(maxDelay, start - ready); worst = Math.max(worst, proc);
+      const h = Math.min(proc * YS, 150), x = X0 + 8 + b * BW;
+      const r = S('rect', { x, y: Y0, width: BW - 10, height: 0, rx: 3, fill: proc > INT ? C.bad : C.ok }, svg);
+      await tween(220, k => { r.setAttribute('y', Y0 - h * k); r.setAttribute('height', h * k); }); if (my !== run) return;
+      T(svg, x + (BW - 10) / 2, Y0 - h - 5, fmt(n), { class: 'tiny', 'font-weight': 700 });
+      if (proc * YS > 150) T(svg, x + (BW - 10) / 2, Y0 - 60, Math.round(proc) + 's', { class: 'tiny', fill: '#fff', 'font-weight': 800 });
+    }
+    const mode = cap.checked ? 'maxRatePerPartition caps every batch at 40 k records (1 000 × 4 partitions × 10 s)' : bp.checked ? 'backpressure' : 'no limits';
+    if (worst > INT) say(st, `<b>💥 ${mode}:</b> the first batch took ${fmt(Math.round(worst * CAPA))} records and ${Math.round(worst)} s to process; the batches behind it waited up to ${Math.round(maxDelay)} s. ${bp.checked && !cap.checked ? 'Backpressure only learns from <em>completed</em> batches, so the first one is unbounded — set a cap or initialRate.' : 'One giant batch can also exhaust executor memory.'}`, 'bad');
+    else say(st, `<b>${backlog ? 'Controlled catch-up' : 'Steady'}:</b> ${mode}. Every batch finishes within the interval.${lag ? ` Remaining lag ${fmt(lag)} records — it drains at about 20 k per batch.` : ''}`, 'ok');
+  }
+  $('[data-act=run]', root).onclick = () => enqueue(sim);
+  $('[data-act=backlog]', root).onclick = () => { backlog = 3600 * IN; enqueue(sim); };
+  $('[data-act=reset]', root).onclick = () => { cap.checked = false; bp.checked = false; reset(); };
+  reset();
+  registerFig(root, { first() { enqueue(sim); } });
+})();
+
+/* ---------- quiz ---------- */
+(() => {
+  const Q = [
+    ['Where does the lambda you pass to rdd.map(...) execute?', ['On the driver, which then sends the results to executors', 'On executors, inside tasks, against copies of captured variables', 'On the cluster manager'], 1, 'The driver serializes the function into tasks; executors run it. Captured variables are copies — changes never flow back to the driver.'],
+    ['An RDD built with textFile → map is not cached. You call count() and then take(10). How often is the input read?', ['Once — Spark remembers the result', 'Twice — each action recomputes the lineage', 'Never — transformations are lazy'], 1, 'Lazy means "not until an action". Every action runs the lineage again from the source unless you persist the RDD. (take() may stop after reading only the partitions it needs.)'],
+    ['textFile → map → filter → reduceByKey → map → count(). How many stages?', ['5, one per operation', '2 — the DAG is cut at the one shuffle', '1 — it is one job'], 1, 'Narrow operations are pipelined inside a stage; only the wide reduceByKey introduces a shuffle boundary.'],
+    ['(L2) Why is reduceByKey better than groupByKey for computing sums?', ['It combines values per key on the map side before the shuffle', 'It avoids the shuffle completely', 'It always uses more partitions'], 0, 'Both shuffle. reduceByKey merges values inside each map task first, so far fewer records cross the network.'],
+    ['(L2) Execution needs memory; cached blocks occupy more than R. What happens?', ['Storage evicts execution memory', 'Execution evicts cached blocks, but only down to R; beyond that it spills', 'The executor fails with OOM immediately'], 1, 'Execution may evict storage until storage is back to R. Storage can never evict execution.'],
+    ['(L2) What does Adaptive Query Execution base its decisions on?', ['Only catalog statistics collected before the query', 'Runtime statistics from completed shuffle stages', 'Analysis of your Java lambdas'], 1, 'AQE re-optimizes during execution with real statistics — e.g. switching a sort-merge join to a broadcast join.'],
+    ['A DStream program defines transformations but no output operation. What does Spark process?', ['Every batch, and discards the results', 'Nothing — output operations trigger the work', 'Only the first batch'], 1, 'DStreams are lazy like RDDs: output operations such as foreachRDD force the processing.'],
+    ['A topic has 12 partitions. With the direct stream, how many tasks read Kafka in each batch?', ['One per executor', '12 — one per Kafka partition', 'spark.default.parallelism'], 1, 'The KafkaRDD has a 1:1 mapping between Kafka partitions and Spark partitions, and one task per partition.'],
+    ['What is wrong with enable.auto.commit = true in a DStream job?', ['Nothing — it gives exactly-once', 'Offsets can be committed for records that were polled but never written: undefined semantics', 'Spark ignores the setting'], 1, 'The docs call it "almost certainly not what you want". Commit after the output with commitAsync, or store offsets with the output.'],
+    ['(L2) Which of these requires a checkpoint directory?', ['updateStateByKey', 'map + foreachRDD', 'createDirectStream with Subscribe'], 0, 'Stateful transformations and reduceByKeyAndWindow with an inverse function need periodic RDD checkpointing.'],
+    ['(L2) A direct stream restarts after 1 hour of downtime, with no rate settings. What does the first batch contain?', ['The whole backlog, in one batch', 'One batch interval of data', 'Nothing — backpressure is on by default'], 0, 'Without maxRatePerPartition (and backpressure is off by default), the first batch runs from the last offset to the latest one.']
+  ];
+  const box = $('#quiz'); let answered = 0, good = 0; const scoreEl = $('#score');
+  function upd() { scoreEl.textContent = `Score: ${good} / ${answered}`; }
+  Q.forEach(([q, opts, ok, why], n) => {
+    const d = H('div', 'quiz-q reveal', `<h4>${n + 1}. ${q}</h4><div class="opts"></div><div class="why">💡 ${why}</div>`, box);
+    opts.forEach((t, i) => {
+      const b = H('button', '', null, $('.opts', d)); b.textContent = t;
+      b.onclick = () => {
+        if (d.classList.contains('done')) return;
+        d.classList.add('done'); answered++;
+        if (i === ok) good++; else b.classList.add('wrong');
+        $('.opts', d).children[ok].classList.add('right');
+        $$('button', d).forEach(x => x.disabled = true);
+        upd();
+      };
+    });
+    revealIO.observe(d);
+  });
+})();
+</script>
+</body>
+</html>
