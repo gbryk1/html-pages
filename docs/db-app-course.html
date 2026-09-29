@@ -1,0 +1,2306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your App vs. the Database — transactions, isolation, locking</title>
+<meta name="description" content="Animated guide to database operations from an application: connection pools, transactions, isolation levels, Spring @Transactional and propagation, locking, JPA pitfalls, deadlocks, outbox, migrations, troubleshooting and interview traps.">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper:#fbf8f1; --paper2:#ffffff; --ink:#1c1c22; --mut:#5d5f6b; --line:#d9d3c4; --shadow:#1c1c22;
+  --accent:#1b6fa8; --accent2:#e39b2d; --ok:#2f9e63; --bad:#d64545; --warn:#c98a00;
+  --pen:#b8431f; --note:#fff4c2; --card:#f1ece0; --code:#f3efe6; --dim:#9aa0ab;
+  --hand:"Segoe Print","Bradley Hand","Comic Neue","Comic Sans MS","Chalkboard SE","Marker Felt",cursive;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,"Palatino Linotype",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#15171c; --paper2:#1d2027; --ink:#e7e5df; --mut:#a3a6b1; --line:#383c49; --shadow:#000;
+          --accent:#5aa9e6; --accent2:#f0b34f; --ok:#4cc38a; --bad:#f06b6b; --warn:#f0c040;
+          --pen:#ff9a6b; --note:#3a3420; --card:#232730; --code:#22262e; --dim:#5d6270; }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.68 var(--serif); }
+a { color:var(--accent); }
+code, kbd { font:.86em var(--mono); background:var(--code); padding:.08em .35em; border-radius:4px; }
+pre { font:14px/1.5 var(--mono); background:var(--code); border-left:4px solid var(--accent); padding:.9rem 1rem; overflow:auto; border-radius:4px; }
+pre code { background:none; padding:0; font-size:inherit; }
+h1,h2,h3,h4 { font-family:var(--sans); line-height:1.2; }
+h3 { font-size:1.28rem; margin:2.2rem 0 .6rem; }
+strong, b { font-weight:700; }
+.hand { font-family:var(--hand); color:var(--pen); }
+.mut { color:var(--mut); }
+
+/* progress + toc */
+#progress { position:fixed; inset:0 0 auto 0; height:5px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform-origin:0 50%; transform:scaleX(0); z-index:50; }
+#toc { position:fixed; top:1.4rem; left:1rem; width:205px; font:13.5px/1.35 var(--sans); z-index:40; display:none; opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #toc { opacity:1; pointer-events:auto; }
+#toc b { display:block; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.5rem; }
+#toc a { display:block; padding:.28rem .55rem; border-left:3px solid var(--line); color:var(--mut); text-decoration:none; }
+#toc a:hover { color:var(--ink); }
+#toc a.active { border-color:var(--accent2); color:var(--ink); font-weight:700; background:var(--card); }
+@media (min-width:1440px) { #toc { display:block; } }
+
+/* cover */
+.cover { min-height:96vh; display:grid; place-items:center; padding:3rem 1.2rem; position:relative; overflow:hidden;
+         background:radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 55%), var(--paper); }
+.cover-inner { max-width:1040px; width:100%; display:grid; gap:2rem; grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px) { .cover-inner { grid-template-columns:1.1fr .9fr; } }
+.cover .kicker { font:700 .85rem var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); }
+.cover h1 { font-size:clamp(2.4rem,5.6vw,4.2rem); margin:.3rem 0 .6rem; letter-spacing:-.02em; }
+.cover h1 span { display:inline-block; background:var(--ink); color:var(--paper); padding:0 .25em; transform:rotate(-1.5deg); }
+.cover .sub { font-size:1.2rem; color:var(--mut); max-width:34em; }
+.cover .stamp { display:inline-block; margin-top:1.2rem; font:700 1rem var(--hand); color:var(--pen); border:3px solid var(--pen); padding:.3rem .8rem; border-radius:8px; transform:rotate(-4deg); }
+.cover svg { width:100%; max-width:400px; justify-self:center; overflow:visible; }
+.spin { animation:spin 50s linear infinite; transform-origin:200px 200px; }
+.spin-rev { animation:spin 34s linear infinite reverse; transform-origin:200px 200px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.cover .scroll-hint { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); font:1rem var(--hand); color:var(--mut); animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob { 50% { transform:translate(-50%,8px); } }
+
+/* layout */
+main { max-width:800px; margin:0 auto; padding:0 1.2rem 6rem; }
+.chapter { padding-top:4.5rem; }
+.chap-head { display:flex; gap:1.1rem; align-items:center; margin-bottom:1rem; }
+.chap-num { flex:none; width:4.2rem; height:4.2rem; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font:800 1.7rem var(--sans); transform:rotate(-6deg); box-shadow:4px 4px 0 var(--accent2); }
+.chap-head h2 { font-size:clamp(1.6rem,3.8vw,2.2rem); margin:0; }
+.chap-head .tag { font:1.02rem var(--hand); color:var(--pen); display:block; margin-top:.3rem; }
+
+/* reveal */
+.js .reveal { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.js .reveal.shown { opacity:1; transform:none; }
+
+/* head-first boxes */
+.box { position:relative; margin:2rem 0; padding:1.1rem 1.25rem 1rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper2); box-shadow:5px 5px 0 var(--shadow); }
+.box > .lbl { position:absolute; top:-1rem; left:1rem; font:800 .82rem var(--sans); letter-spacing:.06em; text-transform:uppercase; background:var(--ink); color:var(--paper); padding:.25rem .65rem; border-radius:4px; transform:rotate(-2deg); }
+.box.brain { border-style:dashed; background:color-mix(in srgb, var(--accent) 8%, var(--paper2)); }
+.box.brain > .lbl { background:var(--accent); color:#fff; }
+.box.pencil { background:color-mix(in srgb, var(--accent2) 10%, var(--paper2)); }
+.box.pencil > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.watch { border-color:var(--bad); box-shadow:5px 5px 0 var(--bad); }
+.box.watch > .lbl { background:var(--bad); color:#fff; }
+.box.geek { background:var(--card); font-size:.95em; }
+.box.geek > .lbl { background:var(--mut); }
+.box.relax { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); }
+.box.relax > .lbl { background:var(--ok); color:#fff; }
+.box.bullets { background:var(--note); transform:rotate(-.4deg); }
+.box.bullets ul { margin:.3rem 0 0; padding-left:1.2rem; }
+.box.bullets li { margin:.35rem 0; }
+.box.bullets li::marker { content:"▸ "; color:var(--pen); }
+.box.usecase { border-color:var(--accent); box-shadow:5px 5px 0 var(--accent); }
+.box.usecase > .lbl { background:var(--accent); color:#fff; }
+.box.usecase ol { margin:.5rem 0 .3rem; padding-left:1.3rem; }
+.box.usecase li { margin:.4rem 0; }
+.box p:first-of-type { margin-top:.4rem; }
+.box p:last-child { margin-bottom:0; }
+.qa { display:grid; grid-template-columns:auto 1fr; gap:.4rem .8rem; margin:.8rem 0 1rem; }
+.qa .q, .qa .a { font:800 1.15rem var(--sans); }
+.qa .q { color:var(--accent); } .qa .a { color:var(--pen); }
+.qa div { margin:0; }
+details { margin-top:.8rem; }
+summary { cursor:pointer; font:700 .95rem var(--sans); color:var(--pen); }
+.fire { display:grid; gap:.7rem; margin-top:.5rem; }
+.fire .who { font:800 .85rem var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.fire .line { display:grid; grid-template-columns:7.5rem 1fr; gap:.8rem; }
+.fire .line.l2 .who { color:var(--accent); } .fire .line.l1 .who { color:var(--pen); }
+@media (max-width:560px) { .fire .line { grid-template-columns:1fr; gap:.1rem; } }
+.anno { font:1.05rem/1.35 var(--hand); color:var(--pen); display:block; margin:.4rem 0 .4rem 1.2rem; transform:rotate(-1.2deg); }
+.anno::before { content:"↖ "; }
+.pull { font:italic 1.35rem/1.45 var(--serif); border-left:6px solid var(--accent2); padding:.2rem 0 .2rem 1rem; margin:1.6rem 0; }
+.prompt-ex { font:13.5px/1.5 var(--mono); background:var(--code); border:1.5px dashed var(--line); border-radius:6px; padding:.7rem .85rem; margin-top:.7rem; white-space:pre-wrap; }
+.prompt-ex b { font-family:var(--sans); color:var(--pen); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+
+/* figures (generic) */
+.fig { margin:2.2rem -1rem; padding:1rem 1rem .9rem; background:var(--paper2); border:2px solid var(--ink); border-radius:8px; box-shadow:6px 6px 0 var(--shadow); position:relative; }
+@media (min-width:1000px) { .fig.wide { margin-left:-6rem; margin-right:-6rem; } }
+.fig .ftitle { font:800 .95rem var(--sans); margin:0 0 .6rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.fig .ftitle span { font:400 .85rem var(--sans); color:var(--mut); }
+.fig figcaption, .fig .cap { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.6rem; }
+.fig svg { display:block; width:100%; height:auto; }
+.fig svg text { fill:var(--ink); font-family:var(--sans); }
+.ctrl { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.4rem 0 .6rem; font:14px var(--sans); }
+.btn { font:700 13.5px var(--sans); color:var(--ink); background:var(--paper2); border:2px solid var(--ink); border-radius:999px; padding:.33rem .85rem; box-shadow:2px 2px 0 var(--shadow); cursor:pointer; transition:transform .08s; }
+.btn:hover { background:var(--card); }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.on { background:var(--ink); color:var(--paper); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.ctrl input[type=text], .ctrl select, .calc input { font:14px var(--mono); padding:.3rem .5rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); }
+.ctrl input[type=text] { width:9rem; }
+.ctrl label { display:inline-flex; gap:.35rem; align-items:center; }
+.scroll-x { overflow-x:auto; }
+.scroll-x > svg { min-width:620px; }
+.two { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:720px) { .two { grid-template-columns:1.2fr 1fr; align-items:start; } }
+table.mini { width:100%; border-collapse:collapse; font:13.5px var(--sans); }
+table.mini th, table.mini td { text-align:left; padding:.28rem .4rem; border-bottom:1px solid var(--line); }
+table.mini th { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+table.mini tr.flash td { animation:flashbg 1.2s ease; }
+@keyframes flashbg { 0%{ background:color-mix(in srgb, var(--accent2) 45%, transparent);} 100%{ background:transparent;} }
+.chip { display:inline-block; min-width:1.6em; text-align:center; font:800 12px var(--sans); color:#fff; padding:.1rem .4rem; border-radius:999px; }
+.status { font:14px/1.45 var(--sans); padding:.55rem .75rem; border-radius:6px; background:var(--card); margin-top:.5rem; min-height:2.2rem; }
+.status.ok { background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.status.bad { background:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.status.warn { background:color-mix(in srgb, var(--warn) 20%, var(--paper2)); }
+.fly { pointer-events:none; }
+.small { font-size:11px; }
+.tiny { font-size:9.5px; }
+.edge { stroke:var(--line); stroke-width:2; }
+.nd circle, .nd rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2.2; transition:fill .3s, opacity .3s; }
+.nd text { font-weight:800; font-size:12px; pointer-events:none; }
+.nd.off circle, .nd.off rect { fill:var(--dim); opacity:.5; stroke-dasharray:4 3; }
+.nd.hot circle, .nd.hot rect { fill:var(--accent2); }
+.nd.pulse circle, .nd.pulse rect, .pop { animation:pulse .6s ease; transform-box:fill-box; transform-origin:center; }
+@keyframes pulse { 40% { transform:scale(1.3); } }
+
+
+/* ---- generic extras: meters, legends, logs, stacked token bars ---- */
+main, footer { overflow-wrap:break-word; }   /* long URLs / identifiers in prose must not widen the page */
+.two > * { min-width:0; }
+.ctrl label { flex-wrap:wrap; max-width:100%; }
+.ctrl select { max-width:100%; min-width:0; }
+.meter { height:12px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.meter > i { display:block; height:100%; width:0; background:var(--ok); transition:width .6s ease, background .4s; }
+.legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.3rem; background:var(--c); vertical-align:-1px; }
+.log { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; height:190px; overflow-y:auto; }
+.log div { opacity:0; transform:translateX(-6px); transition:opacity .3s, transform .3s; white-space:pre-wrap; }
+.log div.shown { opacity:1; transform:none; }
+.log .u { color:var(--accent); font-weight:700; } .log .e { color:var(--bad); } .log .g { color:var(--ok); }
+.stack { position:relative; height:34px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:var(--paper); display:flex; }
+.stack .seg { height:100%; transition:width .7s ease; overflow:hidden; white-space:nowrap; font:700 10.5px/34px var(--sans); color:#fff; text-indent:4px; }
+
+/* ---- multi-level structure: parts, level chips, depth switch, "go deeper", course map ---- */
+.part { margin:5rem 0 0; padding:1.4rem 1.3rem 1.2rem; border-radius:10px; background:var(--ink); color:var(--paper); box-shadow:6px 6px 0 var(--accent2); }
+.part .part-no { font:800 .8rem var(--sans); letter-spacing:.18em; text-transform:uppercase; color:var(--accent2); }
+.part h2 { margin:.2rem 0 .35rem; font-size:clamp(1.7rem,4vw,2.4rem); }
+.part p { margin:0; font-size:1rem; opacity:.85; }
+.lvl-chip { display:inline-block; vertical-align:middle; margin-left:.5rem; font:800 10.5px/1.5 var(--sans); letter-spacing:.06em; text-transform:uppercase; padding:.08rem .5rem; border-radius:999px; color:#fff; background:var(--ok); }
+.lvl-chip.l2 { background:var(--accent); } .lvl-chip.l3 { background:#8e44ad; } .lvl-chip.l4 { background:var(--bad); }
+.lvl-off { display:none !important; }
+details.deeper { border:2px dashed #8e44ad; border-radius:8px; padding:.6rem .9rem; margin:1.8rem 0; background:color-mix(in srgb, #8e44ad 6%, var(--paper2)); }
+details.deeper > summary { font:700 1rem var(--sans); color:var(--ink); }
+details.deeper > summary .lvl-chip { margin:0 .4rem 0 0; }
+details.deeper[open] > summary { margin-bottom:.5rem; }
+.lvl-hint { display:block; width:100%; text-align:left; margin:1.4rem 0 0; font:700 13px var(--sans); color:var(--accent); background:none; border:2px dashed var(--accent); border-radius:8px; padding:.45rem .8rem; cursor:pointer; }
+#depth { position:fixed; left:1rem; bottom:1rem; z-index:45; display:flex; gap:.2rem; align-items:center; font:700 12px var(--sans); background:var(--paper2); color:var(--ink); border:2px solid var(--ink); border-radius:999px; padding:.22rem .3rem .22rem .75rem; box-shadow:3px 3px 0 var(--shadow); opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #depth { opacity:1; pointer-events:auto; }
+#depth button { font:700 12px var(--sans); border:0; border-radius:999px; padding:.25rem .6rem; background:transparent; color:var(--ink); cursor:pointer; }
+#depth button.on { background:var(--ink); color:var(--paper); }
+@media (max-width:640px) { #depth .nm { display:none; } }
+#toc { max-height:calc(100vh - 5.5rem); overflow-y:auto; }
+.toc-part { font:800 .7rem var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:.8rem 0 .2rem .2rem; }
+#map { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.7rem; margin:1.5rem 0; }
+.map-part { border:2px solid var(--line); border-radius:10px; padding:.55rem .6rem; background:var(--paper2); }
+.map-part > b { display:block; font:800 11.5px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin-bottom:.35rem; }
+.map-ch { display:flex; gap:.45rem; align-items:baseline; font:13px/1.3 var(--sans); color:var(--ink); text-decoration:none; padding:.22rem .4rem; border-radius:6px; border-left:4px solid var(--ok); margin:.15rem 0; transition:background .3s; }
+.map-ch.l2 { border-left-color:var(--accent); } .map-ch.l3 { border-left-color:#8e44ad; } .map-ch.l4 { border-left-color:var(--bad); }
+.map-ch i { font:800 11px var(--mono); font-style:normal; color:var(--mut); min-width:1.4em; }
+.map-ch:hover { background:var(--card); }
+.map-ch.here { background:var(--accent2); color:#1c1c22; font-weight:700; }
+.map-ch.seen::after { content:"✓"; margin-left:auto; color:var(--ok); font-weight:800; }
+.map-ch.dim, #toc a.dim { opacity:.4; }
+
+/* shared figure bits */
+.db-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
+.db-grid2 > * { min-width:0; }
+.db-kv { font:13px/1.4 var(--sans); }
+.db-kv b { font-family:var(--mono); }
+.db-lanes { display:grid; grid-template-columns:1fr 1fr; gap:.35rem .6rem; font:12.5px/1.4 var(--mono); }
+.db-lanes > div { min-width:0; overflow-wrap:anywhere; }
+.db-lanes .h { font:800 12px var(--sans); text-transform:uppercase; letter-spacing:.05em; color:var(--mut); border-bottom:2px solid var(--line); padding-bottom:.2rem; }
+.db-lanes .st { background:var(--code); border-radius:5px; padding:.25rem .45rem; opacity:0; transform:translateY(6px); transition:opacity .35s, transform .35s; }
+.db-lanes .st.shown { opacity:1; transform:none; }
+.db-lanes .st.bad { box-shadow:inset 3px 0 0 var(--bad); }
+.db-lanes .st.ok { box-shadow:inset 3px 0 0 var(--ok); }
+.db-lanes .st.wait { box-shadow:inset 3px 0 0 var(--warn); }
+.db-lanes .st small { display:block; font:11.5px/1.35 var(--sans); color:var(--mut); }
+.db-lanes .gap { visibility:hidden; }
+.db-pills { display:flex; flex-wrap:wrap; gap:.35rem; }
+.db-state { display:flex; flex-wrap:wrap; gap:.5rem; margin:.5rem 0; font:13px var(--sans); }
+.db-state span { background:var(--card); border:1.5px solid var(--line); border-radius:6px; padding:.2rem .55rem; }
+.db-state span b { font-family:var(--mono); }
+.db-state span.hot { border-color:var(--accent2); background:color-mix(in srgb, var(--accent2) 20%, var(--paper2)); }
+
+/* pool */
+.pl-slots { display:grid; grid-template-columns:repeat(10,1fr); gap:4px; margin:.4rem 0; }
+.pl-slot { aspect-ratio:1; border:2px solid var(--ink); border-radius:6px; background:var(--paper); display:grid; place-items:center; font:800 11px var(--sans); transition:background .25s; }
+.pl-slot.busy { background:var(--accent); color:#fff; }
+.pl-slot.slow { background:var(--bad); color:#fff; }
+.pl-q { display:flex; flex-wrap:wrap; gap:3px; min-height:22px; margin:.3rem 0; }
+.pl-q i { width:14px; height:14px; border-radius:50%; background:var(--warn); display:block; }
+.pl-q i.late { background:var(--bad); }
+.pl-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:.4rem; font:12.5px var(--sans); }
+.pl-stats div { background:var(--card); border-radius:6px; padding:.3rem .5rem; }
+.pl-stats b { display:block; font:800 1.2rem var(--sans); }
+
+/* transfer */
+.tx-acc { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; text-align:center; font:13px var(--sans); }
+.tx-acc div { border:2px solid var(--ink); border-radius:8px; padding:.4rem; background:var(--paper); }
+.tx-acc b { display:block; font:800 1.5rem var(--sans); transition:color .3s; }
+.tx-acc .lost b { color:var(--bad); }
+
+/* isolation matrix */
+.iso-t td.y { color:var(--bad); font-weight:700; }
+.iso-t td.n { color:var(--ok); font-weight:700; }
+.iso-t td.pg { color:var(--accent); font-weight:700; }
+.iso-t tr.sel td { background:color-mix(in srgb, var(--accent2) 22%, transparent); }
+.iso-t td, .iso-t th { white-space:nowrap; }
+.iso-t td:first-child { font-weight:700; }
+.iso-def { font:800 10px var(--sans); background:var(--accent2); color:#1c1c22; border-radius:999px; padding:.05rem .4rem; margin-left:.3rem; }
+
+/* proxy */
+.px-flow { display:grid; grid-template-columns:repeat(4,1fr); gap:.4rem; align-items:stretch; font:12.5px/1.3 var(--sans); }
+.px-flow > div { border:2px solid var(--ink); border-radius:8px; padding:.45rem .4rem; text-align:center; background:var(--paper); transition:background .3s, opacity .3s; min-width:0; overflow-wrap:anywhere; }
+.px-flow > div.on { background:var(--accent); color:#fff; }
+.px-flow > div.skip { opacity:.35; border-style:dashed; }
+.px-flow > div.bad { background:var(--bad); color:#fff; }
+.px-flow code { background:none; padding:0; font-size:11.5px; color:inherit; }
+@media (max-width:560px) { .px-flow { grid-template-columns:1fr 1fr; } }
+
+/* propagation */
+.pr-out { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.45rem; margin:.5rem 0; font:13px/1.35 var(--sans); }
+.pr-out div { border:2px solid var(--line); border-radius:8px; padding:.4rem .55rem; background:var(--paper); min-width:0; overflow-wrap:anywhere; }
+.pr-out div b { display:block; font:800 11px var(--sans); text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+.pr-out .good { border-color:var(--ok); } .pr-out .bad { border-color:var(--bad); } .pr-out .warn { border-color:var(--warn); }
+
+/* N+1 */
+.np-bar { display:flex; flex-wrap:wrap; gap:3px; min-height:26px; margin:.4rem 0; }
+.np-bar i { width:18px; height:18px; border-radius:4px; background:var(--accent); display:block; }
+.np-bar i.first { background:var(--ok); width:40px; }
+.np-bar i.err { background:var(--bad); width:auto; height:auto; padding:.1rem .4rem; color:#fff; font:700 11px var(--sans); font-style:normal; }
+.np-count { font:800 1.6rem var(--sans); }
+
+/* batch */
+.bt-row { display:grid; grid-template-columns:9.5rem 1fr 4.2rem; gap:.5rem; align-items:center; font:12.5px var(--sans); margin:.35rem 0; }
+.bt-row > * { min-width:0; }
+.bt-row .meter { height:16px; }
+.bt-row b { font-family:var(--mono); text-align:right; }
+@media (max-width:520px) { .bt-row { grid-template-columns:6.5rem 1fr 3.6rem; } }
+
+/* MVCC */
+.mv-vers { display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0; }
+.mv-ver { border:2px solid var(--ink); border-radius:8px; padding:.35rem .6rem; font:12.5px/1.35 var(--mono); background:var(--paper); transition:opacity .3s, background .3s; }
+.mv-ver.dead { opacity:.45; text-decoration:line-through; }
+.mv-ver.seen { background:color-mix(in srgb, var(--ok) 25%, var(--paper2)); }
+.mv-ver.unc { border-style:dashed; }
+
+/* deadlock */
+.dl-wrap { max-width:420px; margin:0 auto; }
+.dl-wrap .arr { stroke:var(--ink); stroke-width:2.5; fill:none; marker-end:url(#dl-ah); opacity:0; transition:opacity .3s; }
+.dl-wrap .arr.on { opacity:1; }
+.dl-wrap .arr.cyc { stroke:var(--bad); }
+.dl-wrap #dl-ah path { fill:var(--ink); }
+
+/* outbox */
+.ob-sys { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; font:12.5px/1.35 var(--sans); }
+.ob-sys > div { border:2px solid var(--ink); border-radius:8px; padding:.45rem; background:var(--paper); min-height:5.2rem; min-width:0; overflow-wrap:anywhere; }
+.ob-sys > div b { display:block; font:800 11px var(--sans); text-transform:uppercase; color:var(--mut); }
+.ob-sys .item { font-family:var(--mono); font-size:11.5px; background:var(--code); border-radius:4px; padding:.1rem .3rem; margin-top:.25rem; }
+.ob-sys .item.ghost { box-shadow:inset 3px 0 0 var(--bad); }
+.ob-sys .item.gone { text-decoration:line-through; opacity:.55; }
+@media (max-width:520px) { .ob-sys { grid-template-columns:1fr; } .ob-sys > div { min-height:0; } }
+
+/* starvation */
+.st-grid { display:grid; grid-template-columns:5.5rem 1fr; gap:.35rem .6rem; font:12.5px var(--sans); align-items:center; }
+.st-cells { display:flex; gap:4px; flex-wrap:wrap; }
+.st-cells i { width:26px; height:26px; border-radius:6px; border:2px solid var(--ink); display:grid; place-items:center; font:800 10px var(--sans); font-style:normal; background:var(--paper); }
+.st-cells i.o { background:var(--accent); color:#fff; }
+.st-cells i.n { background:var(--ok); color:#fff; }
+.st-cells i.w { background:var(--warn); color:#1c1c22; }
+.st-cells i.x { background:var(--bad); color:#fff; }
+
+/* migration */
+.mg-lanes { display:grid; grid-template-columns:6.5rem 1fr; gap:.3rem .6rem; font:12.5px var(--sans); align-items:center; }
+.mg-track { position:relative; height:22px; background:var(--card); border-radius:5px; overflow:hidden; }
+.mg-track i { position:absolute; top:0; bottom:0; border-radius:5px; font:700 10.5px/22px var(--sans); color:#fff; padding-left:4px; white-space:nowrap; overflow:hidden; font-style:normal; }
+
+/* pg_stat_activity */
+.mo-t td { font-family:var(--mono); font-size:12px; }
+.mo-t tr.hit td { background:color-mix(in srgb, var(--bad) 18%, transparent); }
+
+/* checklist */
+.ck-list { list-style:none; padding:0; margin:.4rem 0; }
+.ck-list li { margin:.3rem 0; font:14px/1.4 var(--sans); }
+.ck-list label { display:flex; gap:.5rem; align-items:flex-start; cursor:pointer; }
+.ck-list input { margin-top:.2rem; flex:none; }
+.ck-list h4 { margin:1rem 0 .2rem; font:800 12px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); }
+
+/* traps */
+.tp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:.7rem; }
+.tp-card { border:2px solid var(--ink); border-radius:8px; background:var(--paper2); padding:.6rem .75rem; box-shadow:3px 3px 0 var(--shadow); font:14px/1.45 var(--sans); }
+.tp-card > b { display:block; margin-bottom:.2rem; }
+.tp-card details { margin-top:.3rem; }
+.tp-card summary { font-size:.85rem; }
+
+.tp-card p { margin:0; }
+.tp-card details p { margin-top:.35rem; }
+
+/* ==== per-figure CSS goes here — prefix every class with the figure name (.ex-…) to avoid collisions ==== */
+.ex-row { display:grid; grid-template-columns:6rem 1fr; gap:.6rem; align-items:center; font:12.5px var(--sans); margin:.4rem 0; }
+/* quiz */
+.quiz-q { margin:1.2rem 0; padding:.9rem 1rem; border:2px solid var(--ink); border-radius:8px; background:var(--paper2); }
+.quiz-q h4 { margin:0 0 .6rem; font-size:1rem; }
+.quiz-q .opts { display:grid; gap:.4rem; }
+.quiz-q button { text-align:left; font:14px/1.4 var(--sans); color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:6px; padding:.45rem .7rem; cursor:pointer; }
+.quiz-q button:hover:not(:disabled) { border-color:var(--ink); }
+.quiz-q button.right { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+.quiz-q button.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); }
+.quiz-q .why { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.5rem; display:none; }
+.quiz-q.done .why { display:block; }
+.score { position:sticky; bottom:1rem; margin-left:auto; width:max-content; font:800 1rem var(--sans); background:var(--ink); color:var(--paper); padding:.45rem .9rem; border-radius:999px; box-shadow:3px 3px 0 var(--accent2); }
+.cheat td:first-child { font-family:var(--mono); font-size:12.5px; white-space:nowrap; }
+footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var(--sans); color:var(--mut); border-top:2px solid var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+  html { scroll-behavior:auto; }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Chapters"></nav>   <!-- built from parts/chapters by JS -->
+<div id="depth" role="group" aria-label="Reading depth"></div>   <!-- built by JS when any data-level > 1 exists -->
+
+<header class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="kicker">Animated guide · databases from the application side</div>
+      <h1>Your app vs. <span>the database</span></h1>
+      <p class="sub">Transactions, isolation levels, Spring propagation, locking, JPA traps, deadlocks, outbox and zero-downtime migrations — from "what is a transaction" to the questions that sink interviews. Java, Spring and PostgreSQL, with MySQL notes. Scroll — the diagrams start by themselves.</p>
+      <div class="stamp">from BEGIN to production 🧠</div>
+    </div>
+    <svg viewBox="0 0 400 400" aria-hidden="true">
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <g id="cover-nodes"></g>
+      </g>
+      <g class="spin-rev">
+        <circle cx="200" cy="200" r="95" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 10"/>
+      </g>
+      <circle cx="200" cy="200" r="46" fill="var(--accent)" stroke="var(--ink)" stroke-width="4"/>
+    </svg>
+  </div>
+  <div class="scroll-hint">scroll ↓</div>
+</header>
+
+<main>
+<section class="chapter" id="intro" data-title="How to read this">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>How to read this guide</h2><span class="tag">your app is a concurrent program — the DB just hides it well</span></div></div>
+  <p class="reveal">Most database bugs never show up on your laptop. You click through the app alone, one request at a time, and
+    everything is correct. Production runs the same code hundreds of times <em>in parallel</em>, holds connections for too
+    long, retries, crashes halfway, and reads from replicas. This guide is about the mechanisms behind that: connections and
+    pools, transactions, isolation levels, Spring's <code>@Transactional</code> and propagation, locking, JPA's hidden
+    queries, and what to check in every application that talks to a database.</p>
+  <p class="reveal">Examples use <b>Java, Spring and JPA/Hibernate on PostgreSQL</b>, with MySQL InnoDB notes where it behaves
+    differently. The ideas carry over to any stack. Facts were checked against the PostgreSQL 18, Spring Framework 7.0,
+    Hibernate ORM 6.6, HikariCP and MySQL 8.4 documentation in September 2026.</p>
+  <p class="reveal">The guide has levels. Chapters and blocks carry a chip —
+    <span class="lvl-chip">L1</span> essentials, <span class="lvl-chip l2">L2</span> practitioner,
+    <span class="lvl-chip l3">L3</span> expert, <span class="lvl-chip l4">L4</span> operations. Choose your depth with the
+    switch in the bottom-left corner; deeper material hides until you want it. The map below jumps anywhere and ticks off
+    what you've read.</p>
+  <div id="map" class="reveal"></div>
+  <div class="box brain reveal"><span class="lbl">🧠 Brain power</span>
+    <p>A colleague writes a money transfer: read both balances, check that the sender has enough, subtract, add, save.
+      The method is annotated with <code>@Transactional</code>. "It's in a transaction, so it's safe," they say.
+      Is it? Keep your answer — the last chapter comes back to it.</p>
+  </div>
+</section>
+
+<section class="part" id="part-1" data-level="1">
+  <span class="part-no">Part I</span><h2>Essentials</h2><p>Connections, transactions, and what goes wrong when two of them run at the same time.</p>
+</section>
+
+<section class="chapter" id="pool" data-level="1" data-title="Connections & the pool">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Connections and the pool</h2><span class="tag">the scarcest thing in your app is not CPU</span></div></div>
+  <p class="reveal">Every query travels over a <b>connection</b>: a network session with the database server. Opening one costs
+    a TCP handshake, authentication and a server-side session, so applications keep a <b>connection pool</b>. In Spring Boot
+    that's HikariCP by default. A request <em>borrows</em> a connection, runs its statements, and <em>returns</em> it.</p>
+  <p class="reveal">The pool is small on purpose. HikariCP's <code>maximumPoolSize</code> defaults to <b>10</b>. When all ten
+    are borrowed, the next <code>getConnection()</code> call blocks for up to <code>connectionTimeout</code> — default
+    <b>30 seconds</b> — and then throws. So the question is never "how fast is my query" alone. It is "how long does each request
+    <em>hold</em> a connection".</p>
+
+  <figure class="fig wide" id="fig-pool">
+    <div class="ftitle">▶ A pool of 10 connections <span>normal traffic, then make one step slow</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="normal">▶ Normal traffic</button>
+      <button class="btn bad" data-act="slow">🐢 HTTP call inside the transaction</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="pl-slots" id="pl-slots"></div>
+    <div class="db-kv">Waiting for a connection: <span class="pl-q" id="pl-q"></span></div>
+    <div class="pl-stats">
+      <div>served<b id="pl-served">0</b></div>
+      <div>waiting<b id="pl-wait">0</b></div>
+      <div>timed out<b id="pl-to">0</b></div>
+      <div>sim time<b id="pl-t">0 s</b></div>
+    </div>
+    <div class="status" id="pl-status">Press ▶ to send requests.</div>
+    <figcaption>Illustrative simulation: 3 requests arrive per simulated second; a normal request holds a connection for
+      about 1 s, a "slow" one for 8 s (e.g. an HTTP call made while the transaction is open). The 30 s timeout is Hikari's
+      default <code>connectionTimeout</code>; time is compressed.</figcaption>
+  </figure>
+
+  <p class="reveal">Notice what broke: not the database. The database was idle while requests queued. The <em>pool</em> ran
+    dry because connections were held while the code waited on something else.</p>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ There are no dumb questions</span>
+    <div class="qa">
+      <div class="q">Q:</div><div>So I just raise the pool to 200?</div>
+      <div class="a">A:</div><div>Usually not. Each connection is a server process in PostgreSQL, and throughput flattens
+        once active connections exceed what the CPU and disks can serve. HikariCP's pool-sizing page quotes the PostgreSQL
+        project's starting point, <code>connections = (core_count × 2) + effective_spindle_count</code>, and tells you to
+        load-test around it. Fix the <em>hold time</em> first.</div>
+      <div class="q">Q:</div><div>Is every statement in a transaction?</div>
+      <div class="a">A:</div><div>Yes, but maybe not the one you think. JDBC connections start in <b>auto-commit</b> mode
+        (HikariCP's <code>autoCommit</code> default is <code>true</code> as well): each statement is its own transaction and
+        commits immediately. A transaction spanning several statements only exists when something — you or Spring — turns
+        auto-commit off and later commits.</div>
+    </div>
+  </div>
+
+  <details class="deeper" data-level="2">
+    <summary>🔬 Go deeper: the Hikari settings worth knowing</summary>
+    <div class="scroll-x">
+    <table class="mini">
+      <thead><tr><th>Setting</th><th>Default</th><th>What it does / when to touch it</th></tr></thead>
+      <tbody>
+        <tr><td><code>maximumPoolSize</code></td><td>10</td><td>Max connections, idle and in use. Size from load tests, not guesses.</td></tr>
+        <tr><td><code>minimumIdle</code></td><td>same as <code>maximumPoolSize</code></td><td>Hikari recommends leaving it unset: a fixed-size pool.</td></tr>
+        <tr><td><code>connectionTimeout</code></td><td>30000 ms</td><td>How long <code>getConnection()</code> waits before throwing. Lower it so overload fails fast.</td></tr>
+        <tr><td><code>maxLifetime</code></td><td>1800000 ms (30 min)</td><td>Retire connections; keep it several seconds shorter than any database or infrastructure connection time limit.</td></tr>
+        <tr><td><code>idleTimeout</code></td><td>600000 ms (10 min)</td><td>Only applies when <code>minimumIdle</code> &lt; <code>maximumPoolSize</code>.</td></tr>
+        <tr><td><code>leakDetectionThreshold</code></td><td>0 (off)</td><td>Logs a warning when a connection is out of the pool longer than this. Min 2000 ms.</td></tr>
+        <tr><td><code>autoCommit</code></td><td>true</td><td>Default auto-commit of connections handed out.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Connections are pooled and few (Hikari default: 10). Throughput depends on <b>hold time</b>.</li>
+      <li>A full pool makes callers wait up to <code>connectionTimeout</code> (30 s default), then fail.</li>
+      <li>Without an explicit transaction, each statement auto-commits on its own.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="acid" data-level="1" data-title="Transactions & ACID">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Transactions: all or nothing</h2><span class="tag">the crash always happens between line 1 and line 2</span></div></div>
+  <p class="reveal">A <b>transaction</b> groups statements into one unit: <code>BEGIN</code>, several statements,
+    <code>COMMIT</code> — or <code>ROLLBACK</code>, which undoes all of them. The classic promise is <b>ACID</b>:</p>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Letter</th><th>Promise</th><th>What it means for your code</th></tr></thead>
+    <tbody>
+      <tr><td><b>A</b>tomicity</td><td>All statements take effect, or none</td><td>A crash mid-way leaves no half-done transfer.</td></tr>
+      <tr><td><b>C</b>onsistency</td><td>Constraints hold after every commit</td><td>Only rules the DB <em>knows</em> (PK, FK, CHECK, UNIQUE). Your business rules are your job.</td></tr>
+      <tr><td><b>I</b>solation</td><td>Concurrent transactions don't see each other's mess</td><td>…to a degree set by the isolation level. Chapters 3–4.</td></tr>
+      <tr><td><b>D</b>urability</td><td>Committed means it survives a crash</td><td>Once <code>COMMIT</code> returns, the data is safe.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <figure class="fig" id="fig-tx">
+    <div class="ftitle">▶ Transfer 50 from A to B <span>then crash between the two updates</span></div>
+    <div class="ctrl">
+      <button class="btn on" data-act="auto">auto-commit</button>
+      <button class="btn" data-act="tx">one transaction</button>
+      <span class="mut">|</span>
+      <button class="btn primary" data-act="run">▶ Transfer</button>
+      <button class="btn bad" data-act="crash">💥 Crash mid-way</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="tx-acc"><div>Account A<b id="tx-a">100</b></div><div>Account B<b id="tx-b">0</b></div><div id="tx-sumbox">Total<b id="tx-sum">100</b></div></div>
+    <div class="log" id="tx-log" style="height:130px;margin-top:.6rem"></div>
+    <div class="status" id="tx-status">Pick a mode and press a button.</div>
+    <figcaption>Simplified: one session, no concurrency. The crash stands for anything between the statements — an exception,
+      a killed pod, a lost network.</figcaption>
+  </figure>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p>In PostgreSQL, once any statement in a transaction fails, the transaction is <b>aborted</b>: every further command is
+      rejected until you end the block. <code>ROLLBACK</code> (or <code>ROLLBACK TO</code> a savepoint) is the only way back.
+      Catching the SQL exception in Java and "continuing" inside the same transaction does not work.</p>
+  </div>
+
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Deep dive</span>
+    <p>Not everything rolls back. In PostgreSQL, sequence changes (and so <code>serial</code>/identity counters) are
+      immediately visible to other transactions and are <b>not</b> rolled back when the transaction aborts. Gaps in IDs are
+      normal; never use them as "row count" or business numbering.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>A transaction = several statements that commit or roll back together.</li>
+      <li>Only database constraints are guaranteed by C in ACID; put important rules into constraints.</li>
+      <li>After an error, a PostgreSQL transaction is dead until rollback.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="anomalies" data-level="1" data-title="The anomaly zoo">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>The anomaly zoo</h2><span class="tag">five ways two correct transactions make a wrong result</span></div></div>
+  <p class="reveal">Atomicity handles crashes. Isolation handles <em>neighbours</em>. When two transactions interleave, each
+    one can be correct alone and the combination still wrong. The SQL standard names three <b>phenomena</b> — dirty read,
+    non-repeatable read, phantom read — and PostgreSQL's documentation adds a fourth, the <b>serialization anomaly</b>.
+    Two more are what bites applications in practice: the <b>lost update</b> and <b>write skew</b> (a kind of
+    serialization anomaly).</p>
+
+  <figure class="fig wide" id="fig-an">
+    <div class="ftitle">▶ Two transactions, one table <span>pick an anomaly and watch the interleaving</span></div>
+    <div class="ctrl" id="an-btns">
+      <button class="btn" data-sc="dirty">Dirty read</button>
+      <button class="btn" data-sc="nonrep">Non-repeatable read</button>
+      <button class="btn" data-sc="phantom">Phantom read</button>
+      <button class="btn" data-sc="lost">Lost update</button>
+      <button class="btn" data-sc="skew">Write skew</button>
+    </div>
+    <div class="db-state" id="an-db"></div>
+    <div class="db-lanes" id="an-lanes"></div>
+    <div class="status" id="an-status">Pick an anomaly.</div>
+    <figcaption>Each scenario shows an interleaving that the <em>weakest</em> isolation which allows it would permit. Which
+      levels prevent which anomaly is the next chapter. Values are illustrative.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Anomaly</th><th>What happens</th><th>Typical bug</th></tr></thead>
+    <tbody>
+      <tr><td>Dirty read</td><td>You read data another transaction hasn't committed</td><td>Acting on a change that later rolls back</td></tr>
+      <tr><td>Non-repeatable read</td><td>Reading the same row twice gives different values</td><td>Report totals that don't add up</td></tr>
+      <tr><td>Phantom read</td><td>Re-running a query returns a different <em>set</em> of rows</td><td>"Count, then insert if under limit" races</td></tr>
+      <tr><td>Lost update</td><td>Two read-modify-write cycles; the second overwrites the first</td><td>Stock, counters, balances edited in Java</td></tr>
+      <tr><td>Write skew</td><td>Two transactions read an overlapping set, each updates a different row, the invariant breaks</td><td>"At least one doctor on call", double booking</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box pencil reveal"><span class="lbl">✏️ Sharpen your pencil</span>
+    <p>Your code does <code>Product p = repo.findById(id); p.setStock(p.getStock() - 1); repo.save(p);</code> inside
+      <code>@Transactional</code>. Which anomaly can hit it under PostgreSQL's default settings?</p>
+    <details><summary>Answer</summary><p>The <b>lost update</b>. Two requests both read stock 5, both write 4. Read Committed
+      doesn't prevent it, because each <code>UPDATE</code> writes a value computed in Java from a stale read. Chapter 7 shows
+      four fixes.</p></details>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Standard phenomena: dirty read, non-repeatable read, phantom read, plus serialization anomaly.</li>
+      <li>In application code, the dangerous ones are <b>lost update</b> and <b>write skew</b>.</li>
+      <li>Any "read in Java, decide, write back" pattern is suspect.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="isolation" data-level="1" data-title="Isolation levels">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Isolation levels: how much you see of your neighbours</h2><span class="tag">same names, different databases, different rules</span></div></div>
+  <p class="reveal">The SQL standard defines four isolation levels by which phenomena they must prevent. Databases may give
+    you <em>more</em> than the standard requires, and they do — differently. That's why "Repeatable Read" in PostgreSQL and
+    in MySQL are not the same thing.</p>
+
+  <figure class="fig" id="fig-iso">
+    <div class="ftitle">▶ Levels × phenomena <span>switch the database, click a level</span></div>
+    <div class="ctrl">
+      <button class="btn on" data-db="std">SQL standard</button>
+      <button class="btn" data-db="pg">PostgreSQL</button>
+    </div>
+    <div class="scroll-x">
+    <table class="mini iso-t" id="iso-t">
+      <thead><tr><th>Level</th><th>Dirty read</th><th>Non-repeatable</th><th>Phantom</th><th>Serialization anomaly</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <div class="status" id="iso-status">Click a level.</div>
+    <figcaption>Both views come from PostgreSQL 18 docs, Table 13.1: "SQL standard" shows what the standard permits, "PostgreSQL" marks where PostgreSQL is stricter. "Possible" means the standard allows it at that level, not
+      that it happens on every run.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Level</th><th>PostgreSQL</th><th>MySQL InnoDB</th></tr></thead>
+    <tbody>
+      <tr><td>Default</td><td><b>Read Committed</b></td><td><b>Repeatable Read</b></td></tr>
+      <tr><td>Read Uncommitted</td><td>Behaves like Read Committed</td><td>Nonlocking SELECTs, “a possible earlier version of a row might be used”: dirty reads</td></tr>
+      <tr><td>Read Committed</td><td>Each statement sees a fresh snapshot</td><td>Each consistent read sets its own fresh snapshot; no gap locks except FK and duplicate-key checks</td></tr>
+      <tr><td>Repeatable Read</td><td>One snapshot per transaction (Snapshot Isolation); no phantoms; update conflicts fail with a serialization error</td><td>Plain reads use the snapshot of the first read; locking reads and range UPDATE/DELETE use gap or next-key locks</td></tr>
+      <tr><td>Serializable</td><td>Serializable Snapshot Isolation: detects anomalies, aborts one transaction</td><td>Like Repeatable Read, but plain SELECTs become locking reads when auto-commit is off</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <pre class="reveal"><code>// Spring: per transaction
+@Transactional(isolation = Isolation.REPEATABLE_READ)
+public void closeMonth() { … }
+
+-- SQL: first statement inside the transaction
+BEGIN;
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;</code></pre>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p>Higher isolation is not free safety. In PostgreSQL, Repeatable Read and Serializable transactions can fail with
+      SQLSTATE <code>40001</code> (<code>serialization_failure</code>), and <b>your application must retry them</b>. Turning
+      on Serializable without a retry loop just converts silent data bugs into loud errors.</p>
+  </div>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ There are no dumb questions</span>
+    <div class="qa">
+      <div class="q">Q:</div><div>Does Read Committed stop the lost update from the last chapter?</div>
+      <div class="a">A:</div><div>No. No standard phenomenon row is called "lost update" — and Read Committed allows it
+        when you compute the new value in Java. In PostgreSQL, Repeatable Read <em>does</em> detect it (the second writer gets
+        "could not serialize access due to concurrent update"). MySQL's Repeatable Read does not raise that error.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Defaults: PostgreSQL <b>Read Committed</b>, MySQL InnoDB <b>Repeatable Read</b>.</li>
+      <li>PostgreSQL has three real levels: Read Uncommitted = Read Committed.</li>
+      <li>Stronger levels in PostgreSQL = retries on SQLSTATE <code>40001</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="part" id="part-2" data-level="2">
+  <span class="part-no">Part II</span><h2>Practitioner</h2><p>Spring's transaction machinery, propagation, locking strategies and the queries JPA runs behind your back.</p>
+</section>
+
+<section class="chapter" id="transactional" data-level="2" data-title="@Transactional & the proxy">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2><code>@Transactional</code> is a proxy, not magic</h2><span class="tag">it only works when the call goes through the front door</span></div></div>
+  <p class="reveal">Spring doesn't rewrite your method. By default (<b>proxy mode</b>) it wraps the bean in a proxy. When
+    another bean calls your method, the call hits the proxy first: it begins a transaction (for JDBC: takes a connection and
+    switches auto-commit off), calls your code, then commits — or rolls back if an exception escapes. That design explains almost every
+    <code>@Transactional</code> surprise.</p>
+
+  <figure class="fig wide" id="fig-px">
+    <div class="ftitle">▶ Where does the transaction start? <span>try each call path</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="ok">Controller → proxy → service</button>
+      <button class="btn bad" data-act="self">this.save() from inside</button>
+      <button class="btn bad" data-act="checked">throws IOException</button>
+      <button class="btn" data-act="rt">throws RuntimeException</button>
+      <button class="btn bad" data-act="swallow">catch &amp; log</button>
+    </div>
+    <div class="px-flow" id="px-flow">
+      <div data-n="c">Controller<br><code>orders.place()</code></div>
+      <div data-n="p">Spring proxy<br><code>BEGIN … COMMIT</code></div>
+      <div data-n="a">OrderService<br><code>place()</code></div>
+      <div data-n="b"><code>@Transactional</code><br><code>save()</code></div>
+    </div>
+    <div class="log" id="px-log" style="height:120px;margin-top:.6rem"></div>
+    <div class="status" id="px-status">Pick a call path.</div>
+    <figcaption>Simplified: one bean, default settings (proxy mode, <code>REQUIRED</code>, default rollback rules).</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Trap</th><th>Why</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>Self-invocation</td><td>"only external method calls coming in through the proxy are intercepted"</td><td>Move the method to another bean, or put <code>@Transactional</code> on the caller</td></tr>
+      <tr><td>Checked exception</td><td>By default only <code>RuntimeException</code> and <code>Error</code> roll back</td><td><code>rollbackFor = Exception.class</code>, or since Spring 6.2 <code>@EnableTransactionManagement(rollbackOn = ALL_EXCEPTIONS)</code></td></tr>
+      <tr><td>Exception caught inside</td><td>The proxy only sees exceptions that escape the method</td><td>Rethrow, or call <code>TransactionAspectSupport.currentTransactionStatus().setRollbackOnly()</code></td></tr>
+      <tr><td>Called from <code>@PostConstruct</code></td><td>The proxy must be fully initialized first</td><td>Run the work after startup (e.g. an application-ready event listener) or from another bean</td></tr>
+      <tr><td>Interface-based proxy, non-public method</td><td>Must be public and declared in the interface</td><td>Since 6.0, class-based proxies also make protected and package-visible methods transactional</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ There are no dumb questions</span>
+    <div class="qa">
+      <div class="q">Q:</div><div>What do the defaults of a bare <code>@Transactional</code> mean?</div>
+      <div class="a">A:</div><div>Propagation <code>REQUIRED</code>, isolation <code>DEFAULT</code> (whatever the database
+        default is), read-write, timeout of the underlying transaction system (or none), and rollback on
+        <code>RuntimeException</code>/<code>Error</code> only.</div>
+      <div class="q">Q:</div><div>Should <code>@Transactional</code> go on the repository or the service?</div>
+      <div class="a">A:</div><div>On the service method that defines the <em>unit of work</em> — the set of changes that must
+        commit together. Repositories then join that transaction.</div>
+    </div>
+  </div>
+
+  <details class="deeper" data-level="3">
+    <summary>🔬 Go deeper: AspectJ mode</summary>
+    <p>With <code>@EnableTransactionManagement(mode = AdviceMode.ASPECTJ)</code> Spring weaves the transaction aspect into
+      the class byte code (compile-time or load-time weaving, <code>spring-aspects.jar</code>), so self-invocation is
+      transactional too. Most teams avoid the build complexity and simply split beans.</p>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>The transaction starts in the proxy. Calls that bypass the proxy (<code>this.x()</code>) get none.</li>
+      <li>Checked exceptions commit by default. Decide your rollback rules explicitly.</li>
+      <li>An exception you catch and swallow never reaches the proxy.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="propagation" data-level="2" data-title="Propagation">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Propagation: what happens when transactional methods call each other</h2><span class="tag">logical vs physical transactions</span></div></div>
+  <p class="reveal">When a <code>@Transactional</code> method calls another one (through a proxy), the inner method's
+    <b>propagation</b> decides: join the running transaction, start a new one, use a savepoint, or run without one.
+    Spring's docs distinguish the <b>physical</b> transaction (the real database transaction on one connection) from
+    <b>logical</b> transaction scopes (one per annotated method).</p>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Propagation</th><th>Transaction exists</th><th>No transaction</th><th>Use it when</th></tr></thead>
+    <tbody>
+      <tr><td><code>REQUIRED</code> (default)</td><td>joins it</td><td>creates one</td><td>almost always</td></tr>
+      <tr><td><code>REQUIRES_NEW</code></td><td>suspends it, creates a new one (new connection)</td><td>creates one</td><td>audit/log rows that must survive the caller's rollback</td></tr>
+      <tr><td><code>NESTED</code></td><td>savepoint inside it</td><td>like <code>REQUIRED</code></td><td>"try this part, undo only it on failure" (JDBC / <code>DataSourceTransactionManager</code>)</td></tr>
+      <tr><td><code>SUPPORTS</code></td><td>joins it</td><td>runs without</td><td>read helpers that don't care</td></tr>
+      <tr><td><code>MANDATORY</code></td><td>joins it</td><td>throws</td><td>methods that must never be the unit of work</td></tr>
+      <tr><td><code>NOT_SUPPORTED</code></td><td>suspends it, runs without</td><td>runs without</td><td>slow non-DB work called from a transaction</td></tr>
+      <tr><td><code>NEVER</code></td><td>throws</td><td>runs without</td><td>asserting "no transaction here"</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <figure class="fig wide" id="fig-pr">
+    <div class="ftitle">▶ Propagation simulator <span>outer() is @Transactional and calls inner() on another bean</span></div>
+    <div class="ctrl">
+      <label>inner() propagation <select id="pr-prop">
+        <option>REQUIRED</option><option>REQUIRES_NEW</option><option>NESTED</option><option>SUPPORTS</option>
+        <option>MANDATORY</option><option>NOT_SUPPORTED</option><option>NEVER</option></select></label>
+      <label>scenario <select id="pr-sc">
+        <option value="a">inner throws RuntimeException, outer catches it</option>
+        <option value="b">inner succeeds, then outer throws</option>
+        <option value="c">inner() called with no outer transaction</option></select></label>
+    </div>
+    <div class="pr-out" id="pr-out"></div>
+    <div class="status" id="pr-status">Pick a combination.</div>
+    <figcaption>Assumes <code>DataSourceTransactionManager</code>-style JDBC transactions and default rollback rules. With
+      JPA/JTA, <code>NESTED</code> support depends on the transaction manager.</figcaption>
+  </figure>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p><b>UnexpectedRollbackException.</b> With <code>REQUIRED</code>, inner and outer share one physical transaction. If
+      inner throws, its scope marks the transaction <em>rollback-only</em>. Outer catches the exception and tries to commit —
+      Spring rolls back instead and throws <code>UnexpectedRollbackException</code> so the caller "can never be misled to
+      assume that a commit was performed when it really was not".</p>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p><b>REQUIRES_NEW needs a second connection</b> while the outer one stays bound. Spring's docs warn this can exhaust the
+      pool and deadlock when many threads hold an outer transaction and all wait for an inner connection. Their rule: don't
+      use it unless the pool exceeds the number of concurrent threads by at least 1. Chapter 14 animates it.</p>
+  </div>
+
+  <div class="box geek reveal" data-level="3"><span class="lbl">🤓 Deep dive</span>
+    <p>A participating (<code>REQUIRED</code>) scope silently ignores its own isolation, timeout and read-only settings and
+      inherits the outer ones. Set <code>validateExistingTransaction = true</code> on the transaction manager to reject isolation
+      and read-only mismatches instead. <code>REQUIRES_NEW</code> scopes can declare their own settings.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li><code>REQUIRED</code>: one physical transaction; an inner failure dooms the outer one.</li>
+      <li><code>REQUIRES_NEW</code>: independent commit, extra connection, locks released at inner commit.</li>
+      <li><code>NESTED</code>: savepoint, partial rollback, same connection; JDBC only out of the box.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="locking" data-level="2" data-title="Locking strategies">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Four ways to sell the last ticket once</h2><span class="tag">atomic, optimistic, pessimistic — and naive</span></div></div>
+  <p class="reveal">Back to the lost update. Alice and Bob both try to buy the last ticket. Read Committed alone lets both
+    succeed. Here are the standard fixes, from simplest to most specific.</p>
+
+  <figure class="fig wide" id="fig-lk">
+    <div class="ftitle">▶ Last ticket, two buyers <span>pick a strategy</span></div>
+    <div class="ctrl" id="lk-btns">
+      <button class="btn bad" data-s="naive">Read-modify-write</button>
+      <button class="btn" data-s="atomic">Atomic UPDATE</button>
+      <button class="btn" data-s="version">@Version (optimistic)</button>
+      <button class="btn" data-s="forupd">SELECT … FOR UPDATE</button>
+    </div>
+    <div class="db-state" id="lk-db"></div>
+    <div class="db-lanes" id="lk-lanes"></div>
+    <div class="status" id="lk-status">Pick a strategy.</div>
+    <figcaption>PostgreSQL, Read Committed. Timings are illustrative; in reality the order of the two transactions is
+      random.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Strategy</th><th>How</th><th>Use it when</th></tr></thead>
+    <tbody>
+      <tr><td>Atomic UPDATE</td><td><code>UPDATE … SET stock = stock - 1 WHERE id = ? AND stock &gt; 0</code>, check the row count</td><td>The rule fits in one statement. Cheapest and safest.</td></tr>
+      <tr><td>Optimistic (<code>@Version</code>)</td><td>Hibernate adds <code>WHERE version = ?</code>; 0 rows → an optimistic-lock exception (Hibernate: <code>StaleObjectStateException</code> / <code>OptimisticEntityLockException</code>)</td><td>Conflicts are rare; edits span user think-time (forms)</td></tr>
+      <tr><td>Pessimistic (<code>FOR UPDATE</code>)</td><td>Lock the row when reading; others wait</td><td>Conflicts are frequent and retries are expensive</td></tr>
+      <tr><td><code>FOR UPDATE SKIP LOCKED</code></td><td>Skip rows someone else has locked</td><td>Job queues: many workers, each takes a different row</td></tr>
+      <tr><td><code>FOR UPDATE NOWAIT</code></td><td>Error immediately instead of waiting</td><td>Interactive actions that should fail fast</td></tr>
+      <tr><td>Unique constraint</td><td>Let the database reject the duplicate</td><td>"Only one X per Y" rules — race-proof at any isolation</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <pre class="reveal"><code>@Entity
+class Ticket {
+  @Id Long id;
+  int stock;
+  @Version long version;          // optimistic locking
+}
+
+interface TicketRepo extends JpaRepository&lt;Ticket, Long&gt; {
+  @Lock(LockModeType.PESSIMISTIC_WRITE)            // SELECT … FOR UPDATE
+  @Query("select t from Ticket t where t.id = :id")
+  Ticket lockById(Long id);
+
+  @Modifying
+  @Query("update Ticket t set t.stock = t.stock - 1 where t.id = :id and t.stock > 0")
+  int takeOne(Long id);                            // 1 = sold, 0 = sold out
+}</code></pre>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p><code>SKIP LOCKED</code> gives "an inconsistent view of the data" by design. Perfect for a queue, wrong for a report
+      or a balance check.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Prefer pushing the rule into one SQL statement or a constraint.</li>
+      <li><code>@Version</code> turns lost updates into exceptions you must handle (retry or tell the user).</li>
+      <li><code>FOR UPDATE</code> serializes access to a row; keep those transactions short.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="jpa" data-level="2" data-title="JPA: hidden queries">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>JPA and the queries you didn't write</h2><span class="tag">persistence context, dirty checking, N+1, lazy loading</span></div></div>
+  <p class="reveal">Inside a transaction, Hibernate keeps a <b>persistence context</b> (the first-level cache): every entity you
+    load is tracked. Change a field of a managed entity and, as Hibernate's guide puts it, "there is no need to call a
+    particular method to make your modifications persistent" — <b>dirty checking</b> writes it at flush time.</p>
+  <p class="reveal">Flushes happen in AUTO mode: before commit, before a JPQL/HQL query that overlaps the queued changes,
+    and — with the JPA <code>EntityManager</code> — before every native SQL query. So a <code>SELECT</code> in your code can trigger
+    an <code>UPDATE</code> first.</p>
+
+  <figure class="fig wide" id="fig-np">
+    <div class="ftitle">▶ The N+1 problem <span>list 20 orders and print each customer's name</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="n1">findAll() + order.getCustomer()</button>
+      <button class="btn primary" data-act="fetch">JOIN FETCH</button>
+      <button class="btn bad" data-act="lazy">access after the transaction</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="db-kv">SQL statements sent: <span class="np-count" id="np-count">0</span></div>
+    <div class="np-bar" id="np-bar"></div>
+    <div class="log" id="np-log" style="height:120px"></div>
+    <div class="status" id="np-status">Pick a variant.</div>
+    <figcaption>Illustrative: 20 orders with 20 different customers. With repeated customers, the persistence context avoids
+      loading the same one twice, so N is the number of <em>distinct</em> customers.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Setting / tool</th><th>Default</th><th>Advice</th></tr></thead>
+    <tbody>
+      <tr><td><code>@ManyToOne</code>, <code>@OneToOne</code> fetch</td><td>EAGER (JPA)</td><td>Hibernate's guide: "it's better if all associations are marked as LAZY"</td></tr>
+      <tr><td>Collection associations (<code>@OneToMany</code>, <code>@ManyToMany</code>)</td><td>LAZY (JPA)</td><td>Keep lazy; fetch per use case</td></tr>
+      <tr><td><code>JOIN FETCH</code> / entity graph</td><td>—</td><td>Load exactly what this use case needs, in one query</td></tr>
+      <tr><td><code>@BatchSize</code>, <code>hibernate.default_batch_fetch_size</code></td><td>off</td><td>Turns N lazy loads into N / size queries</td></tr>
+      <tr><td>DTO projection</td><td>—</td><td>Read-only screens: no tracking, no dirty checking</td></tr>
+      <tr><td><code>spring.jpa.open-in-view</code></td><td>on in Spring Boot</td><td>Set to <code>false</code>; fetch what the view needs inside the service</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p><b>Open Session in View.</b> Spring Boot registers <code>OpenEntityManagerInViewInterceptor</code> by default, so lazy
+      loading "works" while rendering the response — each lazy access runs another query, outside your service transaction,
+      after the business logic finished. Turn it off with <code>spring.jpa.open-in-view=false</code> and the hidden N+1s
+      become visible <code>LazyInitializationException</code>s ("an attempt to access unfetched data outside the context of
+      an open stateful Session").</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Managed entities are saved by dirty checking — no <code>save()</code> needed, and no way to "just change it locally".</li>
+      <li>N+1: one query for the list, one per row for an association. Fix with <code>JOIN FETCH</code>, entity graphs or batch fetching.</li>
+      <li>Make to-one associations LAZY; disable Open Session in View.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="batching" data-level="2" data-title="Batching, paging, readOnly">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Round trips: batching, paging and read-only</h2><span class="tag">latency × count beats any index</span></div></div>
+  <p class="reveal">Every statement is a network round trip. Inserting 1,000 rows one by one costs 1,000 of them. JDBC
+    <b>batching</b> sends many statements at once; in Hibernate you enable it with <code>hibernate.jdbc.batch_size</code>
+    (its guide suggests a value between 10 and 50).</p>
+
+  <figure class="fig" id="fig-bt">
+    <div class="ftitle">▶ Insert 1,000 entities <span>change the batch size and ID strategy</span></div>
+    <div class="ctrl">
+      <label>batch_size <select id="bt-size"><option value="0">0 (off)</option><option>10</option><option selected>50</option></select></label>
+      <label>@GeneratedValue <select id="bt-id"><option value="seq">SEQUENCE</option><option value="identity">IDENTITY</option></select></label>
+    </div>
+    <div id="bt-rows"></div>
+    <div class="status" id="bt-status">…</div>
+    <figcaption>Counts INSERT round trips only (sequence calls ignored). Illustrative latency: 1 ms per round trip.</figcaption>
+  </figure>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p>With <code>GenerationType.IDENTITY</code>, "Hibernate will not be able to batch INSERT statements" — it must run each
+      insert immediately to learn the generated ID. Use a sequence for entities you insert in bulk. And in long loops, call
+      <code>flush()</code> and <code>clear()</code> regularly so the persistence context doesn't grow without bound.</p>
+  </div>
+
+  <h3 class="reveal">Paging: OFFSET vs keyset</h3>
+  <p class="reveal">PostgreSQL's docs: "The rows skipped by an OFFSET clause still have to be computed inside the server;
+    therefore a large OFFSET might be inefficient." Page 5,000 of an infinite scroll reads and throws away 100,000 rows.
+    <b>Keyset</b> pagination remembers where the last page ended:</p>
+  <pre class="reveal"><code>-- OFFSET: cost grows with the page number
+SELECT * FROM event ORDER BY id LIMIT 20 OFFSET 100000;
+-- keyset: an index seek, same cost on every page
+SELECT * FROM event WHERE id &gt; :lastSeenId ORDER BY id LIMIT 20;</code></pre>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ There are no dumb questions</span>
+    <div class="qa">
+      <div class="q">Q:</div><div>What does <code>@Transactional(readOnly = true)</code> actually do?</div>
+      <div class="a">A:</div><div>It is a hint that the transaction is "effectively read-only, allowing for corresponding
+        optimizations at runtime". What gets optimized depends on the transaction manager, the ORM and the driver. Don't
+        count on it to <em>block</em> writes, and note that a joining <code>REQUIRED</code> scope inherits the outer
+        transaction's flag.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Batch writes (<code>hibernate.jdbc.batch_size</code>); IDENTITY IDs disable insert batching.</li>
+      <li>Large OFFSETs are slow; use keyset pagination for deep pages.</li>
+      <li><code>readOnly = true</code> is an optimization hint, not a guard.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="part" id="part-3" data-level="3">
+  <span class="part-no">Part III</span><h2>Expert</h2><p>Snapshots, serializability, deadlocks, side effects outside the database, and the ways a healthy app starves itself.</p>
+</section>
+
+<section class="chapter" id="mvcc" data-level="3" data-title="MVCC & snapshots">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>MVCC: every reader gets its own photo</h2><span class="tag">readers don't block writers, writers don't block readers</span></div></div>
+  <p class="reveal">PostgreSQL (and InnoDB) use <b>multiversion concurrency control</b>. An <code>UPDATE</code> doesn't
+    overwrite a row in place; it creates a new <em>version</em>. Each statement reads from a <b>snapshot</b> — the set of
+    transactions committed at a certain moment — and picks the version that snapshot can see. So plain reads never wait for
+    writers. The only lock that blocks a plain <code>SELECT</code> is <code>ACCESS EXCLUSIVE</code>.</p>
+  <p class="reveal">The difference between Read Committed and Repeatable Read is just <em>when the photo is taken</em>: at the
+    start of each statement, or at the first statement of the transaction.</p>
+
+  <figure class="fig wide" id="fig-mv">
+    <div class="ftitle">▶ Row versions and snapshots <span>same interleaving, two isolation levels</span></div>
+    <div class="ctrl">
+      <button class="btn on" data-lv="rc">Read Committed</button>
+      <button class="btn" data-lv="rr">Repeatable Read</button>
+      <button class="btn primary" data-act="play">▶ Play</button>
+    </div>
+    <div class="db-kv">Versions of <code>account A</code>:</div>
+    <div class="mv-vers" id="mv-vers"></div>
+    <div class="db-lanes" id="mv-lanes"></div>
+    <div class="status" id="mv-status">Press ▶.</div>
+    <figcaption>Simplified: real versions carry transaction IDs, and PostgreSQL removes old versions later with VACUUM.</figcaption>
+  </figure>
+
+  <div class="box geek reveal"><span class="lbl">🤓 Deep dive</span>
+    <p>Read Committed has a subtle twist for writes. An <code>UPDATE</code> that finds a row being changed by another
+      transaction waits; if that one commits, the <code>UPDATE</code> re-checks its <code>WHERE</code> clause against the
+      <em>new</em> version and proceeds. That's why the atomic <code>stock - 1 … AND stock &gt; 0</code> works. It's also why
+      PostgreSQL's docs call Read Committed "unsuitable for commands that involve complex search conditions": one statement
+      can see a mix of new rows it updates and old rows it doesn't.</p>
+    <p>In Repeatable Read, the same situation fails with <code>ERROR: could not serialize access due to concurrent update</code>:
+      a Repeatable Read transaction "cannot modify or lock rows changed by other transactions after [it] began".</p>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p>Old versions can only be cleaned up once no open transaction might still need them. PostgreSQL's docs note that a
+      transaction left open idle "prevents vacuuming away recently-dead tuples that may be visible only to this transaction"
+      — one forgotten session can bloat busy tables.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>MVCC keeps row versions; reads use a snapshot and don't block writes.</li>
+      <li>Read Committed: new snapshot per statement. Repeatable Read: one snapshot per transaction.</li>
+      <li>Long-open transactions hold back cleanup.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="serializable" data-level="3" data-title="Serializable & retries">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Serializable, write skew and the retry loop</h2><span class="tag">correctness you pay for with retries</span></div></div>
+  <p class="reveal">Write skew slips through Snapshot Isolation because the two transactions write <em>different</em> rows.
+    PostgreSQL's <b>Serializable</b> level uses Serializable Snapshot Isolation: it tracks what each transaction read
+    (predicate locks, shown as <code>SIReadLock</code> in <code>pg_locks</code>) flags read/write dependencies among concurrent
+    Serializable transactions, and aborts one when a combination of them could lead to a serialization anomaly. These predicate locks never block and cannot cause deadlocks.</p>
+
+  <figure class="fig wide" id="fig-sk">
+    <div class="ftitle">▶ Two doctors, one rule: someone must stay on call <span>run under each level</span></div>
+    <div class="ctrl">
+      <button class="btn" data-lv="rr">Repeatable Read</button>
+      <button class="btn primary" data-lv="ser">Serializable</button>
+    </div>
+    <div class="db-state" id="sk-db"></div>
+    <div class="db-lanes" id="sk-lanes"></div>
+    <div class="status" id="sk-status">Pick a level.</div>
+    <figcaption>PostgreSQL. Which of the two transactions gets aborted is the database's choice; the exact error text varies,
+      the SQLSTATE is always <code>40001</code>.</figcaption>
+  </figure>
+
+  <h3 class="reveal">The retry loop — outside the transaction</h3>
+  <p class="reveal">PostgreSQL's advice: retry the <em>complete</em> transaction, "including all logic that decides which SQL to
+    issue and/or which values to use". It also suggests retrying deadlocks (<code>40P01</code>) and, in some cases, unique
+    violations (<code>23505</code>). In Spring, that means the retry wraps the proxy, never the other way round:</p>
+  <pre class="reveal"><code>// caller bean — NOT @Transactional
+public void bookWithRetry(Cmd cmd) {
+  for (int attempt = 1; ; attempt++) {
+    try {
+      bookingService.book(cmd);           // @Transactional(isolation = SERIALIZABLE): a fresh transaction each time
+      return;
+    } catch (ConcurrencyFailureException e) {   // parent of Spring's lock / deadlock / serialization failures
+      if (attempt == 3) throw e;
+      sleep(backoffWithJitter(attempt));
+    }
+  }
+}</code></pre>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p>Data read inside a Serializable transaction is not trustworthy until the transaction <b>commits</b>. Don't send an
+      email or call an API from inside it based on what you read — it might be rolled back a moment later. (A
+      <code>READ ONLY DEFERRABLE</code> serializable transaction waits for a safe snapshot and can trust its reads
+      immediately.)</p>
+  </div>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ There are no dumb questions</span>
+    <div class="qa">
+      <div class="q">Q:</div><div>Can't I fix write skew without Serializable?</div>
+      <div class="a">A:</div><div>Yes: lock the rows the decision depends on (<code>SELECT … FOR UPDATE</code> on all
+        on-call doctors), or turn the invariant into a constraint, or <em>materialize</em> the conflict — a single row both
+        transactions must update. Serializable is the general solution; the others are targeted.</div>
+      <div class="q">Q:</div><div>Will Serializable make everything slow?</div>
+      <div class="a">A:</div><div>It adds tracking and aborts. PostgreSQL recommends declaring transactions <code>READ ONLY</code>
+        when possible, keeping them short, controlling connection count, and not leaving sessions idle in transaction.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Write skew needs Serializable, explicit locks, or a constraint.</li>
+      <li>SQLSTATE <code>40001</code> = retry the whole unit of work, from outside the transactional method.</li>
+      <li>Never act on reads of an uncommitted serializable transaction.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="deadlocks" data-level="3" data-title="Deadlocks">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Deadlocks: two polite people in a doorway</h2><span class="tag">you don't need explicit locks to get one</span></div></div>
+  <p class="reveal">Every <code>UPDATE</code> locks the rows it changes until commit. If T1 locks A then wants B, while T2 locks
+    B then wants A, each waits for the other forever. PostgreSQL waits <code>deadlock_timeout</code> (default <b>1 s</b>)
+    before running its relatively expensive deadlock check, then aborts one of the transactions with SQLSTATE
+    <code>40P01</code>.</p>
+
+  <figure class="fig" id="fig-dl">
+    <div class="ftitle">▶ Transfer A→B and B→A at the same time <span>then fix the lock order</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="bad">▶ Natural order</button>
+      <button class="btn primary" data-act="good">▶ Sorted by id</button>
+    </div>
+    <div class="dl-wrap">
+      <svg viewBox="0 0 400 210" id="dl-svg" role="img" aria-label="wait-for graph">
+        <defs><marker id="dl-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z"/></marker></defs>
+        <path class="arr" id="dl-t1a" d="M94 88 L166 64"/>
+        <path class="arr" id="dl-t2b" d="M306 112 L234 144"/>
+        <path class="arr" id="dl-t1b" d="M88 122 C 115 152, 140 154, 166 152"/>
+        <path class="arr" id="dl-t2a" d="M312 78 C 285 52, 260 54, 234 58"/>
+        <g class="nd" id="dl-n1"><circle cx="65" cy="100" r="30"/></g>
+        <g class="nd" id="dl-n2"><circle cx="335" cy="100" r="30"/></g>
+        <g class="nd"><rect x="170" y="42" width="60" height="36" rx="6"/></g>
+        <g class="nd"><rect x="170" y="132" width="60" height="36" rx="6"/></g>
+      </svg>
+    </div>
+    <div class="status" id="dl-status">Press ▶.</div>
+    <figcaption>Solid arrow into a row = holds its lock; the curved arrows are "waits for". Timing compressed.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Defense</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>Consistent lock order</td><td>PostgreSQL docs: "the best defense … acquire locks on multiple objects in a consistent order". Sort IDs before updating.</td></tr>
+      <tr><td>Take the strongest lock first</td><td>Don't read-lock then upgrade; lock for update up front.</td></tr>
+      <tr><td>Short transactions</td><td>Fewer locks held, for less time.</td></tr>
+      <tr><td>Retry</td><td>Deadlocks will still happen; treat <code>40P01</code> like <code>40001</code>.</td></tr>
+      <tr><td><code>lock_timeout</code></td><td>Bounds how long each lock wait may last (not only deadlocks).</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <details class="deeper" data-level="3">
+    <summary>🔬 Go deeper: MySQL gap locks add another way to deadlock</summary>
+    <p>InnoDB at Repeatable Read locks <em>ranges</em>, not just rows: for locking reads, <code>UPDATE</code> and
+      <code>DELETE</code> with a non-unique or range condition, it "locks the index range scanned, using gap locks or next-key
+      locks to block insertions by other sessions into the gaps". Two transactions inserting into the same gap after locking
+      it can deadlock without ever touching the same row. InnoDB detects deadlocks automatically and rolls one back; its docs
+      say applications must be ready to retry.</p>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Deadlock = cycle of waits; PostgreSQL checks after <code>deadlock_timeout</code> (1 s) and kills one side.</li>
+      <li>Prevent with a consistent lock order; handle the rest with retries.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="outbox" data-level="3" data-title="Transactions & the outside world">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>The database commits. Kafka and email don't care.</h2><span class="tag">dual writes, events after commit, the outbox</span></div></div>
+  <p class="reveal">A transaction only covers the database. The moment your method also sends a message, an email or an HTTP
+    request, you have a <b>dual write</b>: two systems that can't commit together. Whatever order you pick, some crash
+    point leaves them disagreeing.</p>
+
+  <figure class="fig wide" id="fig-ob">
+    <div class="ftitle">▶ Place an order and publish OrderPlaced <span>pick a design, then crash it</span></div>
+    <div class="ctrl" id="ob-btns">
+      <button class="btn" data-d="inside">send inside the transaction</button>
+      <button class="btn" data-d="after">send after commit</button>
+      <button class="btn primary" data-d="outbox">transactional outbox</button>
+    </div>
+    <div class="ob-sys"><div id="ob-db"><b>Database</b></div><div id="ob-bus"><b>Message broker</b></div><div id="ob-cons"><b>Consumer</b></div></div>
+    <div class="status" id="ob-status">Pick a design.</div>
+    <figcaption>Each design is played with its <em>worst</em> crash point. Simplified: one message, one consumer.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Design</th><th>Failure</th><th>Use it when</th></tr></thead>
+    <tbody>
+      <tr><td>Send inside the transaction</td><td>Message sent, then rollback → event for an order that doesn't exist</td><td>Never for important events</td></tr>
+      <tr><td><code>@TransactionalEventListener</code> (default phase <code>AFTER_COMMIT</code>)</td><td>Crash after commit, before send → event lost</td><td>Best-effort side effects: cache eviction, notifications you can miss</td></tr>
+      <tr><td>Transactional outbox</td><td>Relay may publish twice → consumers must be idempotent</td><td>Events other services depend on</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <pre class="reveal"><code>@Transactional
+public void placeOrder(Order o) {
+  orders.save(o);
+  outbox.save(new OutboxEvent("OrderPlaced", o.getId(), toJson(o)));   // same transaction
+}
+// a separate relay (poller or CDC) reads the outbox table, publishes, marks rows as sent</code></pre>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Watch it!</span>
+    <p>Idempotency is not optional. microservices.io: "The Message relay might publish a message more than once. As a
+      result, a message consumer must be idempotent, perhaps by tracking the IDs of the messages that it has already
+      processed." Same for HTTP retries: give each request an idempotency key and store it with a unique constraint.</p>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>DB + anything else = dual write. There is no order that is safe for all crash points.</li>
+      <li>Outbox: write the event in the same transaction; publish it asynchronously.</li>
+      <li>At-least-once delivery ⇒ idempotent consumers.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="starvation" data-level="3" data-title="Long tx & pool starvation">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Long transactions and pool starvation</h2><span class="tag">the app that deadlocks itself without the database noticing</span></div></div>
+  <p class="reveal">A transaction holds its connection — and its row locks — from <code>BEGIN</code> to <code>COMMIT</code>.
+    Everything slow inside it multiplies: an HTTP call, a file upload, a user prompt, a loop that calls another service per row.
+    PostgreSQL's docs call holding transactions open while waiting for user input "a bad idea".</p>
+
+  <figure class="fig" id="fig-st">
+    <div class="ftitle">▶ 4 threads, REQUIRES_NEW inside each <span>pool of 4 vs pool of 5</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="p4">▶ pool = 4</button>
+      <button class="btn primary" data-act="p5">▶ pool = 5</button>
+    </div>
+    <div class="st-grid">
+      <span>pool</span><div class="st-cells" id="st-pool"></div>
+      <span>threads</span><div class="st-cells" id="st-thr"></div>
+    </div>
+    <div class="legend"><span style="--c:var(--accent)">outer tx</span><span style="--c:var(--ok)">inner tx</span><span style="--c:var(--warn)">waiting</span><span style="--c:var(--bad)">timed out</span></div>
+    <div class="status" id="st-status">Press ▶.</div>
+    <figcaption>Illustrative sizes. Real pools are bigger, but the rule is Spring's: with <code>REQUIRES_NEW</code>, the pool must
+      exceed the number of concurrent threads by at least 1.</figcaption>
+  </figure>
+
+  <h3 class="reveal">Timeouts: your safety net</h3>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Setting</th><th>Default</th><th>Stops</th></tr></thead>
+    <tbody>
+      <tr><td><code>statement_timeout</code></td><td>0 (off)</td><td>Any single statement running too long</td></tr>
+      <tr><td><code>lock_timeout</code></td><td>0 (off)</td><td>Waiting too long for one lock</td></tr>
+      <tr><td><code>idle_in_transaction_session_timeout</code></td><td>0 (off)</td><td>Sessions idle inside an open transaction (terminates the session)</td></tr>
+      <tr><td><code>transaction_timeout</code></td><td>0 (off)</td><td>Whole transactions longer than the limit (PostgreSQL 17+)</td></tr>
+      <tr><td><code>@Transactional(timeout = 5)</code></td><td>underlying default</td><td>Spring-side limit, in seconds</td></tr>
+      <tr><td>Hikari <code>connectionTimeout</code></td><td>30 s</td><td>Waiting for a pool connection</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="reveal mut">PostgreSQL's docs say setting <code>statement_timeout</code>, <code>lock_timeout</code> or
+    <code>transaction_timeout</code> in <code>postgresql.conf</code> is not recommended "because it would affect all sessions".
+    Set them per role, per session or per transaction instead.</p>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Refactoring a slow transaction</span>
+    <ol>
+      <li>Do remote calls, file I/O and heavy computation <b>before</b> the transaction.</li>
+      <li>Open a short transaction: re-read what you need, validate, write.</li>
+      <li>Trigger side effects <b>after</b> commit (outbox or after-commit listener).</li>
+      <li>For long batch jobs, commit in chunks — and make each chunk restartable.</li>
+    </ol>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Transaction time = connection time = lock time. Keep it short.</li>
+      <li>REQUIRES_NEW under load can deadlock the pool.</li>
+      <li>Set timeouts at every layer; the defaults are "wait forever" on the PostgreSQL side.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="replicas" data-level="3" data-title="Read replicas & lag">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Read replicas: yesterday's data, served fast</h2><span class="tag">read-your-writes is not free</span></div></div>
+  <p class="reveal">Replicas (PostgreSQL hot standby) take read load off the primary, but "the data on the standby takes
+    some time to arrive from the primary server", so the same query on both "might therefore return differing results".
+    The docs call standby data <em>eventually consistent</em>.</p>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Scenario</th><th>Problem</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>User saves, page reloads from replica</td><td>Their change "disappears"</td><td>Read from the primary for a short time after a user writes (read-your-writes)</td></tr>
+      <tr><td>Check on replica, write on primary</td><td>The check is based on stale data</td><td>Validate and write in one transaction on the primary</td></tr>
+      <tr><td>Routing by <code>readOnly = true</code></td><td>A read-only method called inside a write transaction joins it, on the primary</td><td>Decide routing at the outermost transaction</td></tr>
+      <tr><td>Long queries on the replica</td><td>Can conflict with replayed changes and be cancelled, or delay replay</td><td>Tune the standby delay settings for the replica's purpose</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Replicas lag. Never validate business rules on a replica.</li>
+      <li>Decide per use case whether stale reads are acceptable.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="part" id="part-4" data-level="4">
+  <span class="part-no">Part IV</span><h2>Operations</h2><p>Changing the schema under traffic, seeing what the database is doing, and fixing it at 3 a.m.</p>
+</section>
+
+<section class="chapter" id="migrations" data-level="4" data-title="Zero-downtime migrations">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Schema migrations under traffic</h2><span class="tag">the 5 ms ALTER that took the site down</span></div></div>
+  <p class="reveal">Most <code>ALTER TABLE</code> forms take an <code>ACCESS EXCLUSIVE</code> lock — the one lock that blocks even
+    plain <code>SELECT</code>s. The statement itself may be instant. The danger is <em>getting</em> the lock: it must wait for
+    every open transaction that touched the table, and while it waits, it blocks others.</p>
+
+  <figure class="fig wide" id="fig-mg">
+    <div class="ftitle">▶ A 5 ms ALTER behind a long report <span>with and without lock_timeout</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="plain">▶ ALTER TABLE, no timeout</button>
+      <button class="btn primary" data-act="lt">▶ SET lock_timeout = '2s' first</button>
+    </div>
+    <div class="mg-lanes" id="mg-lanes">
+      <span>report tx</span><div class="mg-track" id="mg-r"></div>
+      <span>ALTER TABLE</span><div class="mg-track" id="mg-a"></div>
+      <span>app queries</span><div class="mg-track" id="mg-q"></div>
+    </div>
+    <div class="status" id="mg-status">Press ▶.</div>
+    <figcaption>Illustrative timeline. The queuing follows PostgreSQL's lock manager rules (a request is granted immediately
+      only if it conflicts with no granted <em>and no waiting</em> request — <code>src/backend/storage/lmgr/README</code>; the docs of
+      <code>pg_blocking_pids</code> call this a "soft block").</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Change</th><th>Risky way</th><th>Safer way</th></tr></thead>
+    <tbody>
+      <tr><td>Any DDL</td><td>Run and hope</td><td><code>SET lock_timeout = '2s'</code> in the migration; retry on failure</td></tr>
+      <tr><td>New index</td><td><code>CREATE INDEX</code> blocks writes for the whole build</td><td><code>CREATE INDEX CONCURRENTLY</code> — not allowed inside a transaction block; check for an INVALID index if it fails</td></tr>
+      <tr><td>New column with default</td><td>Volatile default (e.g. <code>clock_timestamp()</code>) rewrites the table</td><td>Non-volatile default: stored in metadata, "very fast even on large tables"</td></tr>
+      <tr><td>New FK / CHECK</td><td>Validates all rows under a strong lock</td><td><code>ADD CONSTRAINT … NOT VALID</code>, then <code>VALIDATE CONSTRAINT</code> separately</td></tr>
+      <tr><td>Rename / drop a column</td><td>Old app version still running breaks</td><td>Expand → migrate → contract across several deploys</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Expand / contract</span>
+    <ol>
+      <li><b>Expand:</b> add the new column/table; code writes both old and new.</li>
+      <li><b>Migrate:</b> backfill in small batches (short transactions!).</li>
+      <li><b>Switch:</b> code reads from the new structure.</li>
+      <li><b>Contract:</b> once no running version uses the old one, drop it.</li>
+    </ol>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>A waiting <code>ACCESS EXCLUSIVE</code> request blocks newcomers too. Always set <code>lock_timeout</code> for DDL.</li>
+      <li>Index concurrently; add constraints <code>NOT VALID</code> then validate.</li>
+      <li>Every migration must work with both the old and the new app version running.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="observability" data-level="4" data-title="Observability">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Seeing what the database is doing</h2><span class="tag">pg_stat_activity is your best friend</span></div></div>
+  <p class="reveal"><code>pg_stat_activity</code> shows one row per server process: its state, current query and when the
+    transaction started. The state to hunt for is <b><code>idle in transaction</code></b>: "the backend is in a transaction, but
+    is not currently executing a query" — typically your app holding a connection while doing something else.</p>
+
+  <figure class="fig wide" id="fig-mo">
+    <div class="ftitle">▶ The site is slow. Find the culprit. <span>a fake pg_stat_activity</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="find">🔍 Highlight long idle-in-transaction</button>
+      <button class="btn" data-act="block">🔗 Who blocks whom?</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="scroll-x">
+    <table class="mini mo-t" id="mo-t">
+      <thead><tr><th>pid</th><th>state</th><th>xact age</th><th>wait</th><th>query</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <div class="status" id="mo-status">Press a button.</div>
+    <figcaption>Invented data. Real columns: <code>pid</code>, <code>state</code>, <code>xact_start</code>,
+      <code>wait_event_type</code>, <code>query</code>; <code>pg_blocking_pids(pid)</code> returns the blockers.</figcaption>
+  </figure>
+
+  <pre class="reveal"><code>-- open transactions, oldest first
+SELECT pid, state, now() - xact_start AS xact_age, wait_event_type, left(query, 60)
+FROM pg_stat_activity
+WHERE xact_start IS NOT NULL
+ORDER BY xact_start;
+
+-- who blocks whom
+SELECT pid, pg_blocking_pids(pid) AS blocked_by, left(query, 60)
+FROM pg_stat_activity
+WHERE cardinality(pg_blocking_pids(pid)) &gt; 0;</code></pre>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Signal</th><th>Where</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td>Pool active = max, threads pending &gt; 0</td><td>Hikari pool metrics</td><td>Pool exhaustion: look at hold times</td></tr>
+      <tr><td>"Connection leak detection triggered for …"</td><td>Hikari log with <code>leakDetectionThreshold</code></td><td>A connection out of the pool too long — stack trace shows who took it</td></tr>
+      <tr><td>Many <code>idle in transaction</code></td><td><code>pg_stat_activity</code></td><td>Work done inside open transactions</td></tr>
+      <tr><td>Slow statements</td><td><code>log_min_duration_statement</code>, <code>pg_stat_statements</code></td><td>Queries to index or rewrite</td></tr>
+      <tr><td>Lock waits</td><td><code>log_lock_waits</code>, <code>pg_locks</code>, <code>pg_blocking_pids()</code></td><td>Contention or long transactions</td></tr>
+      <tr><td>Statement count per request</td><td>Hibernate statistics / SQL logging in tests</td><td>N+1 regressions — assert the count in tests</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul>
+      <li>Watch transaction age and <code>idle in transaction</code>, not just query time.</li>
+      <li>Turn on pool metrics and leak detection in every environment.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="troubleshooting" data-level="4" data-title="Troubleshooting">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Troubleshooting: symptom → cause → fix</h2><span class="tag">start from what you see</span></div></div>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>"Connection is not available, request timed out after 30000ms"</td><td>Pool exhausted: slow work inside transactions, leaks, <code>REQUIRES_NEW</code> under load</td><td>Shorten transactions, leak detection, size pool &gt; threads with REQUIRES_NEW</td></tr>
+      <tr><td><code>UnexpectedRollbackException</code></td><td>Inner <code>REQUIRED</code> method threw, outer caught it</td><td>Let it propagate, or use <code>REQUIRES_NEW</code>/<code>NESTED</code> deliberately</td></tr>
+      <tr><td>Data saved although an exception was thrown</td><td>Checked exception, swallowed exception, or self-invocation (no transaction)</td><td>Rollback rules; rethrow; call through the proxy</td></tr>
+      <tr><td><code>LazyInitializationException</code></td><td>Lazy association accessed after the transaction</td><td><code>JOIN FETCH</code> / entity graph / DTO in the service</td></tr>
+      <tr><td>Page makes hundreds of queries</td><td>N+1, often EAGER to-one or Open Session in View</td><td>LAZY + fetch per use case; open-in-view=false</td></tr>
+      <tr><td>Optimistic-lock exception (<code>StaleObjectStateException</code>, <code>OptimisticEntityLockException</code>)</td><td>Concurrent edit of an entity with <code>@Version</code></td><td>Retry or show "changed by someone else"</td></tr>
+      <tr><td>SQLSTATE <code>40001</code></td><td>Serialization failure (RR/Serializable)</td><td>Retry the whole transaction from outside</td></tr>
+      <tr><td>SQLSTATE <code>40P01</code> "deadlock detected"</td><td>Inconsistent lock order</td><td>Sort before locking; retry</td></tr>
+      <tr><td>"current transaction is aborted, commands ignored until end of transaction block"</td><td>An earlier statement failed; code carried on</td><td>Roll back (or use a savepoint) after any SQL error</td></tr>
+      <tr><td>Sold twice / counter off by a few</td><td>Lost update via read-modify-write</td><td>Atomic UPDATE, <code>@Version</code> or <code>FOR UPDATE</code></td></tr>
+      <tr><td>Duplicate rows despite "check then insert"</td><td>Race between the check and the insert</td><td>Unique constraint + handle <code>23505</code></td></tr>
+      <tr><td>Table bloat, slow queries over days</td><td>Long or idle-in-transaction sessions holding back VACUUM</td><td><code>idle_in_transaction_session_timeout</code>, fix the app</td></tr>
+      <tr><td>Whole app freezes during a deploy</td><td>DDL waiting for <code>ACCESS EXCLUSIVE</code>, queue behind it</td><td><code>lock_timeout</code> in migrations</td></tr>
+      <tr><td>User doesn't see their own change</td><td>Read from a lagging replica</td><td>Read-your-writes routing</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="chapter" id="checklist" data-level="1" data-title="Review checklist">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>The checklist for every app that uses a database</h2><span class="tag">go through it at design review and before go-live</span></div></div>
+  <figure class="fig" id="fig-ck">
+    <div class="ftitle">▶ Review checklist <span>ticks are saved in this browser</span></div>
+    <div class="ex-row"><b id="ck-n">0 / 0</b><div class="meter"><i id="ck-m"></i></div></div>
+    <div id="ck-list"></div>
+    <div class="ctrl"><button class="btn" data-act="reset">↺ Clear ticks</button></div>
+    <figcaption>Stored in <code>localStorage</code> on this device only; nothing is sent anywhere.</figcaption>
+  </figure>
+</section>
+
+<section class="chapter" id="traps" data-level="1" data-title="Mistakes & interview traps">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Common mistakes and interview traps</h2><span class="tag">answer first, then open the card</span></div></div>
+  <p class="reveal">Each card is a question interviewers like because the "obvious" answer is wrong. Say your answer out loud
+    before you open it.</p>
+  <div class="tp-grid reveal">
+    <div class="tp-card"><p class="tp-q"><b>"@Transactional on a private method works, right?"</b></p><details><summary>Answer</summary><p>In proxy mode, calls from inside the same object never pass through the proxy, so a private helper called internally gets no transaction. Class-based proxies can intercept protected and package-visible methods (since Spring 6.0), but never private ones.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Does a checked exception roll back?"</b></p><details><summary>Answer</summary><p>Not by default. Only <code>RuntimeException</code> and <code>Error</code>. Use <code>rollbackFor</code> or the 6.2 global <code>rollbackOn = ALL_EXCEPTIONS</code>.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"What is PostgreSQL's default isolation level? MySQL's?"</b></p><details><summary>Answer</summary><p>PostgreSQL: Read Committed. MySQL InnoDB: Repeatable Read. Same code, different anomalies.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Does Repeatable Read prevent phantoms?"</b></p><details><summary>Answer</summary><p>The standard allows phantoms at Repeatable Read. PostgreSQL's implementation doesn't allow them. InnoDB's plain reads use a snapshot; its locking reads use next-key locks. "It depends on the database" is the right start.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Serializable means transactions run one at a time?"</b></p><details><summary>Answer</summary><p>No — they run concurrently; the result must equal <em>some</em> serial order. PostgreSQL enforces that by aborting transactions (40001), so you need retries.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"REQUIRES_NEW inside REQUIRED: what if the outer rolls back?"</b></p><details><summary>Answer</summary><p>The inner transaction already committed and stays committed. And it needed a second connection while the outer held the first.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Inner method threw, I caught it — why UnexpectedRollbackException?"</b></p><details><summary>Answer</summary><p>With <code>REQUIRED</code> both share one physical transaction; the inner scope marked it rollback-only. The commit turns into a rollback and Spring tells you.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Optimistic or pessimistic locking?"</b></p><details><summary>Answer</summary><p>Optimistic when conflicts are rare or span user think-time; pessimistic when conflicts are frequent and short. Often the best answer is neither: a single atomic UPDATE or a constraint.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Why is my read-only method still flushing / writing?"</b></p><details><summary>Answer</summary><p><code>readOnly</code> is a hint, and a joining <code>REQUIRED</code> scope inherits the outer transaction's characteristics anyway.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"What's N+1 and how do you detect it?"</b></p><details><summary>Answer</summary><p>One query for a list plus one per row for an association. Detect with SQL logging/statistics in tests (assert query counts); fix with <code>JOIN FETCH</code>, entity graphs, batch fetching or DTOs.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Why not just increase the pool size?"</b></p><details><summary>Answer</summary><p>More connections than the DB can run in parallel means more contention, not more throughput. Reduce hold time first; size from load tests.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Can you deadlock without SELECT FOR UPDATE?"</b></p><details><summary>Answer</summary><p>Yes. Plain UPDATEs take row locks; two transactions updating the same rows in opposite order deadlock.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Send the Kafka event inside or after the transaction?"</b></p><details><summary>Answer</summary><p>Inside risks ghost events, after risks lost ones. Transactional outbox + idempotent consumers.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Is a sequence-generated ID gap a bug?"</b></p><details><summary>Answer</summary><p>No. PostgreSQL sequence changes are not rolled back, so aborted transactions leave gaps.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Is <code>SELECT count(*)</code> then <code>INSERT</code> safe in a transaction?"</b></p><details><summary>Answer</summary><p>Not at Read Committed or Snapshot Isolation — that's a phantom / write skew. Use a unique constraint, a lock on a parent row, or Serializable.</p></details></div>
+    <div class="tp-card"><p class="tp-q"><b>"Why does my SELECT trigger an UPDATE in the SQL log?"</b></p><details><summary>Answer</summary><p>Hibernate's AUTO flush: before a query that overlaps pending changes, dirty entities are flushed first.</p></details></div>
+  </div>
+</section>
+
+<section class="chapter" id="final" data-title="Exam + cheat sheet">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Exam + cheat sheet</h2><span class="tag">check what stuck</span></div></div>
+  <div id="quiz"></div>
+  <div class="score" id="score">Score: 0 / 0</div>
+  <h3 class="reveal">Cheat sheet</h3>
+  <div class="scroll-x reveal">
+  <table class="mini cheat">
+    <thead><tr><th>Parameter / command</th><th>Default / what it does</th><th>Use when</th></tr></thead>
+    <tbody>
+      <tr><td>@Transactional</td><td>REQUIRED, DEFAULT isolation, read-write, rollback on RuntimeException/Error</td><td>On the service method that is the unit of work</td></tr>
+      <tr><td>rollbackFor = Exception.class</td><td>Also roll back on checked exceptions</td><td>Your methods throw checked exceptions</td></tr>
+      <tr><td>Propagation.REQUIRES_NEW</td><td>Suspend outer, new transaction + connection</td><td>Audit rows that must survive; pool &gt; threads</td></tr>
+      <tr><td>Propagation.NESTED</td><td>Savepoint in the outer transaction</td><td>Partial rollback with JDBC transactions</td></tr>
+      <tr><td>Isolation.REPEATABLE_READ</td><td>PG: snapshot per transaction, 40001 on conflicts</td><td>Consistent multi-query reads (reports)</td></tr>
+      <tr><td>Isolation.SERIALIZABLE</td><td>PG: SSI, aborts anomalies with 40001</td><td>Complex invariants; with a retry loop</td></tr>
+      <tr><td>@Version</td><td>Optimistic lock; exception on conflicting update</td><td>Rare conflicts, long edits</td></tr>
+      <tr><td>SELECT … FOR UPDATE [NOWAIT | SKIP LOCKED]</td><td>Row lock until commit</td><td>Hot rows; job queues (SKIP LOCKED)</td></tr>
+      <tr><td>hibernate.jdbc.batch_size</td><td>Batch statements (guide: 10–50); IDENTITY disables insert batching</td><td>Bulk writes</td></tr>
+      <tr><td>spring.jpa.open-in-view=false</td><td>Boot default registers the OSIV interceptor</td><td>Always, in services with clear boundaries</td></tr>
+      <tr><td>maximumPoolSize</td><td>10</td><td>Size from load tests</td></tr>
+      <tr><td>connectionTimeout</td><td>30000 ms</td><td>Lower to fail fast</td></tr>
+      <tr><td>leakDetectionThreshold</td><td>0 (off); min 2000 ms</td><td>Find connections held too long</td></tr>
+      <tr><td>statement_timeout / lock_timeout</td><td>0 (off)</td><td>Per role/session; lock_timeout in every migration</td></tr>
+      <tr><td>idle_in_transaction_session_timeout</td><td>0 (off)</td><td>Kill sessions forgotten in a transaction</td></tr>
+      <tr><td>deadlock_timeout</td><td>1 s</td><td>Wait before the deadlock check</td></tr>
+      <tr><td>CREATE INDEX CONCURRENTLY</td><td>No write lock; not in a transaction block</td><td>Indexes on live tables</td></tr>
+      <tr><td>SQLSTATE 40001 / 40P01 / 23505</td><td>serialization failure / deadlock / unique violation</td><td>Retry candidates</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box relax reveal"><span class="lbl">🎓 Congratulations</span>
+    <p>Back to the transfer from the start: read both balances, check, subtract, add — in <code>@Transactional</code>. Is it
+      safe? <b>Not by itself.</b> Under PostgreSQL's default Read Committed, two concurrent transfers from the same account can
+      both pass the balance check (a lost update / write skew). It's also only transactional if called through the proxy, and
+      a checked exception would commit half of it. Fix it with an atomic
+      <code>UPDATE … SET balance = balance - :x WHERE id = :from AND balance &gt;= :x</code> (check the row count), or lock
+      both rows <code>FOR UPDATE</code> in id order, or run it Serializable with a retry loop — and keep the transaction short.</p>
+    <p>Next step: take the checklist to your own service and count the ✗s.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Educational guide in a single HTML file — no frameworks, no build step, no network dependencies.
+  Facts checked in September 2026 against the PostgreSQL 18 documentation (and its lock manager README), Spring Framework 7.0
+  reference and Javadoc, Hibernate ORM 6.6 User Guide, HikariCP README and wiki, MySQL 8.4 Reference Manual, Java 21
+  <code>java.sql.Connection</code> Javadoc and microservices.io. Numbers in simulations are illustrative unless stated.
+  PostgreSQL, MySQL, Spring, Hibernate and Kafka are trademarks of their respective owners.
+</footer>
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sleep = ms => new Promise(r => setTimeout(r, REDUCE ? 0 : ms));
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, text, attrs = {}) {
+  const t = S('text', Object.assign({ x, y, 'text-anchor': 'middle' }, attrs), parent);
+  t.textContent = text;
+  return t;
+}
+function H(tag, cls, html, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const ease = k => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (REDUCE || ms <= 0) { fn(1); return res(); }
+    const t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / ms);
+      fn(ease(k));
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+function flyDot(parent, x0, y0, x1, y1, { ms = 600, color, r = 5 } = {}) {
+  const c = S('circle', { cx: x0, cy: y0, r, class: 'fly' }, parent);
+  c.style.fill = color || C.accent;
+  return tween(ms, k => { c.setAttribute('cx', x0 + (x1 - x0) * k); c.setAttribute('cy', y0 + (y1 - y0) * k); }).then(() => c.remove());
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function readColors() { for (const k of ['ink', 'paper', 'paper2', 'mut', 'line', 'accent', 'accent2', 'ok', 'bad', 'warn', 'dim', 'card']) C[k] = cssVar('--' + k); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function ringXY(cx, cy, r, f) { const a = f * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+
+/* ---------- structure: auto numbering, TOC, course map, level chips, depth switch ---------- */
+const LEVELS = ['Essentials', 'Practitioner', 'Expert', 'Operations'];   // data-level = index + 1
+const lvlOf = el => +(el.dataset.level || 1);
+const levelled = (root = document) => $$('main [data-level]', root).filter(e => !e.closest('#map'));   // content, not the map's own links
+const DEPTH_KEY = 'akp-depth:' + location.pathname;
+const blocks = $$('main > section.part, main > section.chapter');
+const chapters = blocks.filter(b => b.classList.contains('chapter'));
+chapters.forEach((s, i) => { const n = $('.chap-num', s); if (n && !n.textContent.trim()) n.textContent = i; });
+const titleOf = s => s.dataset.title || $('h2', s).textContent.trim();
+(() => {
+  const toc = $('#toc'), map = $('#map');
+  if (toc) toc.innerHTML = '<b>Contents</b>';
+  let grp = null;
+  for (const b of blocks) {
+    const lv = lvlOf(b);
+    if (b.classList.contains('part')) {
+      const name = `${$('.part-no', b)?.textContent || ''} · ${$('h2', b).textContent}`;
+      if (toc) H('div', 'toc-part', null, toc).textContent = name;
+      if (map) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = name; grp.dataset.level = lv; }
+      continue;
+    }
+    const num = $('.chap-num', b)?.textContent || '';
+    if (toc) { const a = H('a', '', null, toc); a.href = '#' + b.id; a.textContent = `${num} · ${titleOf(b)}`; a.dataset.level = lv; }
+    if (map) {
+      if (!grp) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = 'Start'; }
+      const a = H('a', 'map-ch l' + lv, `<i>${num}</i><span></span>`, grp); a.href = '#' + b.id; a.dataset.level = lv;
+      $('span', a).textContent = titleOf(b);
+    }
+  }
+  const multi = levelled().some(e => lvlOf(e) > 1);
+  // level chips on chapter headings and "go deeper" summaries
+  chapters.forEach(s => { if (multi && s.dataset.level) { const h = $('.chap-head h2', s); if (h) H('span', 'lvl-chip l' + lvlOf(s), `L${lvlOf(s)} · ${LEVELS[lvlOf(s) - 1] || ''}`, h); } });
+  $$('details.deeper').forEach(d => { const sm = $('summary', d); if (sm) sm.insertAdjacentHTML('afterbegin', `<span class="lvl-chip l${lvlOf(d)}">L${lvlOf(d)}</span>`); });
+  // jumping to a chapter deeper than the current depth raises the depth first
+  $$('#toc a, #map a').forEach(a => a.addEventListener('click', () => { if (+a.dataset.level > depth) setDepth(+a.dataset.level); }));
+  const dEl = $('#depth');
+  if (!multi || !dEl) { if (dEl) dEl.remove(); return; }
+  dEl.innerHTML = '<span>Depth</span>';
+  LEVELS.forEach((n, i) => { const b = H('button', '', `${i + 1}<span class="nm"> ${n}</span>`, dEl); b.title = n; b.onclick = () => setDepth(i + 1); });
+})();
+let depth = LEVELS.length;
+try { const d = +localStorage.getItem(DEPTH_KEY); if (d >= 1 && d <= LEVELS.length) depth = d; } catch (e) { }
+function setDepth(d) {
+  depth = d;
+  try { localStorage.setItem(DEPTH_KEY, d); } catch (e) { }
+  levelled().forEach(el => el.classList.toggle('lvl-off', lvlOf(el) > depth));
+  $$('#toc a, #map a, .map-part').forEach(a => a.classList.toggle('dim', lvlOf(a) > depth));
+  $$('#depth button').forEach((b, i) => b.classList.toggle('on', i + 1 === depth));
+  $$('.lvl-hint').forEach(h => h.remove());
+  chapters.forEach(s => {
+    if (s.classList.contains('lvl-off')) return;
+    const hid = levelled(s).filter(e => e.classList.contains('lvl-off'));
+    if (!hid.length) return;
+    const need = Math.min(...hid.map(lvlOf));
+    const b = H('button', 'lvl-hint', `＋ ${hid.length} deeper block${hid.length > 1 ? 's' : ''} hidden here — show level ${need} (${LEVELS[need - 1] || ''})`, s);
+    b.onclick = () => setDepth(need);
+  });
+}
+setDepth(depth);
+
+/* ---------- scroll machinery ---------- */
+const bar = $('#progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+    document.body.classList.toggle('past-cover', scrollY > innerHeight * .8);
+    ticking = false;
+  });
+}, { passive: true });
+
+const revealIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('shown'); revealIO.unobserve(e.target); }
+}), { threshold: 0.12 });
+$$('.reveal').forEach(el => revealIO.observe(el));
+
+const tocLinks = new Map($$('#toc a').map(a => [a.getAttribute('href').slice(1), a]));
+const tocIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove('active'));
+  const a = tocLinks.get(e.target.id); if (a) a.classList.add('active');
+  $$('#map a').forEach(m => { const on = m.getAttribute('href') === '#' + e.target.id; m.classList.toggle('here', on); if (on) m.classList.add('seen'); });
+}), { rootMargin: '-35% 0px -60% 0px' });
+$$('section.chapter').forEach(s => tocIO.observe(s));
+
+const figIO = new IntersectionObserver(es => es.forEach(e => {
+  const f = e.target._fig; if (!f) return;
+  if (e.isIntersecting) {
+    if (f.visible) return;
+    f.visible = true;
+    if (!f.seen) { f.seen = true; f.first && f.first(); }
+    f.enter && f.enter();
+  } else if (f.visible) {
+    f.visible = false; f.leave && f.leave();
+  }
+}), { threshold: 0.25 });
+function registerFig(el, api) { el._fig = api; figIO.observe(el); return api; }
+
+/* enqueue helper: serialize animation runs, drop excess clicks */
+function makeQueue() {
+  let queue = Promise.resolve(), pending = 0;
+  return fn => { if (pending >= 3) return; pending++; queue = queue.then(fn).catch(e => console.error(e)).finally(() => pending--); };
+}
+
+
+/* ---------- generic helpers ---------- */
+function paintBar(el, segs, cap) {           // stacked bar: segs = [{k, v, c, t}], widths as % of cap
+  for (const s of segs) {
+    let d = el.querySelector(`[data-k="${s.k}"]`);
+    if (!d) { d = H('div', 'seg', null, el); d.dataset.k = s.k; }
+    d.style.width = Math.min(100, 100 * s.v / cap) + '%';
+    d.style.background = s.c;
+    d.textContent = s.v >= cap * 0.07 ? s.t : '';
+  }
+}
+function logLine(box, text, cls = '') {      // append a fading-in line to a .log box (textContent: safe)
+  const d = H('div', cls, null, box); d.textContent = text;
+  requestAnimationFrame(() => d.classList.add('shown'));
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+function say(el, html, cls = '') { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = html; }
+const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase labels wrap between words, not mid-word
+/* ---------- cover ---------- */
+(() => {
+  const g = $('#cover-nodes');
+  const icons = ['🔌', '🔒', '📸', '🔁', '⏱️', '📨', '🧬', '🩺'];
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = ringXY(200, 200, 150, i / 8);
+    const c = S('circle', { cx: x, cy: y, r: 17 }, g);
+    c.style.fill = C.paper2; c.style.stroke = C.ink; c.style.strokeWidth = 3;
+    T(g, x, y + 6, icons[i], { 'font-size': 16 });
+  }
+})();
+/* shared: two-lane interleaving player used by several figures */
+function lanePlayer(lanesEl, heads) {
+  return {
+    clear() { lanesEl.innerHTML = ''; heads.forEach(h => H('div', 'h', null, lanesEl).textContent = h); },
+    async step(lane, html, cls = '') {          // lane 0 or 1; the other column gets an invisible spacer
+      const a = H('div', lane === 0 ? 'st ' + cls : 'gap', lane === 0 ? html : '&nbsp;', lanesEl);
+      const b = H('div', lane === 1 ? 'st ' + cls : 'gap', lane === 1 ? html : '&nbsp;', lanesEl);
+      const el = lane === 0 ? a : b;
+      requestAnimationFrame(() => el.classList.add('shown'));
+      await sleep(650);
+      return el;
+    }
+  };
+}
+function dbState(el, obj, hot = []) {
+  el.innerHTML = '';
+  for (const k in obj) { const s = H('span', hot.includes(k) ? 'hot' : '', null, el); s.innerHTML = `${k} = <b></b>`; $('b', s).textContent = obj[k]; }
+}
+
+/* ---------- 1. pool ---------- */
+(() => {
+  const root = $('#fig-pool'), st = $('#pl-status'), slotsEl = $('#pl-slots'), qEl = $('#pl-q');
+  const N = 10, ARR = 3, TIMEOUT = 30;
+  let slots, queue, served, timedOut, t, mode, timer = null, visible = false, warned;
+  for (let i = 0; i < N; i++) H('div', 'pl-slot', String(i + 1), slotsEl);
+  function paint() {
+    [...slotsEl.children].forEach((d, i) => { const s = slots[i]; d.className = 'pl-slot' + (s ? (s.slow ? ' slow' : ' busy') : ''); });
+    qEl.innerHTML = '';
+    queue.slice(0, 60).forEach(w => H('i', t - w > 20 ? 'late' : '', null, qEl));
+    $('#pl-served').textContent = served; $('#pl-wait').textContent = queue.length;
+    $('#pl-to').textContent = timedOut; $('#pl-t').textContent = t + ' s';
+  }
+  function reset() { stop(); slots = Array(N).fill(null); queue = []; served = 0; timedOut = 0; t = 0; mode = null; warned = false; paint(); say(st, 'Press ▶ to send requests.'); $$('[data-act]', root).forEach(b => b.classList.remove('on')); }
+  function tick() {
+    t++;
+    slots = slots.map(s => (s && s.until <= t ? (served++, null) : s));
+    for (let i = 0; i < ARR; i++) queue.push(t);
+    const before = queue.length;
+    queue = queue.filter(w => t - w < TIMEOUT); timedOut += before - queue.length;
+    for (let i = 0; i < N && queue.length; i++) if (!slots[i]) { queue.shift(); slots[i] = { until: t + (mode === 'slow' ? 8 : 1), slow: mode === 'slow' }; }
+    paint();
+    if (mode === 'normal') say(st, `<b>Healthy.</b> Each request holds a connection for ~1 s, so ${ARR} arrivals per second need only ~${ARR} of the 10 connections.`, 'ok');
+    else if (timedOut > 0) { if (!warned) { warned = true; } say(st, `<b>Timeouts.</b> Requests waited ${TIMEOUT} s for a connection and got an exception — while the database itself was nearly idle.`, 'bad'); }
+    else if (queue.length) say(st, `<b>Queue growing.</b> Hold time went from 1 s to 8 s: the pool can now serve ~10/8 ≈ 1.25 requests per second, but ${ARR} arrive.`, 'warn');
+    if (t > 400) stop();
+  }
+  function start(m) { mode = m; $$('[data-act]', root).forEach(b => b.classList.toggle('on', b.dataset.act === m)); if (!timer && visible) timer = setInterval(tick, REDUCE ? 60 : 180); }
+  function stop() { clearInterval(timer); timer = null; }
+  $('[data-act=normal]', root).onclick = () => start('normal');
+  $('[data-act=slow]', root).onclick = () => start('slow');
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, {
+    first() { start('normal'); },
+    enter() { visible = true; if (mode && !timer) timer = setInterval(tick, REDUCE ? 60 : 180); },
+    leave() { visible = false; stop(); }
+  });
+})();
+
+/* ---------- 2. transfer ---------- */
+(() => {
+  const root = $('#fig-tx'), st = $('#tx-status'), log = $('#tx-log');
+  let a, b, txMode = false, run = 0;
+  const enqueue = makeQueue();
+  function paint() { $('#tx-a').textContent = a; $('#tx-b').textContent = b; $('#tx-sum').textContent = a + b; $('#tx-sumbox').classList.toggle('lost', a + b !== 100); }
+  function reset() { run++; a = 100; b = 0; log.innerHTML = ''; paint(); say(st, txMode ? 'Mode: one transaction. Press a button.' : 'Mode: auto-commit. Press a button.'); }
+  function setMode(m) { txMode = m; $('[data-act=auto]', root).classList.toggle('on', !m); $('[data-act=tx]', root).classList.toggle('on', m); reset(); }
+  async function go(crash) {
+    reset(); const my = run;
+    if (txMode) { logLine(log, 'BEGIN;', 'u'); await sleep(400); }
+    logLine(log, 'UPDATE account SET balance = balance - 50 WHERE id = \'A\';'); a -= 50; paint(); await sleep(600); if (my !== run) return;
+    if (!txMode) logLine(log, '-- auto-commit: committed', 'g');
+    if (crash) {
+      logLine(log, '💥 process killed', 'e'); await sleep(600); if (my !== run) return;
+      if (txMode) { logLine(log, '-- server: connection lost, transaction rolled back', 'g'); a += 50; paint(); say(st, '<b>Rolled back.</b> The debit never became visible to anyone. Total is still 100.', 'ok'); }
+      else say(st, '<b>50 vanished.</b> The debit was already committed on its own; the credit never ran. Total = 50.', 'bad');
+      return;
+    }
+    logLine(log, 'UPDATE account SET balance = balance + 50 WHERE id = \'B\';'); b += 50; paint(); await sleep(600); if (my !== run) return;
+    logLine(log, txMode ? 'COMMIT;' : '-- auto-commit: committed', 'g');
+    say(st, txMode ? '<b>Committed together.</b> Both changes became visible at the same moment.' : '<b>Worked this time.</b> Two separate commits. Now try 💥.', 'ok');
+  }
+  $('[data-act=auto]', root).onclick = () => setMode(false);
+  $('[data-act=tx]', root).onclick = () => setMode(true);
+  $('[data-act=run]', root).onclick = () => enqueue(() => go(false));
+  $('[data-act=crash]', root).onclick = () => enqueue(() => go(true));
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => go(true)); } });
+})();
+
+/* ---------- 3. anomalies ---------- */
+(() => {
+  const root = $('#fig-an'), st = $('#an-status'), lp = lanePlayer($('#an-lanes'), ['T1', 'T2']), dbEl = $('#an-db');
+  const enqueue = makeQueue(); let run = 0;
+  const SC = {
+    dirty: { db: { 'price(42)': 100 }, steps: [
+      [1, 'BEGIN; UPDATE item SET price = 10 WHERE id = 42;', { 'price(42)': '10 (uncommitted)' }],
+      [0, 'SELECT price FROM item WHERE id = 42; → 10<small>reads a value nobody committed</small>', null, 'bad'],
+      [1, 'ROLLBACK;', { 'price(42)': 100 }],
+      [0, 'sends "price dropped to 10!" email', null, 'bad']],
+      end: '<b>Dirty read.</b> T1 acted on data that never existed. Only Read Uncommitted allows this — and PostgreSQL never does.' },
+    nonrep: { db: { 'balance(A)': 100 }, steps: [
+      [0, 'BEGIN; SELECT balance FROM account WHERE id=\'A\'; → 100'],
+      [1, 'UPDATE account SET balance = 40 WHERE id=\'A\'; COMMIT;', { 'balance(A)': 40 }],
+      [0, 'SELECT balance FROM account WHERE id=\'A\'; → 40<small>same row, same transaction, different value</small>', null, 'bad']],
+      end: '<b>Non-repeatable read.</b> Allowed at Read Committed: each statement sees what was committed before it started.' },
+    phantom: { db: { 'bookings(room 7)': 2 }, steps: [
+      [0, 'BEGIN; SELECT count(*) FROM booking WHERE room = 7; → 2'],
+      [1, 'INSERT INTO booking(room) VALUES (7); COMMIT;', { 'bookings(room 7)': 3 }],
+      [0, 'SELECT count(*) FROM booking WHERE room = 7; → 3<small>a new row matches the same WHERE</small>', null, 'bad']],
+      end: '<b>Phantom read.</b> Not a changed row — a changed <em>set</em> of rows. Allowed at Read Committed.' },
+    lost: { db: { 'stock(1)': 5 }, steps: [
+      [0, 'SELECT stock → 5<small>Java: newStock = 5 − 1</small>'],
+      [1, 'SELECT stock → 5<small>Java: newStock = 5 − 1</small>'],
+      [0, 'UPDATE product SET stock = 4 WHERE id = 1; COMMIT;', { 'stock(1)': 4 }],
+      [1, 'UPDATE product SET stock = 4 WHERE id = 1; COMMIT;', { 'stock(1)': 4 }, 'bad']],
+      end: '<b>Lost update.</b> Two items sold, stock dropped by one. Read Committed lets both commits through.' },
+    skew: { db: { 'on_call(Alice)': true, 'on_call(Bob)': true }, steps: [
+      [0, 'SELECT count(*) FROM doctor WHERE on_call; → 2<small>"someone else stays, I can go"</small>'],
+      [1, 'SELECT count(*) FROM doctor WHERE on_call; → 2<small>same reasoning</small>'],
+      [0, 'UPDATE doctor SET on_call=false WHERE name=\'Alice\'; COMMIT;', { 'on_call(Alice)': false, 'on_call(Bob)': true }],
+      [1, 'UPDATE doctor SET on_call=false WHERE name=\'Bob\'; COMMIT;', { 'on_call(Alice)': false, 'on_call(Bob)': false }, 'bad']],
+      end: '<b>Write skew.</b> They updated <em>different</em> rows, so no write conflict — yet nobody is on call. Even Snapshot Isolation (PostgreSQL Repeatable Read) allows this; only Serializable stops it.' }
+  };
+  async function play(k) {
+    const my = ++run, sc = SC[k];
+    $$('#an-btns .btn').forEach(b => b.classList.toggle('on', b.dataset.sc === k));
+    lp.clear(); let db = Object.assign({}, sc.db); dbState(dbEl, db); say(st, 'Running…');
+    for (const [lane, html, patch, cls] of sc.steps) {
+      await lp.step(lane, html, cls || ''); if (my !== run) return;
+      if (patch) { db = Object.assign(db, patch); dbState(dbEl, db, Object.keys(patch)); }
+    }
+    say(st, sc.end, 'bad');
+  }
+  $$('#an-btns .btn').forEach(b => b.onclick = () => enqueue(() => play(b.dataset.sc)));
+  lp.clear(); dbState(dbEl, SC.lost.db);
+  registerFig(root, { first() { enqueue(() => play('lost')); } });
+})();
+
+/* ---------- 4. isolation matrix ---------- */
+(() => {
+  const root = $('#fig-iso'), st = $('#iso-status'), tb = $('#iso-t tbody');
+  const P = 'Possible', N = 'Not possible', PG = 'Allowed, but not in PG';
+  const LV = ['Read uncommitted', 'Read committed', 'Repeatable read', 'Serializable'];
+  const STD = [[P, P, P, P], [N, P, P, P], [N, N, P, P], [N, N, N, N]];
+  const PGT = [[N, P, P, P], [N, P, P, P], [N, N, N, P], [N, N, N, N]];
+  const NOTE = {
+    std: ['The standard permits every phenomenon here, even dirty reads (PostgreSQL treats this level as Read Committed).', 'The standard only forbids dirty reads.', 'The standard keeps rows you read stable but still permits phantoms (PostgreSQL forbids them too).', 'Same effect as some one-at-a-time order.'],
+    pg: ['PostgreSQL maps it to Read Committed: “internally only three distinct isolation levels are implemented”.',
+      '<b>PostgreSQL default.</b> Each statement sees a snapshot taken when that statement starts.',
+      'Snapshot of the whole transaction, taken at its first statement. No phantoms here, but write skew is possible and conflicting updates fail with SQLSTATE 40001.',
+      'Serializable Snapshot Isolation: like Repeatable Read plus predicate (SIRead) tracking; aborts one transaction of a dangerous pattern with 40001.']
+  };
+  let db = 'std', sel = -1;
+  function paint() {
+    tb.innerHTML = '';
+    const T = db === 'std' ? STD : PGT;
+    LV.forEach((l, i) => {
+      const tr = H('tr', i === sel ? 'sel' : '', null, tb);
+      H('td', '', l + (db === 'pg' && i === 1 ? '<span class="iso-def">default</span>' : ''), tr);
+      (db === 'std' ? STD[i] : T[i]).forEach((v, j) => {
+        let txt = v, cls = v === P ? 'y' : 'n';
+        if (db === 'pg' && ((i === 0 && j === 0) || (i === 2 && j === 2))) { txt = PG; cls = 'pg'; }
+        H('td', cls, null, tr).textContent = txt;
+      });
+      tr.style.cursor = 'pointer';
+      tr.onclick = () => { sel = i; paint(); say(st, `<b>${l}.</b> ${NOTE[db][i]}`, db === 'pg' && i >= 2 ? 'warn' : ''); };
+    });
+  }
+  $$('[data-db]', root).forEach(b => b.onclick = () => { db = b.dataset.db; $$('[data-db]', root).forEach(x => x.classList.toggle('on', x === b)); paint(); if (sel >= 0) say(st, `<b>${LV[sel]}.</b> ${NOTE[db][sel]}`); });
+  paint();
+  registerFig(root, { first() { setTimeout(() => $('[data-db=pg]', root).click(), REDUCE ? 0 : 800); } });
+})();
+
+/* ---------- 5. proxy ---------- */
+(() => {
+  const root = $('#fig-px'), st = $('#px-status'), log = $('#px-log');
+  const nodes = Object.fromEntries($$('#px-flow > div').map(d => [d.dataset.n, d]));
+  const enqueue = makeQueue(); let run = 0;
+  const light = (on = [], skip = [], bad = []) => Object.entries(nodes).forEach(([k, d]) => { d.classList.toggle('on', on.includes(k)); d.classList.toggle('skip', skip.includes(k)); d.classList.toggle('bad', bad.includes(k)); });
+  async function path(kind) {
+    const my = ++run; log.innerHTML = ''; light();
+    const L = (t, c) => logLine(log, t, c);
+    if (kind === 'self') {
+      nodes.p.querySelector('code').textContent = 'BEGIN … COMMIT';
+      light(['c']); L('controller → orderService.place()   // place() has no @Transactional'); await sleep(500); if (my !== run) return;
+      light(['c', 'a'], ['p']); L('proxy: place() not transactional → just delegates'); await sleep(500); if (my !== run) return;
+      light(['c', 'a', 'b'], ['p']); L('place() calls this.save()  // "this" is the raw object, not the proxy', 'e'); await sleep(500); if (my !== run) return;
+      L('-- no BEGIN: save() runs in auto-commit mode', 'e');
+      return say(st, '<b>Self-invocation.</b> The annotation on save() is never seen: the call never passes through the proxy. Each statement auto-commits separately.', 'bad');
+    }
+    light(['c']); L('controller → orderService.place()'); await sleep(450); if (my !== run) return;
+    light(['c', 'p']); L('proxy: getConnection(); setAutoCommit(false)   // BEGIN', 'u'); await sleep(450); if (my !== run) return;
+    light(['c', 'p', 'a', 'b']); L('INSERT INTO orders …'); await sleep(450); if (my !== run) return;
+    if (kind === 'ok') { L('proxy: commit()', 'g'); return say(st, '<b>Transactional.</b> The call came through the proxy, so it opened, and committed, the transaction.', 'ok'); }
+    if (kind === 'checked') { light(['c', 'p'], [], ['b']); L('throw new IOException("disk full")', 'e'); await sleep(400); if (my !== run) return; L('proxy: checked exception → commit()', 'e'); return say(st, '<b>Committed despite the exception!</b> Default rules roll back only on RuntimeException and Error. Add <code>rollbackFor = Exception.class</code>.', 'bad'); }
+    if (kind === 'rt') { light(['c', 'p'], [], ['b']); L('throw new IllegalStateException()', 'e'); await sleep(400); if (my !== run) return; L('proxy: RuntimeException → rollback()', 'g'); return say(st, '<b>Rolled back.</b> An unchecked exception escaped the method, so the proxy rolled back.', 'ok'); }
+    if (kind === 'swallow') { L('try { payment.charge(); } catch (Exception e) { log.warn(e); }', 'e'); await sleep(400); if (my !== run) return; L('method returns normally → proxy: commit()', 'e'); return say(st, '<b>Half an order committed.</b> The proxy only reacts to exceptions that leave the method. A swallowed exception looks like success.', 'bad'); }
+  }
+  $$('[data-act]', root).forEach(b => b.onclick = () => enqueue(() => path(b.dataset.act)));
+  registerFig(root, { first() { enqueue(() => path('ok')); enqueue(() => sleep(900)); enqueue(() => path('self')); } });
+})();
+
+/* ---------- 6. propagation ---------- */
+(() => {
+  const root = $('#fig-pr'), st = $('#pr-status'), out = $('#pr-out'), sp = $('#pr-prop'), ss = $('#pr-sc');
+  const JOIN = ['REQUIRED', 'SUPPORTS', 'MANDATORY'];
+  function outcome(p, s) {
+    // returns [connections, inner, outer, caller, verdictClass, narration]
+    if (s === 'c') {
+      if (['REQUIRED', 'REQUIRES_NEW', 'NESTED'].includes(p)) return ['1', 'runs in a new transaction', '— (none)', 'normal result', 'good', `<b>${p} with no outer transaction</b> creates one${p === 'NESTED' ? ' — NESTED behaves like REQUIRED here' : ''}.`];
+      if (p === 'MANDATORY') return ['0', 'never runs', '— (none)', 'exception: no existing transaction', 'bad', '<b>MANDATORY</b> refuses to run without a transaction — useful as an assertion.'];
+      return ['1', 'runs without a transaction (each statement auto-commits)', '— (none)', 'normal result', 'warn', `<b>${p}</b> runs non-transactionally when nothing is active. A failure halfway leaves earlier statements committed.`];
+    }
+    if (s === 'a') {
+      if (JOIN.includes(p)) return ['1 (shared)', 'marks the shared transaction rollback-only', 'tries to commit → rolled back', 'UnexpectedRollbackException', 'bad', `<b>${p} joins the outer transaction.</b> Catching inner's exception doesn't help: the one physical transaction is already doomed, and Spring says so with UnexpectedRollbackException.`];
+      if (p === 'REQUIRES_NEW') return ['2 (outer suspended)', 'its own transaction rolls back', 'commits its own work', 'success', 'good', '<b>Independent transactions.</b> Inner rolled back alone; outer committed. Cost: a second connection while the first one stays bound.'];
+      if (p === 'NESTED') return ['1 (savepoint)', 'rolled back to its savepoint', 'continues and commits', 'success', 'good', '<b>Savepoint.</b> Only inner\'s changes are undone; same connection. Works with JDBC savepoints (DataSourceTransactionManager).'];
+      if (p === 'NOT_SUPPORTED') return ['outer suspended', 'runs without a transaction: statements before the exception stay', 'commits', 'success', 'warn', '<b>No transaction for inner.</b> Whatever it wrote before failing is not rolled back.'];
+      return ['1', 'never runs: exception, a transaction exists', 'catches it, commits', 'success (inner skipped!)', 'warn', '<b>NEVER</b> throws as soon as it sees an active transaction.'];
+    }
+    // s === 'b': inner ok, then outer throws
+    if (JOIN.includes(p) || p === 'NESTED') return ['1', 'its changes are part of the outer transaction', 'rolls back — everything', 'outer\'s exception', 'good', `<b>All or nothing.</b> With ${p}, inner's work was never committed on its own, so the outer rollback removes it too.`];
+    if (p === 'REQUIRES_NEW') return ['2', 'already committed — stays', 'rolls back', 'outer\'s exception', 'warn', '<b>Inner survives.</b> Exactly what you want for an audit row — and exactly the bug when it was "part of the order".'];
+    if (p === 'NOT_SUPPORTED') return ['outer suspended', 'auto-committed — stays', 'rolls back', 'outer\'s exception', 'warn', '<b>Inner survives</b>, because it never was in a transaction.'];
+    return ['1', 'never runs: exception', 'rolls back', 'exception from NEVER', 'bad', '<b>NEVER</b> fails immediately inside a transaction.'];
+  }
+  function paint() {
+    const [c, i, o, r, cls, txt] = outcome(sp.value, ss.value);
+    out.innerHTML = '';
+    [['connections', c], ['inner()', i], ['outer()', o], ['caller sees', r]].forEach(([k, v], n) => { const d = H('div', n === 3 ? cls : '', `<b>${k}</b>`, out); d.append(v); d.classList.add('pop'); });
+    say(st, txt, cls === 'good' ? 'ok' : cls === 'bad' ? 'bad' : 'warn');
+  }
+  sp.onchange = paint; ss.onchange = paint; paint();
+  registerFig(root, { async first() { for (const p of ['REQUIRED', 'REQUIRES_NEW', 'NESTED']) { sp.value = p; paint(); await sleep(1600); } } });
+})();
+
+/* ---------- 7. locking race ---------- */
+(() => {
+  const root = $('#fig-lk'), st = $('#lk-status'), lp = lanePlayer($('#lk-lanes'), ['Alice (T1)', 'Bob (T2)']), dbEl = $('#lk-db');
+  const enqueue = makeQueue(); let run = 0;
+  const SC = {
+    naive: [[0, 'SELECT stock FROM ticket WHERE id=1; → 1'], [1, 'SELECT stock FROM ticket WHERE id=1; → 1'],
+      [0, 'UPDATE ticket SET stock = 0 …; INSERT order; COMMIT;', { stock: 0, orders: 1 }],
+      [1, 'UPDATE ticket SET stock = 0 …; INSERT order; COMMIT;', { stock: 0, orders: 2 }, 'bad'],
+      '<b>Sold twice.</b> Both read 1 before either wrote. Two orders, one seat.', 'bad'],
+    atomic: [[0, 'UPDATE ticket SET stock = stock - 1 WHERE id=1 AND stock &gt; 0; → 1 row<small>row now locked by T1</small>', { stock: '0 (uncommitted)' }],
+      [1, 'same UPDATE … → waits<small>blocked on T1\'s row lock</small>', null, 'wait'],
+      [0, 'INSERT order; COMMIT;', { stock: 0, orders: 1 }, 'ok'],
+      [1, '→ 0 rows<small>re-checks WHERE on the new row version: stock &gt; 0 is false</small>', null, 'ok'],
+      [1, 'rowcount = 0 → "sold out"; ROLLBACK;', null, 'ok'],
+      '<b>One sale.</b> In Read Committed the waiting UPDATE re-evaluates its WHERE clause against the updated row. No Java-side read, no race.', 'ok'],
+    version: [[0, 'SELECT stock, version → 1, v7'], [1, 'SELECT stock, version → 1, v7'],
+      [0, 'UPDATE … SET stock=0, version=8 WHERE id=1 AND version=7; → 1 row; COMMIT;', { stock: 0, version: 8, orders: 1 }, 'ok'],
+      [1, 'UPDATE … WHERE id=1 AND version=7; → 0 rows', null, 'bad'],
+      [1, 'Hibernate: optimistic-lock exception → ROLLBACK<small>retry: re-read stock = 0 → "sold out"</small>', null, 'ok'],
+      '<b>One sale.</b> The conflict is detected at write time; the loser must retry or show "someone changed this".', 'ok'],
+    forupd: [[0, 'SELECT … FOR UPDATE; → 1<small>row locked</small>'], [1, 'SELECT … FOR UPDATE; → waits', null, 'wait'],
+      [0, 'UPDATE ticket SET stock = 0; INSERT order; COMMIT;', { stock: 0, orders: 1 }, 'ok'],
+      [1, '→ returns the updated row: stock = 0<small>"sold out"; COMMIT</small>', null, 'ok'],
+      '<b>One sale.</b> Bob waited for Alice, then read the new value. Correct, but every buyer queues on that row.', 'ok']
+  };
+  async function play(k) {
+    const my = ++run, sc = SC[k], steps = sc.slice(0, -2), [end, cls] = sc.slice(-2);
+    $$('#lk-btns .btn').forEach(b => b.classList.toggle('on', b.dataset.s === k));
+    lp.clear(); let db = { stock: 1, orders: 0 }; if (k === 'version') db.version = 7; dbState(dbEl, db); say(st, 'Running…');
+    for (const [lane, html, patch, c] of steps) {
+      await lp.step(lane, html, c || ''); if (my !== run) return;
+      if (patch) { Object.assign(db, patch); dbState(dbEl, db, Object.keys(patch)); }
+    }
+    say(st, end, cls);
+  }
+  $$('#lk-btns .btn').forEach(b => b.onclick = () => enqueue(() => play(b.dataset.s)));
+  lp.clear(); dbState(dbEl, { stock: 1, orders: 0 });
+  registerFig(root, { first() { enqueue(() => play('naive')); } });
+})();
+
+/* ---------- 8. N+1 ---------- */
+(() => {
+  const root = $('#fig-np'), st = $('#np-status'), log = $('#np-log'), bar = $('#np-bar'), cnt = $('#np-count');
+  const enqueue = makeQueue(); let run = 0, n = 0;
+  function reset() { run++; n = 0; cnt.textContent = 0; bar.innerHTML = ''; log.innerHTML = ''; say(st, 'Pick a variant.'); }
+  function q(sql, first) { n++; cnt.textContent = n; H('i', first ? 'first' : '', null, bar); logLine(log, sql); }
+  async function go(kind) {
+    reset(); const my = run;
+    if (kind === 'fetch') {
+      q('select o.*, c.* from orders o join customer c on c.id = o.customer_id', true);
+      return say(st, '<b>1 statement.</b> <code>select o from Order o join fetch o.customer</code> loads what the screen needs at once.', 'ok');
+    }
+    q('select * from orders', true); await sleep(350); if (my !== run) return;
+    if (kind === 'lazy') {
+      logLine(log, '-- transaction ends; open-in-view=false', 'u'); await sleep(450); if (my !== run) return;
+      H('i', 'err', 'LazyInitializationException', bar);
+      logLine(log, 'order.getCustomer().getName() → LazyInitializationException', 'e');
+      return say(st, '<b>Exception, not a query.</b> The persistence context is closed, so the lazy customer can\'t be loaded. That is good news: the N+1 surfaced in development.', 'warn');
+    }
+    for (let i = 1; i <= 20; i++) { q(`select * from customer where id = ${100 + i}`); await sleep(REDUCE ? 0 : 90); if (my !== run) return; }
+    say(st, '<b>21 statements for one screen.</b> 1 for the list + 20 for customers, each a round trip. With 1,000 rows it would be 1,001.', 'bad');
+  }
+  $$('[data-act]', root).forEach(b => b.onclick = () => b.dataset.act === 'reset' ? reset() : enqueue(() => go(b.dataset.act)));
+  reset();
+  registerFig(root, { first() { enqueue(() => go('n1')); } });
+})();
+
+/* ---------- 9. batching ---------- */
+(() => {
+  const root = $('#fig-bt'), st = $('#bt-status'), rows = $('#bt-rows'), sz = $('#bt-size'), id = $('#bt-id');
+  const ROWS = 1000;
+  const r = [['no batching', null], ['your settings', null]].map(([t]) => { const d = H('div', 'bt-row', `<span>${t}</span><div class="meter"><i></i></div><b></b>`, rows); return d; });
+  function paint() {
+    const s = +sz.value, ident = id.value === 'identity';
+    const trips = ident || s === 0 ? ROWS : Math.ceil(ROWS / s);
+    [[ROWS, r[0]], [trips, r[1]]].forEach(([v, d]) => { const m = $('.meter > i', d); m.style.width = Math.max(1, 100 * v / ROWS) + '%'; m.style.background = v === ROWS ? C.bad : C.ok; $('b', d).textContent = v; });
+    if (ident && s > 0) say(st, `<b>IDENTITY defeats batching.</b> Each insert must run immediately to return its generated key: still ${ROWS} round trips.`, 'bad');
+    else if (s === 0) say(st, `<b>${ROWS} round trips</b> ≈ ${ROWS} ms of pure latency at 1 ms each (illustrative).`, 'warn');
+    else say(st, `<b>${trips} round trips</b> instead of ${ROWS}: ${s} inserts per JDBC batch.`, 'ok');
+  }
+  sz.onchange = paint; id.onchange = paint; paint();
+  registerFig(root, { async first() { sz.value = '0'; paint(); await sleep(900); sz.value = '50'; paint(); await sleep(1300); id.value = 'identity'; paint(); await sleep(1500); id.value = 'seq'; paint(); } });
+})();
+
+/* ---------- 10. MVCC ---------- */
+(() => {
+  const root = $('#fig-mv'), st = $('#mv-status'), vers = $('#mv-vers'), lp = lanePlayer($('#mv-lanes'), ['T1 (reader)', 'T2 (writer)']);
+  const enqueue = makeQueue(); let run = 0, lv = 'rc';
+  function V(list) { vers.innerHTML = ''; list.forEach(([txt, cls]) => H('div', 'mv-ver ' + (cls || ''), null, vers).textContent = txt); }
+  async function play() {
+    const my = ++run; lp.clear(); V([['v1: 100 · committed', '']]); say(st, lv === 'rc' ? 'Read Committed: new snapshot per statement.' : 'Repeatable Read: one snapshot for the whole transaction.');
+    await lp.step(0, 'BEGIN; SELECT balance → 100<small>' + (lv === 'rc' ? 'snapshot S1 (this statement)' : 'snapshot S1 (whole transaction)') + '</small>'); if (my !== run) return;
+    V([['v1: 100 · committed', 'seen']]); await sleep(300);
+    await lp.step(1, 'UPDATE account SET balance = 40<small>writes a NEW version; v1 stays</small>'); if (my !== run) return;
+    V([['v1: 100 · committed', ''], ['v2: 40 · uncommitted', 'unc']]);
+    await lp.step(0, 'SELECT balance → 100<small>v2 is not committed: invisible to any snapshot. No waiting.</small>', 'ok'); if (my !== run) return;
+    V([['v1: 100 · committed', 'seen'], ['v2: 40 · uncommitted', 'unc']]);
+    await lp.step(1, 'COMMIT;'); if (my !== run) return;
+    V([['v1: 100 · replaced', 'dead'], ['v2: 40 · committed', '']]);
+    if (lv === 'rc') {
+      await lp.step(0, 'SELECT balance → 40<small>new statement, new snapshot S3 includes T2</small>', 'bad'); if (my !== run) return;
+      V([['v1: 100 · replaced', 'dead'], ['v2: 40 · committed', 'seen']]);
+      say(st, '<b>Read Committed:</b> the third SELECT took a fresh snapshot and saw T2\'s commit — a non-repeatable read, by design.', 'warn');
+    } else {
+      await lp.step(0, 'SELECT balance → 100<small>still snapshot S1: T2 committed after it</small>', 'ok'); if (my !== run) return;
+      V([['v1: 100 · still visible to T1', 'seen'], ['v2: 40 · committed', '']]);
+      say(st, '<b>Repeatable Read:</b> the old version is kept for T1\'s snapshot. Stable reads — but if T1 now tried to UPDATE this row, it would get a serialization error.', 'ok');
+    }
+  }
+  $$('[data-lv]', root).forEach(b => b.onclick = () => { lv = b.dataset.lv; $$('[data-lv]', root).forEach(x => x.classList.toggle('on', x === b)); enqueue(play); });
+  $('[data-act=play]', root).onclick = () => enqueue(play);
+  lp.clear(); V([['v1: 100 · committed', '']]);
+  registerFig(root, { first() { enqueue(play); } });
+})();
+
+/* ---------- 11. write skew ---------- */
+(() => {
+  const root = $('#fig-sk'), st = $('#sk-status'), lp = lanePlayer($('#sk-lanes'), ['Alice (T1)', 'Bob (T2)']), dbEl = $('#sk-db');
+  const enqueue = makeQueue(); let run = 0;
+  async function play(lv) {
+    const my = ++run; $$('[data-lv]', root).forEach(b => b.classList.toggle('on', b.dataset.lv === lv));
+    lp.clear(); const db = { 'Alice on call': 'yes', 'Bob on call': 'yes' }; dbState(dbEl, db); say(st, lv === 'rr' ? 'Repeatable Read (Snapshot Isolation)…' : 'Serializable (SSI)…');
+    const S = async (l, h, c) => { await lp.step(l, h, c); return my === run; };
+    if (!await S(0, 'SELECT count(*) … WHERE on_call → 2')) return;
+    if (!await S(1, 'SELECT count(*) … WHERE on_call → 2')) return;
+    if (!await S(0, 'UPDATE … SET on_call=false WHERE name=\'Alice\'')) return;
+    if (!await S(1, 'UPDATE … SET on_call=false WHERE name=\'Bob\'<small>different row: no lock conflict</small>')) return;
+    if (!await S(0, 'COMMIT; ✔', 'ok')) return;
+    db['Alice on call'] = 'no'; dbState(dbEl, db, ['Alice on call']);
+    if (lv === 'rr') {
+      if (!await S(1, 'COMMIT; ✔', 'bad')) return;
+      db['Bob on call'] = 'no'; dbState(dbEl, db, ['Bob on call']);
+      return say(st, '<b>Nobody on call.</b> Each transaction was consistent with its own snapshot; together they broke the rule. Repeatable Read allowed it.', 'bad');
+    }
+    if (!await S(1, 'COMMIT; ✘ ERROR: could not serialize access due to read/write dependencies among transactions<small>SQLSTATE 40001</small>', 'bad')) return;
+    if (!await S(1, 'retry: SELECT count(*) … → 1<small>"I\'m the last one, I can\'t leave"</small>', 'ok')) return;
+    say(st, '<b>Rule kept.</b> SSI noticed that no serial order produces this result, aborted Bob, and the retry saw Alice\'s commit.', 'ok');
+  }
+  $$('[data-lv]', root).forEach(b => b.onclick = () => enqueue(() => play(b.dataset.lv)));
+  lp.clear(); dbState(dbEl, { 'Alice on call': 'yes', 'Bob on call': 'yes' });
+  registerFig(root, { first() { enqueue(() => play('rr')); enqueue(() => sleep(1500)); enqueue(() => play('ser')); } });
+})();
+
+/* ---------- 12. deadlock ---------- */
+(() => {
+  const root = $('#fig-dl'), st = $('#dl-status'), svg = $('#dl-svg');
+  T(svg, 65, 105, 'T1', { class: 'small', 'font-weight': 800 }); T(svg, 335, 105, 'T2', { class: 'small', 'font-weight': 800 });
+  T(svg, 200, 65, 'row A', { class: 'small' }); T(svg, 200, 155, 'row B', { class: 'small' });
+  const A = id => $('#dl-' + id, svg), n1 = $('#dl-n1', svg), n2 = $('#dl-n2', svg);
+  const enqueue = makeQueue(); let run = 0;
+  function clear() { ['t1a', 't2b', 't1b', 't2a'].forEach(k => A(k).setAttribute('class', 'arr')); n1.classList.remove('off', 'hot'); n2.classList.remove('off', 'hot'); }
+  const on = (k, cyc) => A(k).setAttribute('class', 'arr on' + (cyc ? ' cyc' : ''));
+  async function bad() {
+    const my = ++run; clear();
+    on('t1a'); say(st, 'T1: <code>UPDATE … WHERE id=\'A\'</code> — locks A.'); await sleep(800); if (my !== run) return;
+    on('t2b'); say(st, 'T2: <code>UPDATE … WHERE id=\'B\'</code> — locks B.'); await sleep(800); if (my !== run) return;
+    on('t1b', 1); n1.classList.add('hot'); say(st, 'T1 now needs B → waits for T2.', 'warn'); await sleep(800); if (my !== run) return;
+    on('t2a', 1); n2.classList.add('hot'); say(st, 'T2 now needs A → waits for T1. <b>Cycle.</b> Nobody can move.', 'bad'); await sleep(1200); if (my !== run) return;
+    say(st, 'After <code>deadlock_timeout</code> (1 s) PostgreSQL checks the wait graph…', 'bad'); await sleep(1000); if (my !== run) return;
+    A('t2a').setAttribute('class', 'arr'); A('t2b').setAttribute('class', 'arr'); n2.classList.remove('hot'); n2.classList.add('off'); A('t1b').setAttribute('class', 'arr on'); n1.classList.remove('hot');
+    say(st, '<b>T2 aborted</b> with <code>ERROR: deadlock detected</code> (SQLSTATE 40P01). T1 gets B and commits. T2 must retry.', 'bad');
+  }
+  async function good() {
+    const my = ++run; clear();
+    on('t1a'); say(st, 'Both sort IDs: T1 locks A first.'); await sleep(800); if (my !== run) return;
+    on('t2a'); n2.classList.add('hot'); say(st, 'T2 also starts with A → waits. It holds nothing yet, so there is no cycle.', 'warn'); await sleep(900); if (my !== run) return;
+    on('t1b'); say(st, 'T1 locks B, finishes, COMMIT.'); await sleep(900); if (my !== run) return;
+    A('t1a').setAttribute('class', 'arr'); A('t1b').setAttribute('class', 'arr'); n2.classList.remove('hot');
+    A('t2a').setAttribute('class', 'arr on'); await sleep(500); if (my !== run) return; on('t2b');
+    say(st, '<b>No deadlock.</b> T2 waited a bit, then took A and B in the same order. Consistent lock order turns cycles into queues.', 'ok');
+  }
+  $('[data-act=bad]', root).onclick = () => enqueue(bad);
+  $('[data-act=good]', root).onclick = () => enqueue(good);
+  registerFig(root, { first() { enqueue(bad); } });
+})();
+
+/* ---------- 13. outbox ---------- */
+(() => {
+  const root = $('#fig-ob'), st = $('#ob-status'), dbB = $('#ob-db'), bus = $('#ob-bus'), cons = $('#ob-cons');
+  const enqueue = makeQueue(); let run = 0;
+  const clear = () => [dbB, bus, cons].forEach(b => { $$('.item', b).forEach(i => i.remove()); });
+  const item = (box, t, cls = '') => { const d = H('div', 'item pop ' + cls, null, box); d.textContent = t; return d; };
+  async function play(d) {
+    const my = ++run; clear(); $$('#ob-btns .btn').forEach(b => b.classList.toggle('on', b.dataset.d === d));
+    const W = async ms => { await sleep(ms); return my === run; };
+    if (d === 'inside') {
+      const o = item(dbB, 'BEGIN; INSERT order #7'); say(st, 'Transaction open, order inserted…'); if (!await W(700)) return;
+      item(bus, 'OrderPlaced #7'); say(st, 'Message sent to the broker — before commit.'); if (!await W(700)) return;
+      item(cons, 'ships order #7'); if (!await W(600)) return;
+      o.textContent = 'ROLLBACK (e.g. constraint fails at flush)'; o.classList.add('gone');
+      return say(st, '<b>Ghost event.</b> The consumer shipped an order that was rolled back. You cannot "unsend" a message.', 'bad');
+    }
+    if (d === 'after') {
+      item(dbB, 'INSERT order #7; COMMIT ✔'); say(st, 'Committed. The after-commit listener is about to publish…'); if (!await W(900)) return;
+      item(bus, '💥 process killed before send', 'ghost');
+      return say(st, '<b>Lost event.</b> The order exists, nobody downstream ever hears about it. Fine for a cache eviction, not for billing.', 'bad');
+    }
+    item(dbB, 'INSERT order #7'); if (!await W(400)) return;
+    const ob = item(dbB, 'INSERT outbox(msg-id 91, OrderPlaced #7)'); if (!await W(400)) return;
+    item(dbB, 'COMMIT ✔ — both or neither'); say(st, 'Order and event committed atomically.'); if (!await W(800)) return;
+    item(bus, 'OrderPlaced #7 (msg 91)'); say(st, 'Relay publishes the outbox row…'); if (!await W(600)) return;
+    item(cons, 'msg 91: ships order #7'); if (!await W(600)) return;
+    say(st, '💥 Relay crashes before marking row 91 as sent… restarts and publishes it again.', 'warn'); if (!await W(900)) return;
+    item(bus, 'OrderPlaced #7 (msg 91) — duplicate', 'ghost'); if (!await W(600)) return;
+    item(cons, 'msg 91 already processed → skip', ''); ob.textContent = 'outbox 91: sent';
+    say(st, '<b>Consistent.</b> The event can\'t be lost or invented; it can be duplicated, and the idempotent consumer drops the copy.', 'ok');
+  }
+  $$('#ob-btns .btn').forEach(b => b.onclick = () => enqueue(() => play(b.dataset.d)));
+  registerFig(root, { first() { enqueue(() => play('inside')); } });
+})();
+
+/* ---------- 14. starvation ---------- */
+(() => {
+  const root = $('#fig-st'), st = $('#st-status'), poolEl = $('#st-pool'), thrEl = $('#st-thr');
+  const enqueue = makeQueue(); let run = 0;
+  function paint(pool, thr) {
+    poolEl.innerHTML = ''; pool.forEach(p => { const i = H('i', p ? p[0] : '', null, poolEl); i.textContent = p ? p.slice(1) : ''; });
+    thrEl.innerHTML = ''; thr.forEach((t, n) => { const i = H('i', t, null, thrEl); i.textContent = 'T' + (n + 1); });
+  }
+  async function sim(size) {
+    const my = ++run; const pool = Array(size).fill(null), thr = Array(4).fill('');
+    paint(pool, thr); say(st, `Pool of ${size}. Four requests arrive at once; each opens an outer transaction, then calls a REQUIRES_NEW method.`);
+    for (let t = 0; t < 4; t++) { await sleep(350); if (my !== run) return; pool[t] = 'o' + (t + 1); thr[t] = 'o'; paint(pool, thr); }
+    await sleep(600); if (my !== run) return;
+    if (size === 4) {
+      thr.fill('w'); paint(pool, thr);
+      say(st, 'Every thread now waits for a second connection for its inner transaction. The pool is empty — and nobody will return one, because each holder is waiting too.', 'bad');
+      await sleep(1800); if (my !== run) return;
+      thr.fill('x'); pool.fill(null); paint(pool, thr);
+      return say(st, '<b>Pool deadlock.</b> All four fail after <code>connectionTimeout</code>. The database saw no deadlock at all — only 4 sessions idle in transaction.', 'bad');
+    }
+    let free = [4];
+    for (let t = 0; t < 4; t++) {
+      if (my !== run) return;
+      const slot = free.shift(); pool[slot] = 'n' + (t + 1); thr[t] = 'n'; thr.forEach((x, i) => { if (i > t && x === 'o') thr[i] = 'w'; }); paint(pool, thr);
+      say(st, `T${t + 1} got the spare connection for its inner transaction; the others wait.`, 'warn'); await sleep(750); if (my !== run) return;
+      pool[slot] = null; pool[t] = null; thr[t] = 'done'; free.push(slot, t); paint(pool, thr); await sleep(350);
+    }
+    say(st, '<b>Everyone finishes.</b> One spare connection is enough to keep the chain moving — slowly. Better: avoid REQUIRES_NEW on hot paths.', 'ok');
+  }
+  $('[data-act=p4]', root).onclick = () => enqueue(() => sim(4));
+  $('[data-act=p5]', root).onclick = () => enqueue(() => sim(5));
+  paint(Array(4).fill(null), Array(4).fill(''));
+  registerFig(root, { first() { enqueue(() => sim(4)); } });
+})();
+
+/* ---------- 16. migration lock queue ---------- */
+(() => {
+  const root = $('#fig-mg'), st = $('#mg-status'), tr = { r: $('#mg-r'), a: $('#mg-a'), q: $('#mg-q') };
+  const enqueue = makeQueue(); let run = 0;
+  const SC = {
+    plain: [['r', 0, 70, 'var(--accent)', 'report (ACCESS SHARE)'], ['a', 15, 70, 'var(--warn)', 'waits for lock…'], ['a', 70, 73, 'var(--bad)', ''],
+      ['q', 0, 15, 'var(--ok)', 'ok'], ['q', 15, 73, 'var(--bad)', 'blocked'], ['q', 73, 100, 'var(--ok)', 'ok']],
+    lt: [['r', 0, 70, 'var(--accent)', 'report (ACCESS SHARE)'], ['a', 15, 30, 'var(--warn)', 'waits 2 s'], ['a', 30, 31, 'var(--bad)', ''], ['a', 80, 83, 'var(--ok)', ''],
+      ['q', 0, 15, 'var(--ok)', 'ok'], ['q', 15, 30, 'var(--warn)', 'short stall'], ['q', 30, 100, 'var(--ok)', 'ok']]
+  };
+  async function play(k) {
+    const my = ++run; Object.values(tr).forEach(t => t.innerHTML = '');
+    const segs = SC[k].map(([t, a, b, c, l]) => { const i = H('i', '', null, tr[t]); i.style.left = a + '%'; i.style.width = 0; i.style.background = c; i.textContent = l; return [i, a, b]; });
+    say(st, k === 'plain' ? 'A report transaction is reading the table. The migration starts…' : 'Same situation, but the migration runs <code>SET lock_timeout = \'2s\'</code> first.');
+    await tween(3600, p => { if (my !== run) return; const x = p * 100; segs.forEach(([i, a, b]) => i.style.width = Math.max(0, Math.min(x, b) - a) + '%'); });
+    if (my !== run) return;
+    if (k === 'plain') say(st, '<b>Outage.</b> The ALTER waited for the report; every new query touching the table queued behind the waiting ALTER. The DDL itself took milliseconds.', 'bad');
+    else say(st, '<b>Short stall, no outage.</b> The ALTER gave up with "canceling statement due to lock timeout", traffic resumed, and the migration was retried later.', 'ok');
+  }
+  $('[data-act=plain]', root).onclick = () => enqueue(() => play('plain'));
+  $('[data-act=lt]', root).onclick = () => enqueue(() => play('lt'));
+  registerFig(root, { first() { enqueue(() => play('plain')); } });
+})();
+
+/* ---------- 17. pg_stat_activity ---------- */
+(() => {
+  const root = $('#fig-mo'), st = $('#mo-status'), tb = $('#mo-t tbody');
+  const ROWS = [
+    [4101, 'active', '0.2 s', '', 'SELECT * FROM product WHERE id = $1'],
+    [4102, 'idle in transaction', '12 min', 'Client', 'UPDATE orders SET status = \'PAID\' WHERE id = $1'],
+    [4103, 'active', '48 s', 'Lock', 'UPDATE orders SET status = \'SHIPPED\' WHERE id = $1'],
+    [4104, 'idle', '', 'Client', 'COMMIT'],
+    [4105, 'active', '31 s', 'Lock', 'SELECT … FROM orders WHERE id = $1 FOR UPDATE']
+  ];
+  function paint(hit = [], extra = {}) {
+    tb.innerHTML = '';
+    ROWS.forEach(r => { const t = H('tr', hit.includes(r[0]) ? 'hit' : '', null, tb); r.forEach((v, i) => { const td = H('td', '', null, t); td.textContent = i === 3 && extra[r[0]] ? v + ' ← ' + extra[r[0]] : v; }); });
+  }
+  $('[data-act=find]', root).onclick = () => { paint([4102]); say(st, '<b>pid 4102</b> has had a transaction open for 12 minutes and is doing nothing. The query shown is the <em>last</em> one it ran — the app updated a row, then went off to do something else (an HTTP call?) without committing.', 'bad'); };
+  $('[data-act=block]', root).onclick = () => { paint([4103, 4105], { 4103: 'blocked by {4102}', 4105: 'blocked by {4102}' }); say(st, '<code>pg_blocking_pids()</code> says 4103 and 4105 wait for 4102\'s row lock. Each of them also holds an app connection — this is how one forgotten transaction drains the pool.', 'warn'); };
+  $('[data-act=reset]', root).onclick = () => { paint(); say(st, 'Press a button.'); };
+  paint();
+  registerFig(root, { first() { setTimeout(() => $('[data-act=find]', root).click(), REDUCE ? 0 : 700); } });
+})();
+
+/* ---------- 19. checklist ---------- */
+(() => {
+  const root = $('#fig-ck'), list = $('#ck-list'), KEY = 'dbapp-checklist';
+  const G = {
+    'Connections': ['Pool size comes from a load test, not a guess', 'connectionTimeout lowered so overload fails fast', 'Leak detection and pool metrics enabled', 'No HTTP calls, file I/O or user waits inside transactions'],
+    'Transactions': ['Each use case has one clear unit of work (@Transactional on the service method)', 'Rollback rules explicit for checked exceptions', 'No self-invocation of @Transactional methods', 'No swallowed exceptions inside transactional methods', 'Timeouts set: statement, lock, idle in transaction, @Transactional(timeout)'],
+    'Concurrency': ['Every read-modify-write reviewed: atomic UPDATE, @Version or FOR UPDATE', 'Invariants enforced by constraints (UNIQUE, FK, CHECK)', 'Isolation level chosen per use case, knowing the DB default', 'Retries for 40001 / 40P01, outside the transaction, with backoff', 'Rows locked in a consistent order'],
+    'JPA': ['To-one associations LAZY; fetching planned per use case', 'spring.jpa.open-in-view=false', 'Query counts asserted in tests (N+1 guard)', 'Batching on, sequence IDs for bulk inserts', 'Keyset pagination for deep pages'],
+    'Integration': ['Side effects after commit or via an outbox', 'Consumers and APIs idempotent (dedupe keys, unique constraints)', 'Replica reads only where staleness is acceptable'],
+    'Operations': ['Migrations set lock_timeout and are backward compatible', 'Indexes created CONCURRENTLY on live tables', 'Dashboards: transaction age, idle in transaction, lock waits, slow queries']
+  };
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { }
+  const boxes = [];
+  for (const g in G) {
+    H('h4', '', null, list).textContent = g;
+    const ul = H('ul', 'ck-list', null, list);
+    G[g].forEach(t => { const li = H('li', '', '<label><input type="checkbox"><span></span></label>', ul); $('span', li).textContent = t; const cb = $('input', li); cb.checked = !!saved[t]; cb.onchange = () => { saved[t] = cb.checked; store(); upd(); }; boxes.push(cb); });
+  }
+  const store = () => { try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) { } };
+  function upd() { const n = boxes.filter(b => b.checked).length; $('#ck-n').textContent = `${n} / ${boxes.length}`; const m = $('#ck-m'); m.style.width = (100 * n / boxes.length) + '%'; m.style.background = n === boxes.length ? C.ok : C.accent2; }
+  $('[data-act=reset]', root).onclick = () => { saved = {}; boxes.forEach(b => b.checked = false); store(); upd(); };
+  upd();
+  registerFig(root, { first() { const m = $('#ck-m'), w = m.style.width; m.style.width = '0%'; $('#ck-n').classList.add('pop'); requestAnimationFrame(() => requestAnimationFrame(() => { m.style.width = w; })); } });
+})();
+
+/* ---------- quiz ---------- */
+(() => {
+  const Q = [   // [question, options, correctIndex, why] — wrong options = misconceptions from the chapters
+    ['All 10 Hikari connections are busy. What happens to the 11th request?', ['The pool opens an 11th connection', 'It waits up to connectionTimeout (30 s default), then gets an exception', 'It runs without a transaction'], 1, 'maximumPoolSize is a hard cap; getConnection() blocks for up to connectionTimeout.'],
+    ['Without an explicit transaction, two UPDATEs over JDBC are…', ['one transaction', 'two transactions, each auto-committed', 'not executed until commit'], 1, 'JDBC connections start in auto-commit mode: each statement commits on its own.'],
+    ['In PostgreSQL, a statement in your transaction failed and you caught the exception. Next statement?', ['Runs normally', 'Rejected: the transaction is aborted until ROLLBACK (or ROLLBACK TO a savepoint)', 'Runs in a new transaction automatically'], 1, 'An error puts the transaction block in the aborted state.'],
+    ['Two requests read stock = 5 in Java and both write 4. That is a…', ['phantom read', 'dirty read', 'lost update'], 2, 'Read-modify-write in application code; the second write overwrites the first.'],
+    ['PostgreSQL\'s default isolation level is…', ['Read Committed', 'Repeatable Read', 'Serializable'], 0, 'MySQL InnoDB defaults to Repeatable Read; PostgreSQL to Read Committed.'],
+    ['Does PostgreSQL\'s Repeatable Read allow phantom reads?', ['Yes, as the standard allows', 'No — its snapshot per transaction prevents them', 'Only for INSERTs'], 1, 'Table 13.1: phantom read at Repeatable Read is "Allowed, but not in PG".'],
+    ['Method A calls this.b(); b() is @Transactional, A is not. Is b() transactional?', ['Yes, the annotation is on b()', 'No — self-invocation bypasses the proxy', 'Only if b() is public'], 1, 'Proxy mode intercepts only external calls coming in through the proxy.'],
+    ['A @Transactional method throws a checked IOException. By default…', ['the transaction commits', 'it rolls back', 'Spring retries it'], 0, 'Default rollback: RuntimeException and Error only.'],
+    ['inner() is REQUIRED, throws; outer() catches and returns normally. Result?', ['outer commits, inner is rolled back', 'Everything rolls back and the caller gets UnexpectedRollbackException', 'Everything commits'], 1, 'One physical transaction, marked rollback-only by the inner scope.'],
+    ['Why can REQUIRES_NEW deadlock an application under load?', ['It locks tables', 'Each thread holds one connection and waits for a second one from an exhausted pool', 'It disables auto-commit'], 1, 'Spring: size the pool above the number of concurrent threads by at least 1.'],
+    ['NESTED propagation works via…', ['a second connection', 'JDBC savepoints in the same transaction', 'XA transactions'], 1, 'Out of the box only DataSourceTransactionManager supports it.'],
+    ['Safest simple fix for "decrement stock if > 0"?', ['@Transactional(readOnly = true)', 'UPDATE … SET stock = stock - 1 WHERE id = ? AND stock > 0, check the row count', 'Read it twice before writing'], 1, 'One atomic statement; in Read Committed the waiting UPDATE re-checks its WHERE on the new row version.'],
+    ['What does SKIP LOCKED suit best?', ['Balance checks', 'Job queues with many workers', 'Reports'], 1, 'It deliberately returns an inconsistent view by skipping locked rows.'],
+    ['20 orders, lazy customer, you print each customer\'s name. Statements?', ['1', '21 (N+1)', '2'], 1, 'One for the list, one per distinct customer — unless you JOIN FETCH.'],
+    ['Why does GenerationType.IDENTITY hurt bulk inserts in Hibernate?', ['IDs are random', 'Hibernate cannot batch the INSERTs', 'It locks the table'], 1, 'Each insert must run immediately to get its generated key.'],
+    ['(L3) Under Read Committed, T1 reads a row twice while T2 commits a change in between. T1\'s second read sees…', ['the old value', 'the new value — each statement takes a new snapshot', 'an error'], 1, 'Repeatable Read would still see the old version.'],
+    ['(L3) Doctors on call: two transactions each see 2 on call and each leaves. Which PostgreSQL level stops it?', ['Read Committed', 'Repeatable Read', 'Serializable'], 2, 'Write skew passes Snapshot Isolation; SSI aborts one with 40001.'],
+    ['(L3) Where does the retry loop for 40001 belong?', ['Inside the @Transactional method, around the failing statement', 'Outside it, re-running the whole transaction', 'In the database'], 1, 'PostgreSQL: retry the complete transaction, including the logic that decides what to write.'],
+    ['(L3) PostgreSQL detects a deadlock…', ['instantly', 'after waiting deadlock_timeout (1 s default), then aborts one transaction with 40P01', 'never; you need lock_timeout'], 1, 'The check is expensive, so it runs only after deadlock_timeout.'],
+    ['(L3) You publish a Kafka event in an @TransactionalEventListener (AFTER_COMMIT). Risk?', ['Ghost event for a rolled-back order', 'Lost event if the process dies between commit and send', 'None'], 1, 'Use a transactional outbox when the event must not be lost.'],
+    ['(L4) A 5 ms ALTER TABLE froze the site. Most likely?', ['The ALTER was slow', 'It waited for ACCESS EXCLUSIVE behind a long transaction, and new queries queued behind it', 'Autovacuum'], 1, 'Set lock_timeout in migrations.'],
+    ['(L4) pg_stat_activity shows a session "idle in transaction" for 10 minutes. Meaning?', ['It is waiting on disk', 'A client opened a transaction and isn\'t sending queries — holding locks and a connection', 'It is a replica'], 1, 'Often an app doing slow non-DB work inside a transaction.']
+  ];
+  const box = $('#quiz'); let answered = 0, good = 0; const scoreEl = $('#score');
+  function upd() { scoreEl.textContent = `Score: ${good} / ${answered}`; }
+  Q.forEach(([q, opts, ok, why], n) => {
+    const d = H('div', 'quiz-q reveal', `<h4>${n + 1}. ${q}</h4><div class="opts"></div><div class="why">💡 ${why}</div>`, box);
+    opts.forEach((t, i) => {
+      const b = H('button', '', null, $('.opts', d)); b.textContent = t;
+      b.onclick = () => {
+        if (d.classList.contains('done')) return;
+        d.classList.add('done'); answered++;
+        if (i === ok) good++; else b.classList.add('wrong');
+        $('.opts', d).children[ok].classList.add('right');
+        $$('button', d).forEach(x => x.disabled = true);
+        upd();
+      };
+    });
+    revealIO.observe(d);                 // dynamically created .reveal must be observed explicitly
+  });
+})();
+</script>
+</body>
+</html>
