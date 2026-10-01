@@ -22,16 +22,16 @@ Simona Willisona: pojedyncze pliki HTML, bez Reacta, bez build-stepu, bez backen
 
 ## Skille
 
-- [`skills/animated-knowledge-page`](skills/animated-knowledge-page/SKILL.md) — ogólna (niezależna od repo) metoda budowy
+- [`.claude/skills/animated-knowledge-page`](.claude/skills/animated-knowledge-page/SKILL.md) — ogólna (niezależna od repo) metoda budowy
   animowanych, scrollytellingowych stron wiedzy w stylu „Head First” (jak `cassandra-course.html` czy
   `claude-code-course.html`): plan rozdziałów, weryfikacja faktów w aktualnej dokumentacji, gotowy szablon
-  ([`templates/shell.html`](skills/animated-knowledge-page/templates/shell.html)), katalog boxów i typów diagramów,
-  quiz, ściąga, dwa tryby (prosty / głęboki z planem i wyborem głębokości), trzy budżety tokenów (`lean` — oszczędny, `standard`, `max`; [raport zużycia](skills/animated-knowledge-page/token-report-kafka-session.md)), treści wielopoziomowe (części,
+  ([`templates/shell.html`](.claude/skills/animated-knowledge-page/templates/shell.html)), katalog boxów i typów diagramów,
+  quiz, ściąga, dwa tryby (prosty / głęboki z planem i wyborem głębokości), trzy budżety tokenów (`lean` — oszczędny, `standard`, `max`), treści wielopoziomowe (części,
   poziomy L1–L3, przełącznik głębokości, mapa kursu), podwójna walidacja każdej tezy (autor + niezależny weryfikator,
-  [`extract-claims.cjs`](skills/animated-knowledge-page/scripts/extract-claims.cjs)), testy headless
-  ([`check-page.cjs`](skills/animated-knowledge-page/scripts/check-page.cjs),
-  [`click-through.cjs`](skills/animated-knowledge-page/scripts/click-through.cjs)) i znane pułapki. Aby używać jej
-  wszędzie: `cp -R skills/animated-knowledge-page ~/.claude/skills/`.
+  [`extract-claims.cjs`](.claude/skills/animated-knowledge-page/scripts/extract-claims.cjs)), testy headless
+  ([`check-page.cjs`](.claude/skills/animated-knowledge-page/scripts/check-page.cjs),
+  [`click-through.cjs`](.claude/skills/animated-knowledge-page/scripts/click-through.cjs)) i znane pułapki. Jest skillem poziomu projektu
+  (ładuje się automatycznie w tym repo); aby używać jej wszędzie: `cp -R .claude/skills/animated-knowledge-page ~/.claude/skills/`.
 
 ## Przebudowa
 
