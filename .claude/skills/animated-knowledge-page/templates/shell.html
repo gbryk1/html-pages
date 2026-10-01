@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{ONE_SENTENCE_DESCRIPTION}}">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper:#fbf8f1; --paper2:#ffffff; --ink:#1c1c22; --mut:#5d5f6b; --line:#d9d3c4; --shadow:#1c1c22;
+  --accent:#1b6fa8; --accent2:#e39b2d; --ok:#2f9e63; --bad:#d64545; --warn:#c98a00;
+  --pen:#b8431f; --note:#fff4c2; --card:#f1ece0; --code:#f3efe6; --dim:#9aa0ab;
+  --hand:"Segoe Print","Bradley Hand","Comic Neue","Comic Sans MS","Chalkboard SE","Marker Felt",cursive;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,"Palatino Linotype",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#15171c; --paper2:#1d2027; --ink:#e7e5df; --mut:#a3a6b1; --line:#383c49; --shadow:#000;
+          --accent:#5aa9e6; --accent2:#f0b34f; --ok:#4cc38a; --bad:#f06b6b; --warn:#f0c040;
+          --pen:#ff9a6b; --note:#3a3420; --card:#232730; --code:#22262e; --dim:#5d6270; }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.68 var(--serif); }
+a { color:var(--accent); }
+code, kbd { font:.86em var(--mono); background:var(--code); padding:.08em .35em; border-radius:4px; }
+pre { font:14px/1.5 var(--mono); background:var(--code); border-left:4px solid var(--accent); padding:.9rem 1rem; overflow:auto; border-radius:4px; }
+pre code { background:none; padding:0; font-size:inherit; }
+h1,h2,h3,h4 { font-family:var(--sans); line-height:1.2; }
+h3 { font-size:1.28rem; margin:2.2rem 0 .6rem; }
+strong, b { font-weight:700; }
+.hand { font-family:var(--hand); color:var(--pen); }
+.mut { color:var(--mut); }
+
+/* progress + toc */
+#progress { position:fixed; inset:0 0 auto 0; height:5px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform-origin:0 50%; transform:scaleX(0); z-index:50; }
+#toc { position:fixed; top:1.4rem; left:1rem; width:205px; font:13.5px/1.35 var(--sans); z-index:40; display:none; opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #toc { opacity:1; pointer-events:auto; }
+#toc b { display:block; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.5rem; }
+#toc a { display:block; padding:.28rem .55rem; border-left:3px solid var(--line); color:var(--mut); text-decoration:none; }
+#toc a:hover { color:var(--ink); }
+#toc a.active { border-color:var(--accent2); color:var(--ink); font-weight:700; background:var(--card); }
+@media (min-width:1440px) { #toc { display:block; } }
+
+/* cover */
+.cover { min-height:96vh; display:grid; place-items:center; padding:3rem 1.2rem; position:relative; overflow:hidden;
+         background:radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 55%), var(--paper); }
+.cover-inner { max-width:1040px; width:100%; display:grid; gap:2rem; grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px) { .cover-inner { grid-template-columns:1.1fr .9fr; } }
+.cover .kicker { font:700 .85rem var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); }
+.cover h1 { font-size:clamp(2.4rem,5.6vw,4.2rem); margin:.3rem 0 .6rem; letter-spacing:-.02em; }
+.cover h1 span { display:inline-block; background:var(--ink); color:var(--paper); padding:0 .25em; transform:rotate(-1.5deg); }
+.cover .sub { font-size:1.2rem; color:var(--mut); max-width:34em; }
+.cover .stamp { display:inline-block; margin-top:1.2rem; font:700 1rem var(--hand); color:var(--pen); border:3px solid var(--pen); padding:.3rem .8rem; border-radius:8px; transform:rotate(-4deg); }
+.cover svg { width:100%; max-width:400px; justify-self:center; overflow:visible; }
+.spin { animation:spin 50s linear infinite; transform-origin:200px 200px; }
+.spin-rev { animation:spin 34s linear infinite reverse; transform-origin:200px 200px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.cover .scroll-hint { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); font:1rem var(--hand); color:var(--mut); animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob { 50% { transform:translate(-50%,8px); } }
+
+/* layout */
+main { max-width:800px; margin:0 auto; padding:0 1.2rem 6rem; }
+.chapter { padding-top:4.5rem; }
+.chap-head { display:flex; gap:1.1rem; align-items:center; margin-bottom:1rem; }
+.chap-num { flex:none; width:4.2rem; height:4.2rem; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font:800 1.7rem var(--sans); transform:rotate(-6deg); box-shadow:4px 4px 0 var(--accent2); }
+.chap-head h2 { font-size:clamp(1.6rem,3.8vw,2.2rem); margin:0; }
+.chap-head .tag { font:1.02rem var(--hand); color:var(--pen); display:block; margin-top:.3rem; }
+
+/* reveal */
+.js .reveal { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.js .reveal.shown { opacity:1; transform:none; }
+
+/* head-first boxes */
+.box { position:relative; margin:2rem 0; padding:1.1rem 1.25rem 1rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper2); box-shadow:5px 5px 0 var(--shadow); }
+.box > .lbl { position:absolute; top:-1rem; left:1rem; font:800 .82rem var(--sans); letter-spacing:.06em; text-transform:uppercase; background:var(--ink); color:var(--paper); padding:.25rem .65rem; border-radius:4px; transform:rotate(-2deg); }
+.box.brain { border-style:dashed; background:color-mix(in srgb, var(--accent) 8%, var(--paper2)); }
+.box.brain > .lbl { background:var(--accent); color:#fff; }
+.box.pencil { background:color-mix(in srgb, var(--accent2) 10%, var(--paper2)); }
+.box.pencil > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.watch { border-color:var(--bad); box-shadow:5px 5px 0 var(--bad); }
+.box.watch > .lbl { background:var(--bad); color:#fff; }
+.box.geek { background:var(--card); font-size:.95em; }
+.box.geek > .lbl { background:var(--mut); }
+.box.relax { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); }
+.box.relax > .lbl { background:var(--ok); color:#fff; }
+.box.bullets { background:var(--note); transform:rotate(-.4deg); }
+.box.bullets ul { margin:.3rem 0 0; padding-left:1.2rem; }
+.box.bullets li { margin:.35rem 0; }
+.box.bullets li::marker { content:"▸ "; color:var(--pen); }
+.box.usecase { border-color:var(--accent); box-shadow:5px 5px 0 var(--accent); }
+.box.usecase > .lbl { background:var(--accent); color:#fff; }
+.box.usecase ol { margin:.5rem 0 .3rem; padding-left:1.3rem; }
+.box.usecase li { margin:.4rem 0; }
+.box p:first-of-type { margin-top:.4rem; }
+.box p:last-child { margin-bottom:0; }
+.qa { display:grid; grid-template-columns:auto 1fr; gap:.4rem .8rem; margin:.8rem 0 1rem; }
+.qa .q, .qa .a { font:800 1.15rem var(--sans); }
+.qa .q { color:var(--accent); } .qa .a { color:var(--pen); }
+.qa div { margin:0; }
+details { margin-top:.8rem; }
+summary { cursor:pointer; font:700 .95rem var(--sans); color:var(--pen); }
+.fire { display:grid; gap:.7rem; margin-top:.5rem; }
+.fire .who { font:800 .85rem var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.fire .line { display:grid; grid-template-columns:7.5rem 1fr; gap:.8rem; }
+.fire .line.l2 .who { color:var(--accent); } .fire .line.l1 .who { color:var(--pen); }
+@media (max-width:560px) { .fire .line { grid-template-columns:1fr; gap:.1rem; } }
+.anno { font:1.05rem/1.35 var(--hand); color:var(--pen); display:block; margin:.4rem 0 .4rem 1.2rem; transform:rotate(-1.2deg); }
+.anno::before { content:"↖ "; }
+.pull { font:italic 1.35rem/1.45 var(--serif); border-left:6px solid var(--accent2); padding:.2rem 0 .2rem 1rem; margin:1.6rem 0; }
+.prompt-ex { font:13.5px/1.5 var(--mono); background:var(--code); border:1.5px dashed var(--line); border-radius:6px; padding:.7rem .85rem; margin-top:.7rem; white-space:pre-wrap; }
+.prompt-ex b { font-family:var(--sans); color:var(--pen); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+
+/* figures (generic) */
+.fig { margin:2.2rem -1rem; padding:1rem 1rem .9rem; background:var(--paper2); border:2px solid var(--ink); border-radius:8px; box-shadow:6px 6px 0 var(--shadow); position:relative; }
+@media (min-width:1000px) { .fig.wide { margin-left:-6rem; margin-right:-6rem; } }
+.fig .ftitle { font:800 .95rem var(--sans); margin:0 0 .6rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.fig .ftitle span { font:400 .85rem var(--sans); color:var(--mut); }
+.fig figcaption, .fig .cap { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.6rem; }
+.fig svg { display:block; width:100%; height:auto; }
+.fig svg text { fill:var(--ink); font-family:var(--sans); }
+.ctrl { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.4rem 0 .6rem; font:14px var(--sans); }
+.btn { font:700 13.5px var(--sans); color:var(--ink); background:var(--paper2); border:2px solid var(--ink); border-radius:999px; padding:.33rem .85rem; box-shadow:2px 2px 0 var(--shadow); cursor:pointer; transition:transform .08s; }
+.btn:hover { background:var(--card); }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.on { background:var(--ink); color:var(--paper); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.ctrl input[type=text], .ctrl select, .calc input { font:14px var(--mono); padding:.3rem .5rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); }
+.ctrl input[type=text] { width:9rem; }
+.ctrl label { display:inline-flex; gap:.35rem; align-items:center; }
+.scroll-x { overflow-x:auto; }
+.scroll-x > svg { min-width:620px; }
+.two { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:720px) { .two { grid-template-columns:1.2fr 1fr; align-items:start; } }
+table.mini { width:100%; border-collapse:collapse; font:13.5px var(--sans); }
+table.mini th, table.mini td { text-align:left; padding:.28rem .4rem; border-bottom:1px solid var(--line); }
+table.mini th { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+table.mini tr.flash td { animation:flashbg 1.2s ease; }
+@keyframes flashbg { 0%{ background:color-mix(in srgb, var(--accent2) 45%, transparent);} 100%{ background:transparent;} }
+.chip { display:inline-block; min-width:1.6em; text-align:center; font:800 12px var(--sans); color:#fff; padding:.1rem .4rem; border-radius:999px; }
+.status { font:14px/1.45 var(--sans); padding:.55rem .75rem; border-radius:6px; background:var(--card); margin-top:.5rem; min-height:2.2rem; }
+.status.ok { background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.status.bad { background:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.status.warn { background:color-mix(in srgb, var(--warn) 20%, var(--paper2)); }
+.fly { pointer-events:none; }
+.small { font-size:11px; }
+.tiny { font-size:9.5px; }
+.edge { stroke:var(--line); stroke-width:2; }
+.nd circle, .nd rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2.2; transition:fill .3s, opacity .3s; }
+.nd text { font-weight:800; font-size:12px; pointer-events:none; }
+.nd.off circle, .nd.off rect { fill:var(--dim); opacity:.5; stroke-dasharray:4 3; }
+.nd.hot circle, .nd.hot rect { fill:var(--accent2); }
+.nd.pulse circle, .nd.pulse rect, .pop { animation:pulse .6s ease; transform-box:fill-box; transform-origin:center; }
+@keyframes pulse { 40% { transform:scale(1.3); } }
+
+
+/* ---- generic extras: meters, legends, logs, stacked token bars ---- */
+main, footer { overflow-wrap:break-word; }   /* long URLs / identifiers in prose must not widen the page */
+.two > * { min-width:0; }
+.ctrl label { flex-wrap:wrap; max-width:100%; }
+.ctrl select { max-width:100%; min-width:0; }
+.meter { height:12px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.meter > i { display:block; height:100%; width:0; background:var(--ok); transition:width .6s ease, background .4s; }
+.legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.3rem; background:var(--c); vertical-align:-1px; }
+.log { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; height:190px; overflow-y:auto; }
+.log div { opacity:0; transform:translateX(-6px); transition:opacity .3s, transform .3s; white-space:pre-wrap; }
+.log div.shown { opacity:1; transform:none; }
+.log .u { color:var(--accent); font-weight:700; } .log .e { color:var(--bad); } .log .g { color:var(--ok); }
+.stack { position:relative; height:34px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:var(--paper); display:flex; }
+.stack .seg { height:100%; transition:width .7s ease; overflow:hidden; white-space:nowrap; font:700 10.5px/34px var(--sans); color:#fff; text-indent:4px; }
+
+/* ---- multi-level structure: parts, level chips, depth switch, "go deeper", course map ---- */
+.part { margin:5rem 0 0; padding:1.4rem 1.3rem 1.2rem; border-radius:10px; background:var(--ink); color:var(--paper); box-shadow:6px 6px 0 var(--accent2); }
+.part .part-no { font:800 .8rem var(--sans); letter-spacing:.18em; text-transform:uppercase; color:var(--accent2); }
+.part h2 { margin:.2rem 0 .35rem; font-size:clamp(1.7rem,4vw,2.4rem); }
+.part p { margin:0; font-size:1rem; opacity:.85; }
+.lvl-chip { display:inline-block; vertical-align:middle; margin-left:.5rem; font:800 10.5px/1.5 var(--sans); letter-spacing:.06em; text-transform:uppercase; padding:.08rem .5rem; border-radius:999px; color:#fff; background:var(--ok); }
+.lvl-chip.l2 { background:var(--accent); } .lvl-chip.l3 { background:#8e44ad; } .lvl-chip.l4 { background:var(--bad); }
+.lvl-off { display:none !important; }
+details.deeper { border:2px dashed #8e44ad; border-radius:8px; padding:.6rem .9rem; margin:1.8rem 0; background:color-mix(in srgb, #8e44ad 6%, var(--paper2)); }
+details.deeper > summary { font:700 1rem var(--sans); color:var(--ink); }
+details.deeper > summary .lvl-chip { margin:0 .4rem 0 0; }
+details.deeper[open] > summary { margin-bottom:.5rem; }
+.lvl-hint { display:block; width:100%; text-align:left; margin:1.4rem 0 0; font:700 13px var(--sans); color:var(--accent); background:none; border:2px dashed var(--accent); border-radius:8px; padding:.45rem .8rem; cursor:pointer; }
+#depth { position:fixed; left:1rem; bottom:1rem; z-index:45; display:flex; gap:.2rem; align-items:center; font:700 12px var(--sans); background:var(--paper2); color:var(--ink); border:2px solid var(--ink); border-radius:999px; padding:.22rem .3rem .22rem .75rem; box-shadow:3px 3px 0 var(--shadow); opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #depth { opacity:1; pointer-events:auto; }
+#depth button { font:700 12px var(--sans); border:0; border-radius:999px; padding:.25rem .6rem; background:transparent; color:var(--ink); cursor:pointer; }
+#depth button.on { background:var(--ink); color:var(--paper); }
+@media (max-width:640px) { #depth .nm { display:none; } }
+#toc { max-height:calc(100vh - 5.5rem); overflow-y:auto; }
+.toc-part { font:800 .7rem var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:.8rem 0 .2rem .2rem; }
+#map { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.7rem; margin:1.5rem 0; }
+.map-part { border:2px solid var(--line); border-radius:10px; padding:.55rem .6rem; background:var(--paper2); }
+.map-part > b { display:block; font:800 11.5px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin-bottom:.35rem; }
+.map-ch { display:flex; gap:.45rem; align-items:baseline; font:13px/1.3 var(--sans); color:var(--ink); text-decoration:none; padding:.22rem .4rem; border-radius:6px; border-left:4px solid var(--ok); margin:.15rem 0; transition:background .3s; }
+.map-ch.l2 { border-left-color:var(--accent); } .map-ch.l3 { border-left-color:#8e44ad; } .map-ch.l4 { border-left-color:var(--bad); }
+.map-ch i { font:800 11px var(--mono); font-style:normal; color:var(--mut); min-width:1.4em; }
+.map-ch:hover { background:var(--card); }
+.map-ch.here { background:var(--accent2); color:#1c1c22; font-weight:700; }
+.map-ch.seen::after { content:"✓"; margin-left:auto; color:var(--ok); font-weight:800; }
+.map-ch.dim, #toc a.dim { opacity:.4; }
+
+/* ==== per-figure CSS goes here — prefix every class with the figure name (.ex-…) to avoid collisions ==== */
+.ex-row { display:grid; grid-template-columns:6rem 1fr; gap:.6rem; align-items:center; font:12.5px var(--sans); margin:.4rem 0; }
+/* quiz */
+.quiz-q { margin:1.2rem 0; padding:.9rem 1rem; border:2px solid var(--ink); border-radius:8px; background:var(--paper2); }
+.quiz-q h4 { margin:0 0 .6rem; font-size:1rem; }
+.quiz-q .opts { display:grid; gap:.4rem; }
+.quiz-q button { text-align:left; font:14px/1.4 var(--sans); color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:6px; padding:.45rem .7rem; cursor:pointer; }
+.quiz-q button:hover:not(:disabled) { border-color:var(--ink); }
+.quiz-q button.right { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+.quiz-q button.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); }
+.quiz-q .why { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.5rem; display:none; }
+.quiz-q.done .why { display:block; }
+.score { position:sticky; bottom:1rem; margin-left:auto; width:max-content; font:800 1rem var(--sans); background:var(--ink); color:var(--paper); padding:.45rem .9rem; border-radius:999px; box-shadow:3px 3px 0 var(--accent2); }
+.cheat td:first-child { font-family:var(--mono); font-size:12.5px; white-space:nowrap; }
+footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var(--sans); color:var(--mut); border-top:2px solid var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+  html { scroll-behavior:auto; }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Chapters"></nav>   <!-- built from parts/chapters by JS -->
+<div id="depth" role="group" aria-label="Reading depth"></div>   <!-- built by JS when any data-level > 1 exists -->
+
+<header class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="kicker">Animated guide · {{TOPIC}}</div>
+      <h1>{{TITLE_A}} <span>{{TITLE_B}}</span></h1>
+      <p class="sub">{{ONE_PARAGRAPH_PROMISE}} Scroll — the diagrams start by themselves.</p>
+      <div class="stamp">{{STAMP}} 🧠</div>
+    </div>
+    <svg viewBox="0 0 400 400" aria-hidden="true">
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <g id="cover-nodes"></g>
+      </g>
+      <g class="spin-rev">
+        <circle cx="200" cy="200" r="95" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 10"/>
+      </g>
+      <circle cx="200" cy="200" r="46" fill="var(--accent)" stroke="var(--ink)" stroke-width="4"/>
+    </svg>
+  </div>
+  <div class="scroll-hint">scroll ↓</div>
+</header>
+
+<main>
+<!-- Structure contract (all optional; a flat page works too):
+     section.part[data-level]      big divider opening a group of chapters (Part I · Foundations)
+     section.chapter[data-level]   data-title = short TOC/map title; empty .chap-num is auto-numbered
+     any block [data-level="2|3"]  hidden when the reader's depth is lower (boxes, paragraphs, figures)
+     details.deeper[data-level]    "go deeper" zoom-in block; its level chip is added automatically
+     #map                          clickable course map (parts × chapters, level colors, ✓ seen, ▶ here)
+     Level names: LEVELS in the script. Default depth = deepest; the reader's choice is remembered. -->
+
+<section class="chapter" id="intro" data-title="How to read this">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>How to read this guide</h2><span class="tag">{{HANDWRITTEN_SUBTITLE}}</span></div></div>
+  <p class="reveal">{{WHY_MECHANISMS_NOT_FEATURE_LISTS}}</p>
+  <p class="reveal">The guide has levels. Chapters and blocks carry a chip —
+    <span class="lvl-chip">L1</span> essentials, <span class="lvl-chip l2">L2</span> practitioner,
+    <span class="lvl-chip l3">L3</span> expert. Choose your depth with the switch in the bottom-left corner; deeper
+    material hides until you want it. The map below jumps anywhere and ticks off what you've read.</p>
+  <div id="map" class="reveal"></div>
+  <div class="box brain reveal"><span class="lbl">🧠 Brain power</span>
+    <p>{{OPEN_QUESTION_ANSWERED_IN_THE_FINALE}}</p>
+  </div>
+</section>
+
+<section class="part" id="part-1" data-level="1">
+  <span class="part-no">Part I</span><h2>{{PART_1_NAME}}</h2><p>{{WHAT_THIS_PART_GIVES_YOU}}</p>
+</section>
+
+<section class="chapter" id="ch1" data-level="1" data-title="{{SHORT_TITLE}}">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>{{CHAPTER_1}}</h2><span class="tag">{{TAG}}</span></div></div>
+  <p class="reveal">{{PROSE}}</p>
+
+  <!-- Example figure: replace. Shows the contract: buttons with data-act, a "break it" action, reset, status line,
+       auto-demo in first(), serialized clicks, runId cancellation. -->
+  <figure class="fig wide" id="fig-ex">
+    <div class="ftitle">▶ Example mechanism <span>fill a buffer, then break it</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="add">➕ Add work</button>
+      <button class="btn bad" data-act="flood">💥 Flood it</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="ex-row"><b>Buffer</b><div class="stack" id="ex-bar"></div></div>
+    <div class="legend"><span style="--c:#2f9e63">useful</span><span style="--c:#c98a00">noise</span></div>
+    <div class="status" id="ex-status">Press ➕ to start.</div>
+    <figcaption>{{WHAT_THE_SIMULATION_SIMPLIFIES — mark invented numbers as illustrative}}</figcaption>
+  </figure>
+
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Deep dive</span>
+    <p>{{PRACTITIONER_DETAIL — hidden at depth 1}}</p>
+  </div>
+
+  <details class="deeper" data-level="3">
+    <summary>🔬 Go deeper: {{INTERNALS_TOPIC}}</summary>
+    <p>{{EXPERT_LEVEL_EXPLANATION — may contain its own table, code or small figure}}</p>
+  </details>
+
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>{{TAKEAWAY}}</li></ul>
+  </div>
+</section>
+
+<section class="part" id="part-2" data-level="2">
+  <span class="part-no">Part II</span><h2>{{PART_2_NAME}}</h2><p>{{WHAT_THIS_PART_GIVES_YOU}}</p>
+</section>
+
+<section class="chapter" id="ch2" data-level="2" data-title="{{SHORT_TITLE}}">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>{{CHAPTER_2}}</h2><span class="tag">{{TAG}}</span></div></div>
+  <p class="reveal">{{PROSE}}</p>
+  <div class="box nodumb reveal"><span class="lbl">❓ There are no dumb questions</span>
+    <div class="qa">
+      <div class="q">Q:</div><div>{{NAIVE_BUT_REAL_QUESTION}}</div>
+      <div class="a">A:</div><div>{{ANSWER}}</div>
+    </div>
+  </div>
+</section>
+
+<section class="chapter" id="final" data-title="Exam + cheat sheet">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Exam + cheat sheet</h2><span class="tag">check what stuck</span></div></div>
+  <div id="quiz"></div>
+  <div class="score" id="score">Score: 0 / 0</div>
+  <h3 class="reveal">Cheat sheet</h3>
+  <div class="scroll-x reveal">
+  <table class="mini cheat">
+    <thead><tr><th>Parameter / command</th><th>Default / what it does</th><th>Use when</th></tr></thead>
+    <tbody><tr><td>{{NAME}}</td><td>{{WHAT}}</td><td>{{WHEN}}</td></tr></tbody>
+  </table>
+  </div>
+  <div class="box relax reveal"><span class="lbl">🎓 Congratulations</span><p>{{CLOSE_THE_LOOP_WITH_CHAPTER_0_QUESTION + next step}}</p></div>
+</section>
+</main>
+
+<footer>
+  Educational guide in a single HTML file — no frameworks, no build step, no network dependencies.
+  {{FACT_SOURCES_AND_DATE}} {{TRADEMARK_DISCLAIMER_IF_NEEDED}}
+</footer>
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sleep = ms => new Promise(r => setTimeout(r, REDUCE ? 0 : ms));
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, text, attrs = {}) {
+  const t = S('text', Object.assign({ x, y, 'text-anchor': 'middle' }, attrs), parent);
+  t.textContent = text;
+  return t;
+}
+function H(tag, cls, html, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const ease = k => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (REDUCE || ms <= 0) { fn(1); return res(); }
+    const t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / ms);
+      fn(ease(k));
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+function flyDot(parent, x0, y0, x1, y1, { ms = 600, color, r = 5 } = {}) {
+  const c = S('circle', { cx: x0, cy: y0, r, class: 'fly' }, parent);
+  c.style.fill = color || C.accent;
+  return tween(ms, k => { c.setAttribute('cx', x0 + (x1 - x0) * k); c.setAttribute('cy', y0 + (y1 - y0) * k); }).then(() => c.remove());
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function readColors() { for (const k of ['ink', 'paper', 'paper2', 'mut', 'line', 'accent', 'accent2', 'ok', 'bad', 'warn', 'dim', 'card']) C[k] = cssVar('--' + k); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function ringXY(cx, cy, r, f) { const a = f * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+
+/* ---------- structure: auto numbering, TOC, course map, level chips, depth switch ---------- */
+const LEVELS = ['Essentials', 'Practitioner', 'Expert'];   // {{level names}}; data-level = index + 1
+const lvlOf = el => +(el.dataset.level || 1);
+const levelled = (root = document) => $$('main [data-level]', root).filter(e => !e.closest('#map'));   // content, not the map's own links
+const DEPTH_KEY = 'akp-depth:' + location.pathname;
+const blocks = $$('main > section.part, main > section.chapter');
+const chapters = blocks.filter(b => b.classList.contains('chapter'));
+chapters.forEach((s, i) => { const n = $('.chap-num', s); if (n && !n.textContent.trim()) n.textContent = i; });
+const titleOf = s => s.dataset.title || $('h2', s).textContent.trim();
+(() => {
+  const toc = $('#toc'), map = $('#map');
+  if (toc) toc.innerHTML = '<b>Contents</b>';
+  let grp = null;
+  for (const b of blocks) {
+    const lv = lvlOf(b);
+    if (b.classList.contains('part')) {
+      const name = `${$('.part-no', b)?.textContent || ''} · ${$('h2', b).textContent}`;
+      if (toc) H('div', 'toc-part', null, toc).textContent = name;
+      if (map) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = name; grp.dataset.level = lv; }
+      continue;
+    }
+    const num = $('.chap-num', b)?.textContent || '';
+    if (toc) { const a = H('a', '', null, toc); a.href = '#' + b.id; a.textContent = `${num} · ${titleOf(b)}`; a.dataset.level = lv; }
+    if (map) {
+      if (!grp) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = 'Start'; }
+      const a = H('a', 'map-ch l' + lv, `<i>${num}</i><span></span>`, grp); a.href = '#' + b.id; a.dataset.level = lv;
+      $('span', a).textContent = titleOf(b);
+    }
+  }
+  const multi = levelled().some(e => lvlOf(e) > 1);
+  // level chips on chapter headings and "go deeper" summaries
+  chapters.forEach(s => { if (multi && s.dataset.level) { const h = $('.chap-head h2', s); if (h) H('span', 'lvl-chip l' + lvlOf(s), `L${lvlOf(s)} · ${LEVELS[lvlOf(s) - 1] || ''}`, h); } });
+  $$('details.deeper').forEach(d => { const sm = $('summary', d); if (sm) sm.insertAdjacentHTML('afterbegin', `<span class="lvl-chip l${lvlOf(d)}">L${lvlOf(d)}</span>`); });
+  // jumping to a chapter deeper than the current depth raises the depth first
+  $$('#toc a, #map a').forEach(a => a.addEventListener('click', () => { if (+a.dataset.level > depth) setDepth(+a.dataset.level); }));
+  const dEl = $('#depth');
+  if (!multi || !dEl) { if (dEl) dEl.remove(); return; }
+  dEl.innerHTML = '<span>Depth</span>';
+  LEVELS.forEach((n, i) => { const b = H('button', '', `${i + 1}<span class="nm"> ${n}</span>`, dEl); b.title = n; b.onclick = () => setDepth(i + 1); });
+})();
+let depth = LEVELS.length;
+try { const d = +localStorage.getItem(DEPTH_KEY); if (d >= 1 && d <= LEVELS.length) depth = d; } catch (e) { }
+function setDepth(d) {
+  depth = d;
+  try { localStorage.setItem(DEPTH_KEY, d); } catch (e) { }
+  levelled().forEach(el => el.classList.toggle('lvl-off', lvlOf(el) > depth));
+  $$('#toc a, #map a, .map-part').forEach(a => a.classList.toggle('dim', lvlOf(a) > depth));
+  $$('#depth button').forEach((b, i) => b.classList.toggle('on', i + 1 === depth));
+  $$('.lvl-hint').forEach(h => h.remove());
+  chapters.forEach(s => {
+    if (s.classList.contains('lvl-off')) return;
+    const hid = levelled(s).filter(e => e.classList.contains('lvl-off'));
+    if (!hid.length) return;
+    const need = Math.min(...hid.map(lvlOf));
+    const b = H('button', 'lvl-hint', `＋ ${hid.length} deeper block${hid.length > 1 ? 's' : ''} hidden here — show level ${need} (${LEVELS[need - 1] || ''})`, s);
+    b.onclick = () => setDepth(need);
+  });
+}
+setDepth(depth);
+
+/* ---------- scroll machinery ---------- */
+const bar = $('#progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+    document.body.classList.toggle('past-cover', scrollY > innerHeight * .8);
+    ticking = false;
+  });
+}, { passive: true });
+
+const revealIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('shown'); revealIO.unobserve(e.target); }
+}), { threshold: 0.12 });
+$$('.reveal').forEach(el => revealIO.observe(el));
+
+const tocLinks = new Map($$('#toc a').map(a => [a.getAttribute('href').slice(1), a]));
+const tocIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove('active'));
+  const a = tocLinks.get(e.target.id); if (a) a.classList.add('active');
+  $$('#map a').forEach(m => { const on = m.getAttribute('href') === '#' + e.target.id; m.classList.toggle('here', on); if (on) m.classList.add('seen'); });
+}), { rootMargin: '-35% 0px -60% 0px' });
+$$('section.chapter').forEach(s => tocIO.observe(s));
+
+const figIO = new IntersectionObserver(es => es.forEach(e => {
+  const f = e.target._fig; if (!f) return;
+  if (e.isIntersecting) {
+    if (f.visible) return;
+    f.visible = true;
+    if (!f.seen) { f.seen = true; f.first && f.first(); }
+    f.enter && f.enter();
+  } else if (f.visible) {
+    f.visible = false; f.leave && f.leave();
+  }
+}), { threshold: 0.25 });
+function registerFig(el, api) { el._fig = api; figIO.observe(el); return api; }
+
+/* enqueue helper: serialize animation runs, drop excess clicks */
+function makeQueue() {
+  let queue = Promise.resolve(), pending = 0;
+  return fn => { if (pending >= 3) return; pending++; queue = queue.then(fn).catch(e => console.error(e)).finally(() => pending--); };
+}
+
+
+/* ---------- generic helpers ---------- */
+function paintBar(el, segs, cap) {           // stacked bar: segs = [{k, v, c, t}], widths as % of cap
+  for (const s of segs) {
+    let d = el.querySelector(`[data-k="${s.k}"]`);
+    if (!d) { d = H('div', 'seg', null, el); d.dataset.k = s.k; }
+    d.style.width = Math.min(100, 100 * s.v / cap) + '%';
+    d.style.background = s.c;
+    d.textContent = s.v >= cap * 0.07 ? s.t : '';
+  }
+}
+function logLine(box, text, cls = '') {      // append a fading-in line to a .log box (textContent: safe)
+  const d = H('div', cls, null, box); d.textContent = text;
+  requestAnimationFrame(() => d.classList.add('shown'));
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+function say(el, html, cls = '') { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = html; }
+const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase labels wrap between words, not mid-word
+
+/* ---------- cover ---------- */
+(() => {
+  const g = $('#cover-nodes');
+  const icons = ['📄', '🔍', '✏️', '🧪', '🪝', '🔌', '🕵️', '🌿'];   // {{8 topic icons}}
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = ringXY(200, 200, 150, i / 8);
+    const c = S('circle', { cx: x, cy: y, r: 17 }, g);
+    c.style.fill = C.paper2; c.style.stroke = C.ink; c.style.strokeWidth = 3;
+    T(g, x, y + 6, icons[i], { 'font-size': 16 });
+  }
+})();
+
+/* ---------- example figure (replace) ---------- */
+(() => {
+  const root = $('#fig-ex'), bar = $('#ex-bar'), st = $('#ex-status');
+  const CAP = 100;
+  let v, run = 0;                        // run = runId: bump to cancel stale animations
+  const enqueue = makeQueue();           // serialize clicks
+  const paint = () => paintBar(bar, [{ k: 'u', v: v.u, c: '#2f9e63', t: 'useful' }, { k: 'n', v: v.n, c: '#c98a00', t: 'noise' }], CAP);
+  function reset() { run++; v = { u: 0, n: 0 }; paint(); say(st, 'Press ➕ to start.'); }
+  async function add() {
+    const my = run, u0 = v.u;
+    await tween(600, k => { v.u = Math.min(CAP - v.n, u0 + 20 * k); paint(); });
+    if (my !== run) return;
+    say(st, `<b>+20 useful.</b> One sentence per step: what happened and <em>why</em>.`, 'ok');
+  }
+  async function flood() {
+    const my = run, n0 = v.n;
+    await tween(700, k => { v.n = Math.min(CAP - v.u, n0 + 45 * k); paint(); });
+    if (my !== run) return;
+    say(st, '<b>Broken on purpose.</b> The "break it" action shows the failure mode the chapter warns about.', 'bad');
+  }
+  $('[data-act=add]', root).onclick = () => enqueue(add);
+  $('[data-act=flood]', root).onclick = () => enqueue(flood);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(add); enqueue(add); enqueue(flood); } });   // auto-demo once, at 25% visible
+})();
+
+/* ---------- quiz ---------- */
+(() => {
+  const Q = [   // [question, options, correctIndex, why] — wrong options = misconceptions from the chapters
+    ['{{QUESTION}}', ['{{MISCONCEPTION}}', '{{RIGHT}}', '{{OTHER MISCONCEPTION}}'], 1, '{{WHY}}']
+  ];
+  const box = $('#quiz'); let answered = 0, good = 0; const scoreEl = $('#score');
+  function upd() { scoreEl.textContent = `Score: ${good} / ${answered}`; }
+  Q.forEach(([q, opts, ok, why], n) => {
+    const d = H('div', 'quiz-q reveal', `<h4>${n + 1}. ${q}</h4><div class="opts"></div><div class="why">💡 ${why}</div>`, box);
+    opts.forEach((t, i) => {
+      const b = H('button', '', null, $('.opts', d)); b.textContent = t;
+      b.onclick = () => {
+        if (d.classList.contains('done')) return;
+        d.classList.add('done'); answered++;
+        if (i === ok) good++; else b.classList.add('wrong');
+        $('.opts', d).children[ok].classList.add('right');
+        $$('button', d).forEach(x => x.disabled = true);
+        upd();
+      };
+    });
+    revealIO.observe(d);                 // dynamically created .reveal must be observed explicitly
+  });
+})();
+</script>
+</body>
+</html>
