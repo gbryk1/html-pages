@@ -4,6 +4,8 @@ Samodzielne narzędzia HTML w duchu
 [„Useful patterns for building HTML tools”](https://simonwillison.net/2025/Dec/10/html-tools/)
 Simona Willisona: pojedyncze pliki HTML, bez Reacta, bez build-stepu, bez backendu.
 
+**Strona online (GitHub Pages):** <https://gbryk1.github.io/html-pages/>
+
 ## Narzędzia
 
 | Narzędzie | Rozmiar | Uwagi |
