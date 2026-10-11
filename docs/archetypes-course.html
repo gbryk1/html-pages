@@ -208,6 +208,90 @@ body.past-cover #depth { opacity:1; pointer-events:auto; }
 .map-ch.dim, #toc a.dim { opacity:.4; }
 
 /* ==== per-figure CSS ==== */
+/* ==== beginner layer: 🔰 box, when/when-not, option tables ==== */
+.box.newbie { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); background:color-mix(in srgb, var(--ok) 7%, var(--paper2)); }
+.box.newbie > .lbl { background:var(--ok); color:#fff; }
+.box.newbie .nb-def { font-size:1.08em; }
+.box.newbie .kv { margin-top:.6rem; }
+.box.newbie .kv > span { min-width:0; }
+@media (max-width:560px) { .box.newbie .kv { grid-template-columns:1fr; } .box.newbie .kv > b { margin-top:.35rem; } }
+.nb-when { display:grid; grid-template-columns:1fr; gap:.8rem; margin:1rem 0 1.4rem; }
+@media (min-width:720px) { .nb-when { grid-template-columns:1fr 1fr; } }
+.nb-when > div { border:2px solid var(--line); border-radius:8px; padding:.55rem .75rem; background:var(--paper2); min-width:0; }
+.nb-when h5 { margin:0 0 .3rem; font:800 13px var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.nb-when .yes h5 { color:var(--ok); } .nb-when .no h5 { color:var(--bad); }
+.nb-when ul { margin:.2rem 0 0; padding-left:1.1rem; font:14.5px/1.5 var(--sans); }
+.nb-when li { margin:.25rem 0; }
+table.mini.opts td:first-child { font-weight:700; min-width:8.5rem; }
+table.mini.opts td { vertical-align:top; }
+.nb-sep { margin-top:2.4rem; }
+
+/* fig: anatomy (shared engine anat()) */
+.an-grid { display:grid; gap:.25rem; }
+.an-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:.45rem; }
+.an-via { font:700 12px var(--sans); color:var(--mut); text-align:center; padding:.1rem 0; }
+.an-part { font:13.5px/1.3 var(--sans); text-align:left; color:var(--ink); background:var(--paper); border:2px solid var(--ink); border-radius:8px; padding:.4rem .55rem; cursor:pointer; min-width:0; transition:opacity .3s, transform .3s, border-color .3s, background .3s; }
+.an-part b { display:block; }
+.an-part code { display:block; font-size:11.5px; color:var(--mut); background:none; padding:0; margin-top:.15rem; overflow-wrap:anywhere; }
+.an-part.opt { border-style:dashed; }
+.an-part:hover { border-color:var(--accent); }
+.an-part.sel { border-color:var(--accent2); background:color-mix(in srgb, var(--accent2) 14%, var(--paper)); }
+.an-part.pre { opacity:0; transform:translateY(6px); }
+.an-part.off { opacity:.3; }
+.an-part.gone { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 12%, var(--paper)); text-decoration:line-through; }
+.an-panel { font:14px/1.5 var(--sans); border:2px dashed var(--line); border-radius:8px; padding:.55rem .75rem; background:var(--paper); margin-top:.7rem; min-height:6.5rem; }
+.an-panel h5 { margin:0 0 .25rem; font:800 13px var(--sans); text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+.an-panel p { margin:.2rem 0 .4rem; }
+.an-panel .an-lose { color:var(--bad); }
+.an-legend { font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+
+/* fig: three silos (part 0) */
+.sl-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:.5rem; }
+.sl-card { border:2px solid var(--line); border-radius:8px; padding:.45rem .6rem; background:var(--paper); font:13.5px/1.45 var(--sans); min-width:0; transition:border-color .3s, background .3s; }
+.sl-card h5 { margin:0 0 .25rem; font:800 12.5px var(--sans); text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+.sl-card .sl-f { overflow-wrap:anywhere; }
+.sl-card .sl-f.new { color:var(--ok); font-weight:700; }
+.sl-card .sl-f.stale { color:var(--bad); font-weight:700; }
+.sl-card.party { border-color:var(--a-party); grid-column:1 / -1; }
+.sl-views { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.4rem; margin-top:.4rem; }
+.sl-views > div { border:1.5px dashed var(--line); border-radius:6px; padding:.3rem .45rem; font-size:12.5px; min-width:0; }
+
+/* fig: process stepper (part 0) */
+.ps-steps { display:flex; flex-wrap:wrap; gap:.3rem; margin-bottom:.6rem; }
+.ps-steps span { font:700 12px var(--sans); border:1.5px solid var(--line); border-radius:999px; padding:.1rem .55rem; color:var(--mut); }
+.ps-steps span.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+.ps-steps span.done { background:var(--ok); border-color:var(--ok); color:#fff; }
+.ps-list { display:grid; gap:.35rem; }
+.ps-it { font:14px/1.45 var(--sans); border:2px solid var(--line); border-radius:8px; padding:.4rem .55rem; background:var(--paper); min-width:0; }
+.ps-it mark { background:color-mix(in srgb, var(--accent2) 40%, transparent); color:inherit; padding:0 .1rem; border-radius:3px; }
+.ps-it .ps-tag { display:block; margin-top:.15rem; }
+.ps-it.bad { border-color:var(--bad); }
+.ps-panel { font:14px/1.5 var(--sans); border:2px dashed var(--line); border-radius:8px; padding:.55rem .75rem; background:var(--paper); min-width:0; }
+.ps-panel h5 { margin:0 0 .3rem; font:800 13px var(--sans); text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+.ps-panel ul { margin:.2rem 0; padding-left:1.1rem; }
+.ps-panel li { margin:.25rem 0; }
+.ps-panel .bad { color:var(--bad); }
+
+/* fig: start questions (part 0) */
+.sq-list { display:grid; gap:.35rem; }
+.sq-q { font:14px/1.4 var(--sans); text-align:left; color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:8px; padding:.4rem .6rem; cursor:pointer; }
+.sq-q.on { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 12%, var(--paper)); }
+.sq-q.on::before { content:"✓ "; color:var(--ok); font-weight:800; }
+.sq-out { font:14px/1.5 var(--sans); border:2px dashed var(--line); border-radius:8px; padding:.55rem .75rem; background:var(--paper); min-height:6rem; }
+.sq-out ol { margin:.3rem 0; padding-left:1.3rem; }
+
+/* static: glossary cards and archetype pills (part 0) */
+.gl-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.6rem; margin:1rem 0; }
+.gl-card { border:2px solid var(--ink); border-radius:8px; padding:.55rem .7rem; background:var(--paper2); font:14px/1.45 var(--sans); min-width:0; box-shadow:3px 3px 0 var(--shadow); }
+.gl-card b { display:block; font-size:15px; margin-bottom:.15rem; }
+.gl-card i { display:block; color:var(--mut); margin-top:.3rem; }
+.pill-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:.7rem; margin:1rem 0; }
+.pill { border:2px solid var(--ink); border-radius:10px; padding:.6rem .75rem; background:var(--paper2); font:14px/1.45 var(--sans); min-width:0; box-shadow:4px 4px 0 var(--shadow); }
+.pill > .ach { margin:0 0 .35rem; font-size:12.5px; }
+.pill p { margin:.2rem 0; }
+.pill .pl-k { font:800 11px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); display:block; margin-top:.35rem; }
+.pill a.pl-go { display:inline-block; margin-top:.4rem; font-weight:700; }
+
 /* archetype palette — white text readable in both themes */
 :root { --a-party:#b03a2e; --a-product:#1f6fb2; --a-pricing:#a35f00; --a-rules:#7d3c98; --a-inv:#117a65;
         --a-order:#b4436c; --a-acc:#2e7d32; --a-sched:#34495e; --a-plan:#6d4c41; --a-qty:#5d6d7e; }
@@ -506,6 +590,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
   <p class="reveal">Kompendium ma poziomy. Rozdziały i bloki mają znaczki:
     <span class="lvl-chip">L1</span> podstawy, <span class="lvl-chip l2">L2</span> praktyk,
     <span class="lvl-chip l3">L3</span> ekspert, <span class="lvl-chip l4">L4</span> mistrz (studia przypadków i antywzorce). Głębokość wybierasz przełącznikiem w lewym dolnym rogu. Mapa poniżej przenosi do dowolnego rozdziału i zaznacza przeczytane.</p>
+  <p class="reveal"><b>Zaczynasz od zera?</b> Ustaw głębokość 1 i przeczytaj najpierw <a href="#part-0">Część 0</a>. Wyjaśnia, czym są archetypy, jak z nich korzystać krok po kroku i od którego zacząć. Potem w każdym rozdziale archetypu czytaj w tej kolejności: blok 🔰 „Co to jest”, schemat anatomii, „Kiedy stosować, a kiedy nie”, tabelę opcji i „Minimum na start”. Dopiero po nich przychodzą przykłady z repozytorium, nazwy klas i bloki eksperckie. Głębokość zwiększysz, gdy podstawy przestaną zaskakiwać.</p>
   <p class="reveal">Kolory archetypów są stałe w całym tekście:
     <span class="ach qty">Quantity</span><span class="ach party">Party</span><span class="ach product">Product</span><span class="ach pricing">Pricing</span><span class="ach rules">Rules</span><span class="ach inv">Inventory</span><span class="ach order">Ordering</span><span class="ach acc">Accounting</span><span class="ach sched">Scheduling</span><span class="ach plan">Plan vs Execution</span></p>
   <div id="map" class="reveal"></div>
@@ -513,6 +598,276 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
     <p>Kierowca firmy kurierskiej tankuje na stacji. Płaci kartą flotową wydaną przez firmę leasingową. Firma leasingowa obciąża potem kuriera, a on obciąża swojego klienta za paliwo w cenie usługi. <b>Ilu „klientów” jest w tej historii i ile różnych modeli danych potrzebujesz, żeby ją obsłużyć?</b> Zapamiętaj swoją odpowiedź. Wrócimy do niej na końcu.</p>
   </div>
 </section>
+
+<section class="part" id="part-0" data-level="1">
+  <span class="part-no">Część 0</span><h2>Start: archetypy od zera</h2><p>Dla osób, które słyszą o archetypach pierwszy raz. Czym są, jak z nich korzystać krok po kroku, gdzie siedzą w kodzie i od którego zacząć.</p>
+</section>
+
+<section class="chapter" id="start5" data-level="1" data-title="Archetyp w 5 minut">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Archetyp w 5 minut</h2><span class="tag">ten sam problem rozwiązany raz, porządnie</span></div></div>
+  <p class="reveal">W typowej firmie Jan Kowalski istnieje trzy razy. Dział sprzedaży ma go w CRM jako „klienta”. Księgowość ma go w programie do faktur jako „kontrahenta”. Sklep internetowy ma go jako „użytkownika”. Każdy z tych systemów zbudował inny zespół, w innym roku, z innym modelem danych. Działa to do pierwszej przeprowadzki Jana.</p>
+
+  <figure class="fig wide" id="fig-silo">
+    <div class="ftitle">▶ Jeden człowiek, trzy kartoteki <span>przeprowadź Jana, potem połącz kartoteki w jeden Party</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="silo">💥 Przeprowadzka przy trzech kartotekach</button>
+      <button class="btn primary" data-act="merge">🧩 Połącz w Party</button>
+      <button class="btn" data-act="move">🏠 Przeprowadzka</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="sl-grid" id="sl-grid"></div>
+    <div class="status" id="sl-status">Trzy systemy, trzy kartoteki tego samego człowieka.</div>
+    <figcaption>Systemy, dane i adresy są wymyślone. W prawdziwym modelu Party adres jest osobnym bytem z zastosowaniami (rozliczeniowy, dostawy), a dokumenty, takie jak faktura, zapisują jego migawkę z chwili wystawienia.</figcaption>
+  </figure>
+
+  <p class="reveal">Problem nie polega na tym, że ktoś źle napisał kod. Polega na tym, że <b>każdy zespół od nowa wymyślił pojęcie, które ludzkość dawno opisała</b>. „Ktoś, kto występuje w różnych rolach” to stary, dobrze poznany problem. Tak samo „rzecz z katalogu kontra konkretny egzemplarz”, „cena zależna od warunków” albo „saldo, które musi się zgadzać”.</p>
+  <p class="reveal"><b>Archetyp</b> to gotowy, sprawdzony szkielet modelu dla takiego powtarzalnego pojęcia. Mówi, z jakich części pojęcie się składa, które części są obowiązkowe, które opcjonalne i jakie pytania zadać biznesowi, żeby dobrać wariant. Najbliższa analogia z kuchni to <b>przepis bazowy</b>, np. ciasto drożdżowe. Mąka, drożdże i wyrastanie są zawsze. Kruszonka, śliwki albo ser to warianty. Nie wymyślasz ciasta od zera dla każdej okazji. Bierzesz przepis i dobierasz dodatki do gości.</p>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Trzy problemy, które archetypy rozwiązują</span>
+    <div class="kv">
+      <b>Wymyślanie od nowa</b><span>Każdy projekt modeluje „klienta”, „cenę” i „saldo” po swojemu, z tymi samymi błędami. Archetyp daje gotowy szkielet i listę znanych pułapek.</span>
+      <b>Ifologia</b><span>Kod pełen warunków typu „jeśli klient firmowy, to…”, „jeśli produkt X, to…”. Archetyp zamienia takie warianty w <b>dane</b>: role, typy, reguły i kalkulatory, które dodaje się bez zmiany kodu.</span>
+      <b>Brak historii</b><span>Model, który zna tylko „teraz”, nie odpowie na pytania „ile kosztowało w lutym?”, „kto był prezesem rok temu?”, „jaki był plan wczoraj?”. Archetypy mają wbudowane okresy ważności, wersje i niezmienne zapisy.</span>
+    </div>
+  </div>
+
+  <h3 class="reveal">Słowniczek startowy</h3>
+  <p class="reveal">Te dziesięć pojęć wraca w każdym rozdziale. Wystarczy je rozumieć intuicyjnie. Dokładne definicje są w rozdziałach i w <a href="#glossary">słowniku</a>.</p>
+  <div class="gl-cards reveal">
+    <div class="gl-card"><b>Typ i egzemplarz</b>Typ to opis z katalogu („iPhone 15, 256 GB”). Egzemplarz to konkretna rzecz („ten telefon z tym numerem IMEI”).<i>Jak przepis i upieczone według niego ciasto.</i></div>
+    <div class="gl-card"><b>Rola</b>Charakter, w jakim ktoś występuje: klient, dostawca, pracownik, płatnik. Jedna osoba ma wiele ról naraz.<i>Jak kapelusze, które zmieniasz, zostając tą samą osobą.</i></div>
+    <div class="gl-card"><b>Relacja</b>Nazwane powiązanie dwóch ról, np. „pracownik zatrudniony przez pracodawcę”, zwykle z datą początku i końca.<i>Jak umowa między dwiema stronami.</i></div>
+    <div class="gl-card"><b>Ważność</b>Okres, w którym coś obowiązuje: od kiedy do kiedy. Mają ją ceny, relacje, uprawnienia i bonusy.<i>Jak data ważności na bilecie miesięcznym.</i></div>
+    <div class="gl-card"><b>Wersja</b>Kolejny wariant tej samej rzeczy. Stary nie znika, tylko przestaje obowiązywać.<i>Jak kolejne wydania podręcznika.</i></div>
+    <div class="gl-card"><b>Migawka</b>Kopia danych z chwili zdarzenia, zapisana w dokumencie. Faktura pamięta adres z dnia wystawienia.<i>Jak zdjęcie: osoba się zmienia, zdjęcie nie.</i></div>
+    <div class="gl-card"><b>Blokada</b>Zajęcie zasobu przez kogoś, często na określony czas, po którym blokada sama wygasa.<i>Jak ręcznik na leżaku przy basenie.</i></div>
+    <div class="gl-card"><b>Zapis i saldo</b>Zapis to niezmienny wpis „+100” albo „−30”. Saldo to suma zapisów. Nie nadpisujesz salda, tylko dopisujesz zapisy.<i>Jak wyciąg z konta bankowego.</i></div>
+    <div class="gl-card"><b>Plan i wykonanie</b>Plan to osobno zapisany zamiar („300 sztuk w marcu”). Wykonanie to fakty. Porównuje się je jawnymi regułami.<i>Jak budżet domowy i paragony.</i></div>
+    <div class="gl-card"><b>Polityka</b>Reguła biznesowa zapisana jako osobny, wymienny element modelu, np. „kto może mieć jaką rolę”.<i>Jak regulamin, który można zmienić bez przebudowy budynku.</i></div>
+  </div>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Czy muszę znać wszystkie archetypy, żeby zacząć?</div>
+      <div class="a">O:</div><div>Nie. Większość systemów zaczyna od dwóch, trzech: kto (Party), co (Product) i ile (Pricing albo Accounting). Resztę dokładasz, gdy w wymaganiach pojawi się zdanie, które jej potrzebuje. Rozdział <a href="#startmap">Mapa decyzji na start</a> pomaga wybrać pierwsze.</div>
+      <div class="q">P:</div><div>Czy archetyp to biblioteka, którą instaluję?</div>
+      <div class="a">O:</div><div>Nie. To <b>sposób modelowania</b>: części, reguły i pytania. Możesz go zaimplementować w dowolnym języku i bazie. Repozytorium szkolenia pokazuje przykładową implementację w Javie, ale celem jest zrozumienie szkieletu, a nie kopiowanie klas.</div>
+      <div class="q">P:</div><div>Czy archetypy nie skomplikują prostego systemu?</div>
+      <div class="a">O:</div><div>Mogą, jeśli wdrożysz wszystkie opcje naraz. Dlatego każdy rozdział ma sekcję „Minimum na start”. Archetyp w wersji minimalnej jest zwykle tak samo prosty jak model „na szybko”, ale ma miejsce na rozbudowę bez przepisywania.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul>
+      <li>Archetyp to sprawdzony szkielet modelu dla pojęcia, które powtarza się w prawie każdym biznesie.</li>
+      <li>Ma części obowiązkowe i opcjonalne. Opcje dobierasz do wymagań, jak dodatki do przepisu bazowego.</li>
+      <li>Rozwiązuje trzy problemy: wymyślanie od nowa, ifologię i brak historii.</li>
+      <li>Zaczynasz od dwóch, trzech archetypów w wersji minimalnej.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="howto" data-level="1" data-title="Jak korzystać z archetypów">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Jak korzystać z archetypów: proces w 5 krokach</h2><span class="tag">od zdania w wymaganiach do modelu</span></div></div>
+  <p class="reveal">Archetypy nie są listą klas do skopiowania. Są narzędziem do <b>czytania wymagań</b>. Ten sam proces działa dla sklepu, banku i szpitala. Przejdziemy go na jednym przykładzie: wypożyczalni rowerów miejskich.</p>
+  <ol class="reveal">
+    <li><b>Wypisz wymagania jako zdania.</b> Rozmawiaj z biznesem i zapisuj pełne zdania z liczbami i wyjątkami: „pierwsze 20 minut za darmo, potem…”, a nie hasła w rodzaju „cennik”.</li>
+    <li><b>Znajdź sygnały.</b> W każdym zdaniu zaznacz frazę, która coś zdradza: „osoba albo firma” (role), „numer ramy” (egzemplarz), „zarezerwować na 15 minut” (blokada z czasem), „saldo” (konto). Ściąga sygnałów jest w rozdziale <a href="#recognize">Jak rozpoznać archetyp</a>.</li>
+    <li><b>Dobierz konfigurację.</b> Każdy archetyp ma opcje. Rower to egzemplarz śledzony indywidualnie, a nie „5 sztuk na stanie”. Stacja to pula stojaków. Opcje każdego archetypu znajdziesz w jego tabeli „Opcje i konfiguracje”.</li>
+    <li><b>Połącz archetypy.</b> Archetypy rozmawiają przez <b>identyfikatory</b> (przejazd zna identyfikator roweru), <b>migawki</b> (przejazd pamięta dane użytkownika z chwili startu) i <b>zdarzenia</b> („przejazd zakończony” uruchamia opłatę). Nigdy przez wspólne tabele.</li>
+    <li><b>Zacznij od minimum.</b> Zbuduj najprostszą wersję, która obsłuży dzisiejsze zdania. Opcje dokładaj, gdy pojawi się nowe zdanie, które ich wymaga. Na koniec sprawdź model z biznesem na konkretnych scenariuszach: „klient rezerwuje, rezygnuje po minucie, ile płaci?”.</li>
+  </ol>
+
+  <figure class="fig wide" id="fig-steps">
+    <div class="ftitle">▶ Wypożyczalnia rowerów krok po kroku <span>przejdź pięć kroków, potem zobacz model z rzeczowników</span></div>
+    <div class="ctrl">
+      <button class="btn" data-act="prev">◀ Krok</button>
+      <button class="btn primary" data-act="next">Krok ▶</button>
+      <button class="btn bad" data-act="naive">💥 Modeluj z rzeczowników</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="ps-steps" id="ps-steps"></div>
+    <div class="two"><div class="ps-list" id="ps-list"></div><div class="ps-panel" id="ps-panel"></div></div>
+    <div class="status" id="ps-status">Klikaj „Krok ▶”.</div>
+    <figcaption>Wymagania, kwoty i czasy są wymyślone. Przykład wypożyczalni wraca w ćwiczeniu z rozdziału <a href="#what">Czym jest archetyp</a>. Konfiguracje to jedna z rozsądnych odpowiedzi, a nie jedyna.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Krok</th><th>Pytanie kontrolne</th><th>Sygnał, że trzeba wrócić</th></tr></thead>
+    <tbody>
+      <tr><td>1. Zdania</td><td>Czy każde wymaganie ma czasownik i przykład z liczbami?</td><td>Na liście są same rzeczowniki: „klient”, „cennik”, „rezerwacja”.</td></tr>
+      <tr><td>2. Sygnały</td><td>Czy każde zdanie ma przypisany co najmniej jeden archetyp?</td><td>Zdanie „nie pasuje nigdzie”. Często to proces albo raport, a nie nowe pojęcie.</td></tr>
+      <tr><td>3. Konfiguracja</td><td>Czy przy każdej opcji jest zdanie z wymagań, które jej potrzebuje?</td><td>Opcja jest w modelu „bo może się przyda”.</td></tr>
+      <tr><td>4. Połączenia</td><td>Czy archetypy łączą tylko identyfikatory, migawki i zdarzenia?</td><td>Jeden moduł czyta tabele drugiego albo trzyma referencję do jego obiektu.</td></tr>
+      <tr><td>5. Minimum</td><td>Czy da się to zbudować w kilka dni i sprawdzić na scenariuszach?</td><td>Pierwsza wersja ma wszystkie opcje wszystkich archetypów.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga: nie modeluj z rzeczowników</span>
+    <p>Najczęstszy błąd początkujących to zrobienie klasy z każdego rzeczownika w wymaganiach. Powstają wtedy <code>Uzytkownik</code> i <code>UzytkownikFirmowy</code>, <code>Rower</code> i <code>RowerElektryczny</code>, <code>Cennik</code> i <code>CennikAbonamentowy</code>. Każda para to ten sam archetyp w innym kostiumie, a różnica między nimi powinna być <b>daną</b> (rolą, typem, wersją), a nie klasą.</p>
+  </div>
+
+  <div class="box pencil reveal"><span class="lbl">✏️ Zaostrz ołówek</span>
+    <p>Siłownia: „Karnet miesięczny kosztuje 150 zł, studenci płacą 120 zł. Zajęcia grupowe mają 12 miejsc i zapisuje się na nie w aplikacji. Trener prowadzi zajęcia tylko z ważnym certyfikatem. Niewykorzystane wejścia z karnetu 10-wejściowego wygasają po 3 miesiącach.” Przejdź kroki 2–4.</p>
+    <details><summary>Odpowiedź</summary>
+      <p>Sygnały: „studenci” to rola klienta (<span class="ach party">Party</span>) i warunek reguły ceny (<span class="ach pricing">Pricing</span> lub <span class="ach rules">Rules</span>). „12 miejsc i zapisuje się” to <span class="ach inv">Inventory</span>: zajęcia w danym terminie jako pula o pojemności 12. „Ważny certyfikat” to kompetencja z okresem ważności w Party. „Wejścia wygasają po 3 miesiącach” to <span class="ach acc">Accounting</span>: konto wejść z ważnością zapisu i transakcją kompensującą. Połączenia: zapis na zajęcia zna identyfikator klienta i zajęć, a wejście na salę to zdarzenie, które zdejmuje jedno wejście z konta.</p>
+    </details>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul>
+      <li>Pięć kroków: zdania, sygnały, konfiguracja, połączenia, minimum.</li>
+      <li>Sygnałem są frazy z liczbami, czasem i wyjątkami, a nie same rzeczowniki.</li>
+      <li>Archetypy łączą się przez identyfikatory, migawki i zdarzenia.</li>
+      <li>Pierwsza wersja ma tylko te opcje, których wymagają dzisiejsze zdania.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="incode" data-level="1" data-title="Archetyp w kodzie">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Gdzie archetyp siedzi w kodzie i architekturze</h2><span class="tag">moduł z jedną fasadą</span></div></div>
+  <p class="reveal">W kodzie archetyp to najczęściej <b>osobny moduł</b>: pakiet, biblioteka albo usługa z jednym wejściem (fasadą). W środku jest model archetypu, polityki, które zmienia biznes, i repozytorium do zapisu. Na zewnątrz wychodzą tylko identyfikatory, widoki i zdarzenia. Repozytorium szkolenia jest zbudowane właśnie tak: każdy archetyp to osobny moduł Maven (<code>party</code>, <code>product</code>, <code>pricing</code>, <code>inventory</code>, <code>ordering</code>, <code>accounting</code> i inne).</p>
+
+  <figure class="fig wide an-fig" id="an-layers">
+    <div class="ftitle">▶ Anatomia modułu archetypu <span>kliknij warstwę</span></div>
+    <div class="ctrl"></div>
+    <div class="an-grid"></div>
+    <div class="an-panel"></div>
+    <div class="status"></div>
+    <figcaption>Schemat jest uproszczony. Nazwy w nawiasach to przykłady z repozytorium szkolenia. Zdarzenia mogą być wysyłane w tym samym procesie albo przez kolejkę, zależnie od architektury.</figcaption>
+  </figure>
+
+  <h3 class="reveal">Co jest kodem, a co daną</h3>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Kod (zmienia programista)</th><th>Dane (zmienia biznes, z wersją)</th></tr></thead>
+    <tbody>
+      <tr><td>szkielet: Party ma role, transakcja sumuje się do zera</td><td>jakie role i relacje istnieją i kto może je mieć</td></tr>
+      <tr><td>rodzaje kalkulatorów ceny</td><td>parametry kalkulatorów: progi, stawki, okresy ważności</td></tr>
+      <tr><td>rodzaje reguł wyboru i warunków</td><td>konkretne pakiety, promocje i ich kolejność</td></tr>
+      <tr><td>mechanizm blokad i kolejek</td><td>czas trwania blokady, polityka kolejki, pojemności</td></tr>
+      <tr><td>mechanizm reguł księgowania</td><td>konkretne reguły: kiedy naliczyć prowizję, podatek, bonus</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="reveal">Ta granica to <b>poziom wiedzy</b> (opisany szerzej w rozdziale <a href="#knowledge">Poziom wiedzy</a>): typy i reguły są danymi, a kod zna tylko mechanizm. Nie przesadzaj jednak w drugą stronę. Jeśli wariant zmienia się raz na dwa lata, stała w kodzie jest tańsza niż ekran konfiguracji.</p>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Czy każdy archetyp to osobny mikroserwis?</div>
+      <div class="a">O:</div><div>Nie musi. Archetyp to granica <b>modelu</b>, a nie jednostka wdrożenia. Może być modułem w monolicie, tak jak w repozytorium szkolenia. Ważne, żeby inne moduły nie sięgały do jego wnętrza.</div>
+      <div class="q">P:</div><div>Jak to się ma do DDD?</div>
+      <div class="a">O:</div><div>DDD daje granice (bounded context) i wspólny język. Archetyp podpowiada, co włożyć do środka granicy. Wiele archetypów to obszary, które Evans nazywa poddziedzinami generycznymi (<i>generic subdomains</i>): potrzebne, ale nie wyróżniają firmy na rynku. Dlatego warto je modelować sprawdzonym szkieletem, a kreatywność zostawić dla domeny głównej.</div>
+      <div class="q">P:</div><div>A baza danych?</div>
+      <div class="a">O:</div><div>Każdy moduł ma swoje tabele. Między modułami przechodzą identyfikatory, a nie klucze obce do cudzych tabel. Raport, który potrzebuje danych z kilku modułów, czyta je przez fasady albo z osobnej bazy raportowej zasilanej zdarzeniami.</div>
+    </div>
+  </div>
+
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul>
+      <li>Archetyp to moduł: fasada, model, polityki, repozytorium, zdarzenia.</li>
+      <li>Szkielet jest kodem. Warianty biznesu są danymi z wersją.</li>
+      <li>Moduły wymieniają identyfikatory, migawki i zdarzenia, a nie tabele.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="pills" data-level="1" data-title="Archetypy w pigułce">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Dziesięć archetypów w pigułce</h2><span class="tag">jedna karta na archetyp</span></div></div>
+  <p class="reveal">Każda karta odpowiada na cztery pytania: czym archetyp jest, z czego się składa, po jakim zdaniu go poznać i jakie ma główne opcje. Szczegóły są w rozdziale, do którego prowadzi link.</p>
+  <div class="pill-grid reveal">
+    <div class="pill"><span class="ach qty">Quantity i Money</span>
+      <p>Liczba zawsze razem z jednostką albo walutą.</p>
+      <span class="pl-k">Części</span><p>wartość, jednostka lub waluta, operacje sprawdzające jednostki</p>
+      <span class="pl-k">Sygnał</span><p>„litry”, „kWh”, „w euro”, „podziel na raty”</p>
+      <span class="pl-k">Opcje</span><p>konwersje jednostek, polityka zaokrągleń, alokacja kwot, procenty</p>
+      <a class="pl-go" href="#qty">Rozdział →</a></div>
+    <div class="pill"><span class="ach party">Party</span>
+      <p>Osoba albo organizacja, która występuje w wielu rolach.</p>
+      <span class="pl-k">Części</span><p>osoba lub organizacja, role, identyfikatory, adresy, relacje</p>
+      <span class="pl-k">Sygnał</span><p>„ten sam klient jest też dostawcą”, „kto był pełnomocnikiem w marcu?”</p>
+      <span class="pl-k">Opcje</span><p>polityki ról i identyfikatorów, relacje z ważnością, kompetencje</p>
+      <a class="pl-go" href="#party">Rozdział →</a></div>
+    <div class="pill"><span class="ach product">Product</span>
+      <p>Co sprzedajesz: typ z katalogu i konkretny egzemplarz.</p>
+      <span class="pl-k">Części</span><p>typ, egzemplarz, cechy, wpis w katalogu, strategia śledzenia</p>
+      <span class="pl-k">Sygnał</span><p>„numer seryjny”, „partia”, „wariant”, „pakiet”, „wycofany z oferty”</p>
+      <span class="pl-k">Opcje</span><p>pięć strategii śledzenia, partie, pakiety z regułami, relacje produktów</p>
+      <a class="pl-go" href="#product">Rozdział →</a></div>
+    <div class="pill"><span class="ach pricing">Pricing</span>
+      <p>Cena jako drzewo składników, z których każdy liczy osobny kalkulator.</p>
+      <span class="pl-k">Części</span><p>kalkulator, komponent, zależności, rozbicie ceny, wersje</p>
+      <span class="pl-k">Sygnał</span><p>„cena zależy od…”, „pierwsze 5 GB w cenie”, „ile kosztowało w lutym?”</p>
+      <span class="pl-k">Opcje</span><p>8 kalkulatorów, 3 interpretacje ceny, wersje z ważnością</p>
+      <a class="pl-go" href="#pricing">Rozdział →</a></div>
+    <div class="pill"><span class="ach rules">Rules</span>
+      <p>Wyjątki i promocje jako dane: kiedy działają, co robią i czego nie wolno.</p>
+      <span class="pl-k">Części</span><p>warunek (predykat), zmiana (aplikator), strażnik, łańcuch</p>
+      <span class="pl-k">Sygnał</span><p>„chyba że”, „dla VIP −10%”, „promocje się (nie) łączą”</p>
+      <span class="pl-k">Opcje</span><p>procent od bazy lub od wyniku, kwota, cena stała, strażnik marży, algebry</p>
+      <a class="pl-go" href="#rules">Rozdział →</a></div>
+    <div class="pill"><span class="ach inv">Inventory</span>
+      <p>Co jest dostępne, ile i kto to zablokował.</p>
+      <span class="pl-k">Części</span><p>zasób, model dostępności, blokada z właścicielem, rezerwacja</p>
+      <span class="pl-k">Sygnał</span><p>„czy jest wolne?”, „zarezerwuj”, „lista oczekujących”</p>
+      <span class="pl-k">Opcje</span><p>egzemplarz, pula, slot czasu, grupy slotów, zasób złożony, kolejki</p>
+      <a class="pl-go" href="#inventory">Rozdział →</a></div>
+    <div class="pill"><span class="ach order">Ordering</span>
+      <p>Zlecenie: kto zamawia, co, za ile i w jakim jest stanie.</p>
+      <span class="pl-k">Części</span><p>strony z rolami, linie, wycena linii, stany, porty do innych modułów</p>
+      <span class="pl-k">Sygnał</span><p>„zamawia dział, płaci spółka, odbiera oddział”, „status zamówienia”</p>
+      <span class="pl-k">Opcje</span><p>role na zamówieniu i liniach, stany wyceny, migawki, kompensacje</p>
+      <a class="pl-go" href="#ordering">Rozdział →</a></div>
+    <div class="pill"><span class="ach acc">Accounting</span>
+      <p>Saldo jako suma niezmiennych zapisów, a każda operacja się bilansuje.</p>
+      <span class="pl-k">Części</span><p>konto, zapis, transakcja, reguła księgowania</p>
+      <span class="pl-k">Sygnał</span><p>„saldo”, „limit”, „punkty”, „portfel”, „na dzień”</p>
+      <span class="pl-k">Opcje</span><p>typy kont, reguły księgowania, dwa zegary, ważność zapisów, korekty</p>
+      <a class="pl-go" href="#accounting">Rozdział →</a></div>
+    <div class="pill"><span class="ach sched">Scheduling</span>
+      <p>Harmonogram jako graf zależności, z którego wynikają daty.</p>
+      <span class="pl-k">Części</span><p>kroki, zależności, czasy trwania, porządek, ścieżka krytyczna</p>
+      <span class="pl-k">Sygnał</span><p>„nie wcześniej niż”, „po zakończeniu”, „co się opóźni, jeśli…”</p>
+      <span class="pl-k">Opcje</span><p>typy zależności (w repozytorium gotowy jest FS; SS/FF/SF i zwłoka to rozszerzenia), wykrywanie cykli, algorytmy grafowe</p>
+      <a class="pl-go" href="#sched">Rozdział →</a></div>
+    <div class="pill"><span class="ach plan">Plan vs Execution</span>
+      <p>Plan zapisany jako osobny byt i porównywany z faktami jawnymi regułami.</p>
+      <span class="pl-k">Części</span><p>plan z wersjami, wykonanie, tolerancja, delta</p>
+      <span class="pl-k">Sygnał</span><p>„planowaliśmy, a wyszło”, „harmonogram rat a wpłaty”</p>
+      <span class="pl-k">Opcje</span><p>strategie tolerancji, rozdzielczość porównania, symulacje „co jeśli”</p>
+      <a class="pl-go" href="#planexec">Rozdział →</a></div>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul>
+      <li>Kto: Party. Co: Product. Ile: Quantity, Pricing, Rules. Czy wolne: Inventory.</li>
+      <li>Zlecenie: Ordering. Saldo: Accounting. Kolejność: Scheduling. Zamiar kontra fakt: Plan vs Execution.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="chapter" id="startmap" data-level="1" data-title="Mapa decyzji na start">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Mapa decyzji na start</h2><span class="tag">dziesięć pytań, Twoja ścieżka czytania</span></div></div>
+  <p class="reveal">Nie musisz czytać wszystkiego. Zaznacz pytania, na które w Twoim projekcie odpowiedź brzmi „tak”. Dostaniesz listę rozdziałów do przeczytania najpierw. Pełne drzewo decyzyjne z konfiguracjami jest na końcu kompendium, w rozdziale <a href="#decide">Drzewo decyzyjne</a>.</p>
+
+  <figure class="fig wide" id="fig-start">
+    <div class="ftitle">▶ Od którego archetypu zacząć? <span>klikaj pytania</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="demo">🚲 Przykład: wypożyczalnia</button>
+      <button class="btn bad" data-act="all">💥 Wszystko na start</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="two"><div class="sq-list" id="sq-list"></div><div class="sq-out" id="sq-out"></div></div>
+    <div class="status" id="sq-status">Kliknij pytania, które pasują do Twojego projektu.</div>
+    <figcaption>Pytania są uproszczeniem sygnałów z rozdziału „Jak rozpoznać archetyp”. Przykład wypożyczalni zaznacza tylko najważniejsze pytania.</figcaption>
+  </figure>
+
+  <div class="box relax reveal"><span class="lbl">😌 Spokojnie</span>
+    <p>Jedno albo dwa zaznaczone pytania to dobry znak: masz mały, czytelny start. Kolejne archetypy przyjdą same, razem z nowymi zdaniami w wymaganiach. Dalej czytaj <a href="#part-1">Część I</a>, która uczy rozpoznawać archetypy w tekście wymagań.</p>
+  </div>
+</section>
+
 
 <section class="part" id="part-1" data-level="1">
   <span class="part-no">Część I</span><h2>Myślenie archetypami</h2><p>Czym archetyp różni się od wzorca projektowego, po czym go poznać w wymaganiach i jak archetypy łączą się w system.</p>
@@ -736,6 +1091,70 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 <section class="chapter" id="qty" data-level="1" data-title="Quantity i Money">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Quantity i Money</h2><span class="tag">liczba bez jednostki to plotka</span></div></div>
   <p class="reveal">23 września 1999 roku NASA straciła sondę Mars Climate Orbiter. Oprogramowanie naziemne dostawcy podawało impuls w funtach-sekundach (lbf·s), a system nawigacji oczekiwał niutonosekund (N·s). Sonda weszła za nisko w atmosferę Marsa. W 1983 roku Boeing 767 Air Canada (lot 143, „Gimli Glider”) skończył paliwo w locie, bo przy tankowaniu pomylono przelicznik na kilogramy z przelicznikiem na funty. W obu przypadkach liczba była poprawna. <b>Zła była jej jednostka.</b></p>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Quantity</b> to liczba zawsze związana z jednostką (5 kg, 12 kWh, 3 szt.). <b>Money</b> to kwota zawsze związana z walutą (100,00 PLN). Operacje na nich pilnują jednostek i nie gubią groszy.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Przepis kulinarny. „Dodaj 2” nic nie znaczy, dopóki nie wiesz, czy chodzi o łyżki, szklanki czy kilogramy.</span>
+      <b>Rozwiązuje</b><span>dodawanie kilogramów do funtów, „zgubione” grosze przy dzieleniu na raty, błędy zaokrągleń, mylenie procentów z punktami procentowymi.</span>
+      <b>Czym NIE jest</b><span>Nie jest „liczbą z opisem w osobnej kolumnie”. Jednostka jest częścią wartości: dwie ilości w różnych jednostkach to różne rzeczy, dopóki ktoś jawnie ich nie przeliczy.</span>
+    </div>
+  </div>
+
+  <figure class="fig wide an-fig" id="an-qty">
+    <div class="ftitle">▶ Anatomia: Quantity i Money <span>kliknij część</span></div>
+    <div class="ctrl"></div><div class="an-grid"></div><div class="an-panel"></div><div class="status"></div>
+    <figcaption>Nazwy w nawiasach pochodzą z repozytorium szkolenia. Konwersji jednostek, polityki zaokrągleń i alokacji repozytorium nie modeluje jako osobnych obiektów: to opcje, które dokładasz sam.</figcaption>
+  </figure>
+
+  <div class="nb-when reveal">
+    <div class="yes"><h5>✅ Sięgnij, gdy</h5><ul>
+      <li>ta sama rzecz bywa liczona w różnych jednostkach (paliwo w litrach i w tonach, czas w minutach i w godzinach);</li>
+      <li>dzielisz kwoty: raty, udziały, rozksięgowanie kosztu na działy;</li>
+      <li>obsługujesz więcej niż jedną walutę;</li>
+      <li>zaokrąglenia mają znaczenie prawne lub podatkowe (VAT, odsetki).</li>
+    </ul></div>
+    <div class="no"><h5>⛔ Odpuść, gdy</h5><ul>
+      <li>liczba nie ma jednostki z natury (numer wersji, liczba kliknięć w raporcie);</li>
+      <li>cały system liczy jedną rzecz w jednej jednostce i nic tego nie zmieni. Nawet wtedy pieniądze trzymaj w typie dziesiętnym.</li>
+    </ul></div>
+  </div>
+
+  <h3 class="reveal">Opcje i konfiguracje</h3>
+  <div class="scroll-x reveal">
+  <table class="mini opts">
+    <thead><tr><th>Opcja</th><th>Co robi</th><th>Kiedy wybrać</th><th>Koszt / ryzyko</th></tr></thead>
+    <tbody>
+      <tr><td>Jednostka jako typ</td><td>Ilość to para (wartość, jednostka). Dodawanie różnych jednostek kończy się błędem.</td><td>Zawsze, gdy liczysz coś fizycznego lub umownego (szt., kg, l, h, min).</td><td>Niski. Trzeba ustalić listę jednostek.</td></tr>
+      <tr><td>Zakaz wartości ujemnych</td><td>Ilość nie może być mniejsza od zera. W repozytorium sprawdza to konstruktor <code>Quantity</code>.</td><td>Stany, zamówione ilości, pojemności.</td><td>Ruchy „minus” trzeba wtedy modelować osobno, np. zapisem rozchodu.</td></tr>
+      <tr><td>Konwersja jednostek</td><td>Jawne przeliczenie z zapisanym współczynnikiem (Fowler: <i>Conversion Ratio</i>).</td><td>Kupujesz w tonach, sprzedajesz w litrach. Rozliczasz godziny i minuty.</td><td>Współczynnik bywa zmienny (gęstość zależy od temperatury). Zapisuj go razem z wynikiem.</td></tr>
+      <tr><td>Money z walutą</td><td>Kwota + kod waluty, w typie dziesiętnym. Różnych walut nie dodaje się bez kursu.</td><td>Każde pieniądze w systemie.</td><td>Kurs to dana z datą i źródłem, a nie stała w kodzie.</td></tr>
+      <tr><td>Polityka zaokrągleń</td><td>Ustala, kiedy (linia czy suma), jak (w górę, do parzystej) i gdzie trafia różnica.</td><td>VAT, odsetki, ceny jednostkowe z wieloma miejscami po przecinku.</td><td>Zmiana polityki zmienia kwoty na dokumentach. Wersjonuj ją.</td></tr>
+      <tr><td>Alokacja</td><td>Dzieli kwotę na części tak, że suma części zawsze równa się całości.</td><td>Raty, udziały, podział kosztu, zwroty częściowe.</td><td>Trzeba zdecydować, która część dostaje resztę groszy.</td></tr>
+      <tr><td>Procent jako typ</td><td>Osobny typ procentu (<code>Percentage</code>), żeby 5% nie pomylić z 0,05 ani z 5 punktami procentowymi.</td><td>Stawki, rabaty, prowizje, oprocentowanie.</td><td>Niski.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Minimum na start, rozbudowa na sygnał</span>
+    <ol>
+      <li><b>Dzień pierwszy:</b> pieniądze w typie dziesiętnym z walutą, ilości z jednostką, zakaz dodawania różnych jednostek.</li>
+      <li><b>Sygnał „rata” lub „udział”:</b> dodaj alokację zamiast dzielenia.</li>
+      <li><b>Sygnał „VAT” lub „odsetki”:</b> zapisz politykę zaokrągleń jako regułę z nazwą.</li>
+      <li><b>Sygnał „kupujemy w tonach, sprzedajemy w litrach”:</b> dodaj jawną konwersję z zapisanym współczynnikiem.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Typowe błędy początkujących</span>
+    <ul>
+      <li><code>double</code> dla pieniędzy. Skutek: <code>0.1 + 0.2 ≠ 0.3</code> i rozjazd sum na raportach.</li>
+      <li>Kwota bez waluty „bo i tak jest PLN”. Skutek: pierwszy klient z euro psuje wszystkie sumy.</li>
+      <li>Dzielenie 100 zł na 3 przez zaokrąglenie każdej części. Skutek: 99,99 zł i grosz, którego nikt nie umie znaleźć.</li>
+    </ul>
+  </div>
+
+  <h3 class="reveal nb-sep">W praktyce i w repozytorium</h3>
+
   <p class="reveal">Archetyp <span class="ach qty">Quantity</span> (Fowler, <i>Analysis Patterns</i>; Arlow i Neustadt mają osobne archetypy Quantity i Money) mówi prosto: <b>ilość = wartość + jednostka</b>, a operacje sprawdzają jednostki. W repozytorium szkolenia <code>Quantity</code> to para (kwota <code>BigDecimal</code>, <code>Unit</code>). Dodawanie i odejmowanie różnych jednostek kończy się wyjątkiem, a ujemna ilość jest odrzucana już w konstruktorze. <code>Money</code> opakowuje JavaMoney (JSR 354), czyli kwotę z walutą.</p>
 
   <figure class="fig wide" id="fig-money">
@@ -789,6 +1208,72 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Party: kto jest kim</h2><span class="tag">jedna osoba, wiele kapeluszy</span></div></div>
   <p class="reveal">Strona szkolenia opisuje problem tak: „wieczny chaos z userami”. Klient, firma, pracownik i partner siedzą w osobnych strukturach, które się rozjeżdżają. Rozwiązanie: zamiast osobnych klas <code>Client</code> czy <code>Partner</code> modelujesz uniwersalny <span class="ach party">Party</span> i przypisujesz mu role.</p>
   <p class="reveal">Weź bank. Jan Kowalski ma tam konto osobiste (klient detaliczny). Pracuje w tym banku, więc obowiązują go zasady konfliktu interesów. Jest poręczycielem kredytu brata. Zasiada też w zarządzie spółki, która jest klientem korporacyjnym. W modelu „tabela na rolę” Jan to cztery rekordy, które o sobie nie wiedzą. Dział ryzyka nie zobaczy wtedy, że jedna osoba łączy cztery ekspozycje. Rozporządzenie CRR ma na to pojęcie „grupy powiązanych klientów” (<i>group of connected clients</i>). Bez Party nie da się go policzyć.</p>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Party</b> to każdy, kto może być stroną w biznesie: osoba albo organizacja. „Klient”, „dostawca”, „pracownik” i „płatnik” to nie osobne typy, tylko <b>role</b>, które ta sama strona pełni naraz albo po kolei.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Aktor i jego role. Ten sam człowiek gra w trzech filmach. Nikt nie zakłada mu trzech dowodów osobistych.</span>
+      <b>Rozwiązuje</b><span>duplikaty klientów w kilku tabelach, „zmianę typu klienta”, brak odpowiedzi na pytanie „z kim jeszcze ta osoba jest powiązana?”.</span>
+      <b>Czym NIE jest</b><span>Nie jest kontem logowania (User). Nie jest też „klientem z flagą isSupplier”. Party mówi <i>kto</i>, rola mówi <i>w jakim charakterze</i>.</span>
+    </div>
+  </div>
+
+  <figure class="fig wide an-fig" id="an-party">
+    <div class="ftitle">▶ Anatomia: Party <span>kliknij część</span></div>
+    <div class="ctrl"></div><div class="an-grid"></div><div class="an-panel"></div><div class="status"></div>
+    <figcaption>Nazwy w nawiasach pochodzą z repozytorium szkolenia. Relacje i kompetencje mają własne rozdziały na wyższych poziomach: <a href="#relations">Role i relacje</a> oraz <a href="#capab">Kompetencje i zakresy</a>.</figcaption>
+  </figure>
+
+  <div class="nb-when reveal">
+    <div class="yes"><h5>✅ Sięgnij, gdy</h5><ul>
+      <li>ta sama osoba lub firma pojawia się w kilku rolach (klient i dostawca, pacjent i pracownik);</li>
+      <li>obsługujesz i osoby, i firmy, i działy firm;</li>
+      <li>ktoś pyta „kto był pełnomocnikiem w marcu?” albo „kto kontroluje tę spółkę?”;</li>
+      <li>dane tej samej strony rozjeżdżają się między systemami.</li>
+    </ul></div>
+    <div class="no"><h5>⛔ Odpuść, gdy</h5><ul>
+      <li>system ma jedną rolę i nie zanosi się na drugą (np. wewnętrzna lista uczestników szkolenia);</li>
+      <li>stroną zarządza zewnętrzny system (CRM, ERP), a Ty potrzebujesz tylko jego identyfikatora. Wtedy trzymaj identyfikator i migawkę danych.</li>
+    </ul></div>
+  </div>
+
+  <h3 class="reveal">Opcje i konfiguracje</h3>
+  <div class="scroll-x reveal">
+  <table class="mini opts">
+    <thead><tr><th>Opcja</th><th>Co robi</th><th>Kiedy wybrać</th><th>Koszt / ryzyko</th></tr></thead>
+    <tbody>
+      <tr><td>Osoba / organizacja / jednostka</td><td>Dwa rodzaje stron: osoba i organizacja. Organizacja to firma albo jednostka organizacyjna (dział, oddział).</td><td>Zawsze. Jednostki dokładasz, gdy działy mają własne role (np. płacą osobno).</td><td>Niski. Pułapka: jednoosobowa działalność to osoba, a nie firma.</td></tr>
+      <tr><td>Role przez politykę</td><td>Rola to nazwany „kapelusz”. Polityka decyduje, kto może mieć jaką rolę.</td><td>Gdy role mają warunki, np. „lekarz” tylko dla osoby.</td><td>Polityki trzeba utrzymywać razem z biznesem.</td></tr>
+      <tr><td>Identyfikatory z polityką</td><td>PESEL, paszport, NIP, REGON, KRS jako osobne obiekty. Polityka pilnuje, że PESEL ma tylko osoba, a REGON tylko organizacja.</td><td>Gdy identyfikatorów jest kilka albo pochodzą z różnych krajów.</td><td>Walidacja numerów (sumy kontrolne) to osobna praca.</td></tr>
+      <tr><td>Adresy jako osobny byt</td><td>Adres pocztowy, e-mail, telefon, WWW z zastosowaniami: rozliczeniowy, korespondencyjny, dostawy, zamieszkania, kontaktowy.</td><td>Gdy faktura i towar idą na różne adresy albo adresy często się zmieniają.</td><td>Dokumenty muszą zapisywać migawkę adresu, a nie referencję.</td></tr>
+      <tr><td>Relacje bez ważności</td><td>Nazwane powiązanie dwóch ról, np. „oddział należy do firmy”.</td><td>Relacje trwałe z natury, w małym systemie.</td><td>Brak historii. Zmiana relacji kasuje przeszłość.</td></tr>
+      <tr><td>Relacje z ważnością</td><td>Powiązanie ma datę od i do.</td><td>Zatrudnienie, pełnomocnictwo, opieka nad klientem, kontrola kapitałowa.</td><td>Każde zapytanie musi mówić „na kiedy”.</td></tr>
+      <tr><td>Polityka relacji</td><td>Decyduje, które role mogą być powiązane jaką relacją.</td><td>Gdy relacje tworzą użytkownicy lub integracje.</td><td>Domyślna polityka w repozytorium pozwala na wszystko. Reguły musisz dopisać sam.</td></tr>
+      <tr><td>Kompetencje i zakresy</td><td>Co strona potrafi, gdzie, kiedy, ile i na jakim poziomie, z datą ważności.</td><td>Dopasowanie wykonawcy do zlecenia: uprawnienia, certyfikaty, regiony.</td><td>Ważność trzeba sprawdzać w chwili przydziału.</td></tr>
+      <tr><td>Zdarzenia i wersja</td><td>Każda zmiana daje zdarzenie. Pole wersji służy do wykrywania równoległych zmian. W repozytorium Party tylko je przechowuje, a sprawdzanie konfliktów trzeba dopisać.</td><td>Gdy inne moduły reagują na zmiany stron albo kilka osób edytuje te same dane.</td><td>Potrzebny mechanizm publikacji zdarzeń.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Minimum na start, rozbudowa na sygnał</span>
+    <ol>
+      <li><b>Dzień pierwszy:</b> osoba i organizacja, lista ról, jeden identyfikator (np. NIP), jeden adres.</li>
+      <li><b>Sygnał „faktura na inny adres niż dostawa”:</b> adresy jako osobny byt z zastosowaniami.</li>
+      <li><b>Sygnał „działa w imieniu”, „pełnomocnik”, „opiekun klienta”:</b> relacje z ważnością.</li>
+      <li><b>Sygnał „tylko z uprawnieniami”, „tylko w regionie”:</b> kompetencje z zakresami.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Typowe błędy początkujących</span>
+    <ul>
+      <li>Osobne tabele <code>Klient</code>, <code>Dostawca</code>, <code>Pracownik</code>. Skutek: ta sama firma istnieje trzy razy i nikt nie widzi łącznej ekspozycji.</li>
+      <li>Pole <code>typKlienta</code> zmieniane w czasie. Skutek: historia znika, a stare dokumenty pokazują dzisiejszy typ.</li>
+      <li>Login jako Party. Skutek: księgowa obsługująca 30 firm „jest” jedną z nich.</li>
+    </ul>
+  </div>
+
+  <h3 class="reveal nb-sep">W praktyce i w repozytorium</h3>
+
   <p class="reveal">W repozytorium szkolenia <code>Party</code> jest klasą zamkniętą (<code>sealed</code>) z dwiema gałęziami: <code>Person</code> i <code>Organization</code>. Organizacja dzieli się na <code>Company</code> i <code>OrganizationUnit</code> (np. dział, oddział). Party ma:</p>
   <ul class="reveal">
     <li><b>role</b>: nazwane kapelusze (<code>Role</code>), dodawane przez politykę <code>PartyRoleDefiningPolicy</code>. Ponowne dodanie tej samej roli nic nie zmienia i daje zdarzenie „pominięto”, a naruszenie polityki zwraca błąd <code>POLICY_NOT_MET</code>;</li>
@@ -846,6 +1331,16 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
 <section class="chapter" id="relations" data-level="2" data-title="Role i relacje">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Role i relacje między stronami</h2><span class="tag">relacja łączy role, nie ludzi</span></div></div>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Relacja między stronami</b> to nazwane powiązanie dwóch <b>ról</b> (np. „pełnomocnik” i „mocodawca”), zwykle z okresem ważności. Polityka relacji decyduje, które powiązania są dozwolone.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Umowa z datą zawarcia i rozwiązania. Ludzie zostają ci sami, a umowy się zaczynają, kończą i zmieniają.</span>
+      <b>Rozwiązuje</b><span>pytania „kto był prezesem 3 lata temu?”, „kto kontroluje tę spółkę?”, wiele hierarchii naraz w jednej organizacji.</span>
+      <b>Czym NIE jest</b><span>Nie jest kluczem obcym <code>firma_id</code> w tabeli osób. Taki klucz pamięta tylko jedno, bieżące powiązanie i nie ma nazwy ani dat.</span>
+    </div>
+  </div>
+
   <p class="reveal">Ubezpieczenie na życie: <b>ubezpieczający</b> zawiera umowę i płaci składkę. <b>Ubezpieczony</b> to osoba, której życie jest chronione. <b>Uposażony</b> dostaje świadczenie. Pracodawca może być ubezpieczającym dla stu pracowników, a każdy z nich wskazuje innych uposażonych. Ta sama osoba może być ubezpieczonym w jednej polisie i uposażonym w trzech innych. Takie sieci powiązań to codzienność archetypu Party.</p>
   <p class="reveal">Kluczowa decyzja z repozytorium szkolenia: <code>PartyRelationship</code> łączy <b>role</b> (<code>PartyRole</code> = Party + rola), a nie gołe Party. Relacja ma nazwę i okres ważności (<code>Validity</code>). Tworzy ją polityka <code>PartyRelationshipDefiningPolicy</code>, która dostaje rolę źródłową, rolę docelową i nazwę relacji, i decyduje, czy relacja jest dozwolona. Domyślna polityka pozwala na wszystko. W prawdziwym systemie to właśnie tu mieszka wiedza dziedzinowa.</p>
   <p class="reveal">Fowler opisuje to samo jako <i>Accountability</i>: typowaną relację odpowiedzialności między stronami, z okresem obowiązywania. Typy relacji i reguły, kto może być po której stronie, należą do poziomu wiedzy. Dzięki temu ten sam mechanizm obsługuje strukturę organizacyjną, nadzór, pełnomocnictwa i kontrolę kapitałową, a do tego <b>kilka hierarchii naraz</b>, np. podległość służbową i podległość regionalną w organizacji macierzowej.</p>
@@ -897,11 +1392,21 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
   </div>
 </section>
 
-<section class="chapter" id="capab" data-level="3" data-title="Kompetencje i zakresy">
+<section class="chapter" id="capab" data-level="2" data-title="Kompetencje i zakresy">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Kompetencje i zakresy działania</h2><span class="tag">rola wymaga, strona potrafi</span></div></div>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Kompetencja</b> mówi, co strona potrafi, a <b>zakres działania</b> mówi gdzie, kiedy, ile i na jakim poziomie. Rola może wymagać kompetencji, a system dopasowuje wykonawców do zleceń.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Prawo jazdy z kategoriami i datą ważności. Nie wystarczy być kierowcą. Trzeba mieć właściwą kategorię, ważną dzisiaj.</span>
+      <b>Rozwiązuje</b><span>przydział zleceń ludziom bez uprawnień, ręczne sprawdzanie certyfikatów, wyszukiwanie wykonawców po regionie, terminie i poziomie.</span>
+      <b>Czym NIE jest</b><span>Nie jest rolą. Rola mówi „kim jesteś w relacji”, kompetencja mówi „co umiesz i gdzie wolno Ci to robić”.</span>
+    </div>
+  </div>
+
   <p class="reveal">Rola mówi, <b>kim</b> ktoś jest w relacji. Nie mówi, <b>co potrafi</b>. Dyspozytor transportu nie szuka „przewoźnika”. Szuka przewoźnika z uprawnieniem ADR do przewozu materiałów niebezpiecznych, który działa na Śląsku, w weekend, i ma wolną cysternę. Szpital nie szuka „radiologa”, tylko radiologa poziomu senior z ważnym prawem wykonywania zawodu w szpitalu A.</p>
   <p class="reveal">Repozytorium szkolenia rozdziela te pojęcia. <code>Capability</code> to kompetencja strony: typ (np. „ADR”), lista <b>zakresów działania</b> (<code>OperatingScope</code>) i okres ważności. Zakresy to zamknięta lista siedmiu rodzajów, a każdy umie powiedzieć, czy spełnia wymaganie:</p>
-  <div class="scroll-x reveal">
+  <div class="scroll-x reveal" data-level="3">
   <table class="mini">
     <thead><tr><th>Zakres</th><th>Spełnia wymaganie, gdy…</th><th>Przykład</th></tr></thead>
     <tbody>
@@ -952,6 +1457,74 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
 <section class="chapter" id="product" data-level="1" data-title="Product">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Product: typ, egzemplarz, partia</h2><span class="tag">„iPhone” to nie jest ten iPhone</span></div></div>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Product</b> opisuje to, co sprzedajesz: towar, usługę, umowę. Rozdziela <b>typ</b> (opis z katalogu, np. „kredyt Stała stopa 5 lat”) od <b>egzemplarza</b> (ta konkretna umowa, ten telefon, ta wizyta).</p>
+    <div class="kv">
+      <b>Analogia</b><span>Karta dania w menu i talerz, który kelner stawia na stole. Karta jest jedna, talerzy setki, a każdy może mieć inne dodatki.</span>
+      <b>Rozwiązuje</b><span>„który egzemplarz trafił do którego klienta”, wycofania partii, warianty i cechy bez nowych kolumn, pakiety z regułami „wybierz jeden z…”.</span>
+      <b>Czym NIE jest</b><span>Nie jest cennikiem: cena żyje w <a href="#pricing">Pricing</a>. Nie jest też stanem magazynu: to, ile sztuk jest wolnych, wie <a href="#inventory">Inventory</a>.</span>
+    </div>
+  </div>
+
+  <figure class="fig wide an-fig" id="an-product">
+    <div class="ftitle">▶ Anatomia: Product <span>kliknij część</span></div>
+    <div class="ctrl"></div><div class="an-grid"></div><div class="an-panel"></div><div class="status"></div>
+    <figcaption>Nazwy w nawiasach pochodzą z repozytorium szkolenia. Pakiety i relacje produktów opisuje szerzej rozdział <a href="#packages">Pakiety i relacje</a>.</figcaption>
+  </figure>
+
+  <div class="nb-when reveal">
+    <div class="yes"><h5>✅ Sięgnij, gdy</h5><ul>
+      <li>sprzedajesz coś z katalogu, w wariantach albo z parametrami;</li>
+      <li>musisz wiedzieć, <i>który</i> egzemplarz dostał klient (gwarancja, serwis, wycofanie);</li>
+      <li>produkt może zniknąć z oferty, ale umowy na niego dalej trwają;</li>
+      <li>sprzedajesz zestawy i pakiety z regułami wyboru.</li>
+    </ul></div>
+    <div class="no"><h5>⛔ Odpuść, gdy</h5><ul>
+      <li>masz kilka stałych pozycji bez cech i wariantów (np. trzy rodzaje biletu wstępu). Wystarczy prosta lista typów;</li>
+      <li>katalogiem zarządza zewnętrzny system (PIM). Trzymaj wtedy identyfikator i migawkę opisu.</li>
+    </ul></div>
+  </div>
+
+  <h3 class="reveal">Opcje i konfiguracje</h3>
+  <div class="scroll-x reveal">
+  <table class="mini opts">
+    <thead><tr><th>Opcja</th><th>Co robi</th><th>Kiedy wybrać</th><th>Koszt / ryzyko</th></tr></thead>
+    <tbody>
+      <tr><td>Typ i egzemplarz</td><td>Opis katalogowy osobno, konkretna rzecz lub umowa osobno.</td><td>Zawsze, gdy egzemplarze się różnią albo trzeba je śledzić.</td><td>Niski. Dla towarów zamiennych egzemplarz może być tylko ilością.</td></tr>
+      <tr><td>Cechy z ograniczeniami</td><td>Typ definiuje cechy (obowiązkowe lub opcjonalne) i ograniczenia: lista wartości, zakres liczb, zakres dat, wyrażenie regularne. Egzemplarz ma wartości.</td><td>Warianty: kolor, pojemność, okres umowy, kwota kredytu.</td><td>Ograniczenia są danymi, więc trzeba je testować jak konfigurację.</td></tr>
+      <tr><td>Śledzenie: unikat</td><td>Dokładnie jeden egzemplarz na świecie, z numerem.</td><td>Dzieła sztuki, nieruchomości, instrumenty kolekcjonerskie.</td><td>Niski.</td></tr>
+      <tr><td>Śledzenie: indywidualne</td><td>Każdy egzemplarz ma numer seryjny (tekstowy, IMEI, VIN).</td><td>Gwarancja, serwis, leasing, wypożyczanie.</td><td>Każda sztuka to rekord.</td></tr>
+      <tr><td>Śledzenie: partia</td><td>Egzemplarze należą do partii z datą produkcji i datami ważności.</td><td>Żywność, leki, chemia, wycofania.</td><td>Trzeba pilnować, z której partii wydano towar.</td></tr>
+      <tr><td>Śledzenie: numer i partia</td><td>Numer seryjny i partia naraz.</td><td>Elektronika, leki na receptę.</td><td>Największy koszt danych.</td></tr>
+      <tr><td>Śledzenie: zamienne</td><td>Egzemplarze są nieodróżnialne, liczy się tylko ilość. Numer i partia są zabronione.</td><td>Śruby, materiały sypkie, energia.</td><td>Brak możliwości wycofania „tej jednej sztuki”.</td></tr>
+      <tr><td>Wpis w katalogu z ważnością</td><td>Nazwa wyświetlana, kategorie i okres, w którym produkt jest w ofercie.</td><td>Produkty sezonowe, wycofywane taryfy.</td><td>Trzeba odróżniać „nie ma w ofercie” od „nie istnieje”.</td></tr>
+      <tr><td>Ograniczenie stosowalności</td><td>Warunek, komu i w jakim kontekście wolno zaproponować produkt (np. wiek 18–45).</td><td>Produkty finansowe, oferty regionalne, oferty dla segmentów.</td><td>Warunki są danymi: potrzebują wersji i testów.</td></tr>
+      <tr><td>Pakiet</td><td>Produkt złożony z nazwanych zestawów i reguł wyboru: dokładnie jeden, najwyżej dwa, „jeśli A, to B”.</td><td>Abonament z telefonem, usługa kurierska z dodatkami.</td><td>Reguły trzeba sprawdzać przy każdym wyborze klienta.</td></tr>
+      <tr><td>Relacje produktów</td><td>Sześć typów: przejście na lepszy, zamiennik, następca, uzupełnienie, zgodny, niezgodny.</td><td>Migracje taryf, cross-sell, konfiguratory.</td><td>Relacje trzeba utrzymywać razem z katalogiem.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Minimum na start, rozbudowa na sygnał</span>
+    <ol>
+      <li><b>Dzień pierwszy:</b> typ z nazwą i jednostką, egzemplarz (albo sama ilość dla towarów zamiennych), jedna strategia śledzenia.</li>
+      <li><b>Sygnał „warianty”, „parametry umowy”:</b> cechy z ograniczeniami zamiast nowych kolumn.</li>
+      <li><b>Sygnał „wycofanie”, „data ważności”:</b> partie jako osobny byt.</li>
+      <li><b>Sygnał „zestaw”, „pakiet”, „tylko z”:</b> pakiety z regułami wyboru i relacje produktów.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Typowe błędy początkujących</span>
+    <ul>
+      <li>Kolumna <code>cena</code> w tabeli produktów. Skutek: pierwsza promocja albo cennik dla firm wymaga przebudowy.</li>
+      <li>Nowa kolumna na każdą cechę. Skutek: tabela z setką pustych pól.</li>
+      <li>Usunięcie produktu z bazy, gdy znika z oferty. Skutek: stare umowy wskazują na nieistniejący typ.</li>
+    </ul>
+  </div>
+
+  <h3 class="reveal nb-sep">W praktyce i w repozytorium</h3>
+
   <p class="reveal">Strona szkolenia ujmuje to tak: niemal każdy biznes to sklep, który sprzedaje „produkt” (ubezpieczenie, usługę kurierską, kredyt) o określonej konfiguracji i cenie. Pierwsza rzecz do rozdzielenia to <b>typ</b> i <b>egzemplarz</b>. <code>ProductType</code> „iPhone 15 Pro 256 GB” to opis z katalogu. Twój telefon z numerem IMEI to <code>ProductInstance</code>. Kredyt hipoteczny „Stała stopa 5 lat” to typ, a umowa nr 123 to egzemplarz z konkretną kwotą.</p>
   <p class="reveal">Typ w repozytorium szkolenia ma: identyfikator (UUID, GTIN, ISBN), nazwę i opis, <b>preferowaną jednostkę</b> (sztuki, litry, kWh), <b>definicje cech</b> (obowiązkowe lub opcjonalne, z ograniczeniami: lista dozwolonych wartości, zakres liczb, zakres dat, wyrażenie regularne), <b>ograniczenie stosowalności</b> (dla kogo i w jakim kontekście produkt jest dostępny) oraz <b>strategię śledzenia</b>. Egzemplarz ma wartości cech, które muszą spełniać ograniczenia typu, numer seryjny (tekstowy, IMEI, VIN) albo partię.</p>
   <p class="reveal">Osobno jest <b>wpis w katalogu</b> (<code>CatalogEntry</code>): nazwa wyświetlana, kategorie i okres ważności. Produkt może istnieć dłużej niż jego obecność w ofercie. Umowy na wycofany produkt nadal trzeba obsługiwać.</p>
@@ -1019,6 +1592,16 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
 <section class="chapter" id="packages" data-level="2" data-title="Pakiety i relacje">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Pakiety, zestawy i relacje produktów</h2><span class="tag">„wybierz dokładnie jeden, ale nie z tym”</span></div></div>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Pakiet</b> to produkt złożony z nazwanych zestawów i <b>reguł wyboru</b> („dokładnie jeden z…”, „najwyżej dwa”, „jeśli A, to B”). <b>Relacje produktów</b> mówią, co jest następcą, zamiennikiem, ulepszeniem albo czym się nie łączy.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Zestaw obiadowy w barze: wybierz jedną zupę, jedno drugie danie i najwyżej dwa dodatki. Deser tylko do zestawu dużego.</span>
+      <b>Rozwiązuje</b><span>konfiguratory oparte na if-ach, niedozwolone kombinacje w koszyku, migracje taryf i podpowiedzi „pasuje do”.</span>
+      <b>Czym NIE jest</b><span>Nie jest koszykiem. Koszyk to wybór klienta, a pakiet to opis tego, co wolno wybrać.</span>
+    </div>
+  </div>
+
   <p class="reveal">Operator komórkowy sprzedaje pakiet: abonament + telefon + starter z kartą SIM i akcesoriami. W scenariuszu repozytorium szkolenia obowiązuje reguła: <b>flagowy telefon wymaga abonamentu premium</b>. Starter musi mieć kartę SIM i może mieć najwyżej dwa akcesoria. Starter jest zagnieżdżony w pakiecie z telefonem. To jest archetyp Product w wersji z konfiguracją, a nie lista produktów w koszyku.</p>
   <p class="reveal">Szkielet z repozytorium: <code>PackageType</code> jest produktem (ma identyfikator, nazwę, strategię śledzenia, ograniczenie stosowalności), ale zamiast cech ma <b>strukturę</b>. Struktura to nazwane zbiory produktów (<code>ProductSet</code>) i <b>reguły wyboru</b> (<code>SelectionRule</code>):</p>
   <div class="scroll-x reveal">
@@ -1073,17 +1656,101 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
   </div>
 </section>
 
-<section class="chapter" id="pricing" data-level="2" data-title="Pricing">
+<section class="chapter" id="pricing" data-level="1" data-title="Pricing">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Pricing: komponenty i kalkulatory</h2><span class="tag">cena to drzewo, nie liczba</span></div></div>
-  <p class="reveal">Sesja ładowania auta w scenariuszu e-mobility z repozytorium szkolenia kosztuje: energię hurtową w progach (0,60 zł/kWh za pierwsze 5 kWh, każdy kolejny próg 5 kWh droższy o 0,10 zł), opłatę sieciową 0,15 zł/kWh, opłatę operatora ładowarki 1,50 zł za sesję plus 0,25 zł/kWh i 0,10 zł/min oraz marżę dostawcy usługi 0,10 zł/kWh. Cena jest <b>drzewem komponentów</b>, a każdy komponent liczy inny kalkulator.</p>
-  <p class="reveal">Archetyp Pricing w repozytorium ma trzy piętra:</p>
-  <ul class="reveal">
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Pricing</b> liczy cenę jako <b>drzewo składników</b> (komponentów), a nie jedną liczbę. Każdy składnik ma nazwę i własny sposób liczenia (kalkulator), a wynik pokazuje, z czego składa się kwota.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Rachunek za prąd. Nie ma na nim jednej kwoty „za prąd”, tylko energia, opłata sieciowa, opłata stała i podatek, każda liczona inaczej.</span>
+      <b>Rozwiązuje</b><span>if-y w kodzie liczącym cenę, brak odpowiedzi na „za co płacę?”, ceny zależne od ilości, czasu i klienta, pytanie „ile kosztowało w lutym?”.</span>
+      <b>Czym NIE jest</b><span>Nie jest polem <code>cena</code> w produkcie. Nie jest też silnikiem promocji: wyjątki typu „−10% dla VIP” to <a href="#rules">Rules</a>, które nakładają się na cenę.</span>
+    </div>
+  </div>
+
+  <figure class="fig wide an-fig" id="an-pricing">
+    <div class="ftitle">▶ Anatomia: Pricing <span>kliknij część</span></div>
+    <div class="ctrl"></div><div class="an-grid"></div><div class="an-panel"></div><div class="status"></div>
+    <figcaption>Nazwy w nawiasach pochodzą z repozytorium szkolenia. Wersje cen opisuje szerzej rozdział <a href="#pricetime">Cena w czasie</a> (poziom 3).</figcaption>
+  </figure>
+
+  <div class="nb-when reveal">
+    <div class="yes"><h5>✅ Sięgnij, gdy</h5><ul>
+      <li>cena ma kilka składników i klient chce widzieć każdy z nich;</li>
+      <li>cena zależy od ilości (progi), czasu (minuty, dni) albo parametrów (kwota, okres);</li>
+      <li>cenniki się zmieniają, a stare transakcje trzeba umieć przeliczyć „po staremu”;</li>
+      <li>kod liczący cenę ma rosnącą listę if-ów po typie produktu lub klienta.</li>
+    </ul></div>
+    <div class="no"><h5>⛔ Odpuść, gdy</h5><ul>
+      <li>każdy produkt ma jedną stałą cenę i zmienia się ona rzadko. Wystarczy cennik z datą obowiązywania;</li>
+      <li>cenę ustala człowiek przy każdej transakcji (wycena indywidualna). Wtedy zapisz kwotę i powód.</li>
+    </ul></div>
+  </div>
+
+  <h3 class="reveal">Opcje i konfiguracje</h3>
+  <p class="reveal">Najpierw <b>kalkulatory</b>, czyli sposoby liczenia jednego składnika. Repozytorium szkolenia ma osiem rodzajów:</p>
+  <div class="scroll-x reveal">
+  <table class="mini opts">
+    <thead><tr><th>Kalkulator</th><th>Co liczy</th><th>Przykład</th></tr></thead>
+    <tbody>
+      <tr><td>Stała kwota</td><td>zawsze tę samą kwotę, niezależnie od parametrów</td><td>opłata za rozpoczęcie sesji ładowania</td></tr>
+      <tr><td>Odsetki roczne</td><td>roczną stopę procentową od kwoty bazowej, przeliczoną na okres</td><td>odsetki od kredytu</td></tr>
+      <tr><td>Funkcja progowa</td><td>cenę bazową z przyrostem co określoną liczbę jednostek</td><td>energia drożeje o 0,10 zł co 5 kWh</td></tr>
+      <tr><td>Punkty dyskretne</td><td>cenę z tabeli „ilość → cena”</td><td>pakiety 5, 10, 20 sztuk</td></tr>
+      <tr><td>Dzienny przyrost</td><td>cenę rosnącą o stałą kwotę każdego dnia od daty startu</td><td>cena biletu rośnie z każdym dniem bliżej wydarzenia</td></tr>
+      <tr><td>Liniowa w czasie</td><td>cenę przechodzącą płynnie od wartości A do B między dwiema chwilami</td><td>stopniowe wprowadzanie nowej stawki</td></tr>
+      <tr><td>Procent</td><td>procent od kwoty bazowej</td><td>VAT, ubezpieczenie 2% od kwoty kredytu</td></tr>
+      <tr><td>Złożony</td><td>wybiera inny kalkulator zależnie od zakresu parametru</td><td>opłata za konto zależna od wysokości wpływów</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="reveal">Potem decyzje o strukturze ceny:</p>
+  <div class="scroll-x reveal">
+  <table class="mini opts">
+    <thead><tr><th>Opcja</th><th>Co robi</th><th>Kiedy wybrać</th><th>Koszt / ryzyko</th></tr></thead>
+    <tbody>
+      <tr><td>Komponent prosty</td><td>Nazwany składnik ceny z jednym kalkulatorem.</td><td>Każda pozycja, którą klient widzi na rachunku.</td><td>Niski.</td></tr>
+      <tr><td>Komponent złożony</td><td>Grupa komponentów z sumą i rozbiciem.</td><td>Cena z kilku składników: „opłaty bazowe”, „nadwyżki”, „podatki”.</td><td>Drzewo trzeba umieć pokazać klientowi.</td></tr>
+      <tr><td>Zależności między komponentami</td><td>Parametr jednego komponentu to wynik innego: wartość, suma, różnica albo iloczyn wyników.</td><td>VAT od sumy netto, ubezpieczenie od odsetek i prowizji.</td><td>Cykl zależności to błąd konfiguracji. Wykrywaj go przy zapisie.</td></tr>
+      <tr><td>Interpretacja: całkowita</td><td>Wynik to cena za całą ilość.</td><td>Rachunki, faktury.</td><td>Pomylenie interpretacji daje ceny wielokrotnie za duże lub za małe.</td></tr>
+      <tr><td>Interpretacja: jednostkowa</td><td>Wynik to średnia cena jednej jednostki.</td><td>Cenniki „za sztukę”, porównania ofert.</td><td>Jak wyżej.</td></tr>
+      <tr><td>Interpretacja: marginalna</td><td>Wynik to cena n-tej konkretnej jednostki.</td><td>Taryfy progowe, „każdy GB ponad limit”.</td><td>Jak wyżej.</td></tr>
+      <tr><td>Adaptery interpretacji</td><td>Sześć przeliczeń między interpretacjami, np. „suma cen marginalnych = cena całkowita”.</td><td>Gdy kalkulator liczy w jednej interpretacji, a dokument potrzebuje innej.</td><td>Niski, jeśli interpretacja jest zapisana przy kalkulatorze.</td></tr>
+      <tr><td>Wersje z ważnością</td><td>Komponent ma wersje „od–do”. Promocja to nakładka na krótszy okres.</td><td>Zmiany cenników, promocje czasowe, reklamacje sprzed miesięcy.</td><td>Każde liczenie potrzebuje daty, „na kiedy”.</td></tr>
+      <tr><td>Strategia dodawania wersji</td><td>Odrzuć identyczne okresy, odrzuć nachodzące albo pozwól na wszystko.</td><td>Ceny regulowane: odrzuć nachodzące. Korekty: pozwól na wszystko.</td><td>Zła strategia pozwala na dwie ceny tego samego dnia.</td></tr>
+      <tr><td>Ograniczenie stosowalności</td><td>Warunek, kiedy komponent w ogóle się liczy.</td><td>Dopłata tylko dla przesyłek zagranicznych, opłata tylko dla klientów bez abonamentu.</td><td>Warunki są danymi: potrzebują testów.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Minimum na start, rozbudowa na sygnał</span>
+    <ol>
+      <li><b>Dzień pierwszy:</b> jeden komponent na pozycję rachunku, kalkulator stały albo procentowy, wynik z rozbiciem.</li>
+      <li><b>Sygnał „cena zależy od ilości”:</b> kalkulator progowy albo tabela punktów i jawna interpretacja.</li>
+      <li><b>Sygnał „VAT od sumy”, „opłata od odsetek”:</b> komponent złożony z zależnościami.</li>
+      <li><b>Sygnał „od przyszłego miesiąca drożej”, „promocja w lutym”:</b> wersje z ważnością.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Typowe błędy początkujących</span>
+    <ul>
+      <li>Jedna metoda <code>liczCene()</code> z if-ami po typie produktu. Skutek: każdy nowy produkt to zmiana kodu.</li>
+      <li>Wynik bez rozbicia. Skutek: reklamacja „dlaczego 81 zł?” wymaga programisty.</li>
+      <li>Nadpisanie ceny w cenniku zamiast nowej wersji. Skutek: nie da się przeliczyć zamówienia sprzed zmiany.</li>
+    </ul>
+  </div>
+
+  <h3 class="reveal nb-sep" data-level="2">W praktyce i w repozytorium</h3>
+
+  <p class="reveal" data-level="2">Sesja ładowania auta w scenariuszu e-mobility z repozytorium szkolenia kosztuje: energię hurtową w progach (0,60 zł/kWh za pierwsze 5 kWh, każdy kolejny próg 5 kWh droższy o 0,10 zł), opłatę sieciową 0,15 zł/kWh, opłatę operatora ładowarki 1,50 zł za sesję plus 0,25 zł/kWh i 0,10 zł/min oraz marżę dostawcy usługi 0,10 zł/kWh. Cena jest <b>drzewem komponentów</b>, a każdy komponent liczy inny kalkulator.</p>
+  <p class="reveal" data-level="2">Archetyp Pricing w repozytorium ma trzy piętra:</p>
+  <ul class="reveal" data-level="2">
     <li><b>Kalkulator</b>: czysta funkcja „parametry → kwota”. Typy: stała kwota, odsetki roczne, funkcja progowa (cena bazowa + przyrost co N jednostek), punkty dyskretne (tabela), dzienny przyrost, liniowa interpolacja w czasie, procent od bazy oraz <b>złożony</b>, który deleguje do innych kalkulatorów według zakresów parametru.</li>
     <li><b>Komponent</b>: nazwany element ceny („opłata za sesję”, „VAT”). Prosty komponent używa kalkulatora i mapuje nazwy parametrów. Złożony komponent ma dzieci i <b>zależności</b>: parametr dziecka może być wynikiem innego dziecka (<code>ValueOf</code>, <code>SumOf</code>, <code>DifferenceOf</code>, <code>ProductOf</code>). Tak VAT dostaje kwotę netto.</li>
     <li><b>Rozbicie</b> (<code>ComponentBreakdown</code>): wynik to nie jedna liczba, tylko drzewo kwot. Klient widzi „za co płaci”, a reklamacja ma na czym pracować.</li>
   </ul>
 
-  <figure class="fig wide" id="fig-calc">
+  <figure class="fig wide" id="fig-calc" data-level="2">
     <div class="ftitle">▶ Plac zabaw kalkulatorów <span>ta sama krzywa, trzy interpretacje</span></div>
     <div class="ctrl">
       <label>Kalkulator <select id="pc-type" aria-label="typ kalkulatora"><option value="step">progowy (energia)</option><option value="disc">punkty dyskretne</option><option value="comp">złożony (opłata za konto)</option></select></label>
@@ -1099,9 +1766,9 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
     <figcaption>Funkcja progowa używa parametrów z repozytorium (0,60 zł bazowo, +0,10 zł co 5 kWh) i jest tu traktowana jako cena marginalna n-tej kWh. „Złożony” odtwarza opłatę za konto zależną od wpływów (pełna opłata poniżej 1000 zł, obniżona od 1000 zł); kwoty opłat i próg 3000 zł są ilustracyjne. Punkty dyskretne (pakiety 5/10/20/40 sztuk) są wymyślone.</figcaption>
   </figure>
 
-  <p class="reveal">Najmniej oczywisty element to <b>interpretacja</b> (<code>Interpretation</code>). <code>TOTAL</code> to cena za całą ilość. <code>UNIT</code> to średnia cena jednostki. <code>MARGINAL</code> to cena n-tej konkretnej jednostki. Repozytorium ma <b>adaptery</b> między nimi, np. „marginalna → całkowita = suma marginalnych od 1 do n” albo „całkowita → marginalna = total(n) − total(n−1)”. To nie jest akademickie: taryfy progowe energii, rabaty ilościowe i cenniki „pierwsze 5 GB w abonamencie, potem 2 zł za GB” różnią się dokładnie interpretacją.</p>
+  <p class="reveal" data-level="2">Najmniej oczywisty element to <b>interpretacja</b> (<code>Interpretation</code>). <code>TOTAL</code> to cena za całą ilość. <code>UNIT</code> to średnia cena jednostki. <code>MARGINAL</code> to cena n-tej konkretnej jednostki. Repozytorium ma <b>adaptery</b> między nimi, np. „marginalna → całkowita = suma marginalnych od 1 do n” albo „całkowita → marginalna = total(n) − total(n−1)”. To nie jest akademickie: taryfy progowe energii, rabaty ilościowe i cenniki „pierwsze 5 GB w abonamencie, potem 2 zł za GB” różnią się dokładnie interpretacją.</p>
 
-  <div class="box usecase reveal"><span class="lbl">🧰 Wzorzec działania: od if-ów do konfiguracji (showcase szkolenia)</span>
+  <div class="box usecase reveal" data-level="2"><span class="lbl">🧰 Wzorzec działania: od if-ów do konfiguracji (showcase szkolenia)</span>
     <ol>
       <li><b>v1</b>: if-y w serwisie wybierają kalkulator („jeśli express, to mnożnik 1,5”).</li>
       <li><b>v2</b>: jeden „mądry” kalkulator dostaje wszystkie parametry i ma if-y w środku. Problem się tylko przeniósł.</li>
@@ -1114,14 +1781,14 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
     <p>W scenariuszu bankowym z repozytorium kredyt 100 000 zł na rok to: odsetki 5 500 zł (5,5%), prowizja 500 zł, czyli „baza kredytu” 6 000 zł. Ubezpieczenie liczy się jako 2% od tej bazy, więc 120 zł. Razem 6 120 zł. Ubezpieczenie <b>zależy</b> od wyniku dwóch innych komponentów. Zależności tworzą graf skierowany. Cykl w nim (VAT od kwoty brutto, która zawiera VAT) to błąd konfiguracji, który warto wykrywać przy zapisie, np. sortowaniem topologicznym z części o <a href="#graphs">grafach</a>. Moduł pricing w repozytorium nie robi tego jawnie.</p>
   </div>
 
-  <div class="box pencil reveal"><span class="lbl">✏️ Zaostrz ołówek</span>
+  <div class="box pencil reveal" data-level="2"><span class="lbl">✏️ Zaostrz ołówek</span>
     <p>Abonament telco: 45 zł opłat bazowych (dwa komponenty: 25 zł i 20 zł), w cenie 5 GB danych i 30 minut roamingu, każdy GB ponad limit po 2 zł, roaming ponad 30 minut po 1,50 zł/min, a VAT od sumy netto. Narysuj drzewo komponentów. Ile kosztuje miesiąc z 8 GB i 50 minutami roamingu (netto)?</p>
     <details><summary>Odpowiedź</summary>
       <p>Drzewo: Rachunek = [Bazowa A (25) + Bazowa B (20) + Nadwyżka danych (progowo, 2 zł × GB ponad 5) + Nadwyżka roamingu (1,50 zł × min ponad 30)], a VAT jest dzieckiem zależnym od sumy netto. Netto: 45 + 3 × 2 + 20 × 1,50 = 45 + 6 + 30 = 81 zł. Kwoty składowe odpowiadają scenariuszom telco z repozytorium szkolenia (tam bazowo 45 zł, nadwyżka danych 6 zł, nadwyżka roamingu 30 zł).</p>
     </details>
   </div>
 
-  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+  <div class="box bullets reveal" data-level="2"><span class="lbl">📌 W punktach</span>
     <ul>
       <li>Cena to drzewo komponentów z rozbiciem, a nie jedna liczba.</li>
       <li>Kalkulator to czysta funkcja. Komponent go nazywa i łączy z zależnościami.</li>
@@ -1187,16 +1854,85 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
   </div>
 </section>
 
-<section class="chapter" id="rules" data-level="2" data-title="Rules">
+<section class="chapter" id="rules" data-level="1" data-title="Rules">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Rules: predykat, aplikator, strażnik</h2><span class="tag">kolejność rabatów to decyzja biznesowa</span></div></div>
   <p class="reveal">Sklep ma trzy promocje: −10% dla VIP, −20% na kategorię „ogród” i −15 zł przy koszyku powyżej 200 zł. Cena bazowa 100 zł. Ile płaci VIP za grill? 100 → 90 → 72 → 57? A może −10% i −20% liczone od bazy, czyli 70 zł? A może promocje się nie łączą? Każda z tych odpowiedzi jest gdzieś na świecie poprawna. Arlow i Neustadt mają osobny archetyp <b>Rule</b>, a repozytorium szkolenia moduł <code>rules</code>. Oba z tego samego powodu: reguły zmieniają się szybciej niż reszta modelu i muszą być danymi z jawną semantyką.</p>
-  <p class="reveal">Szkielet modyfikatora oferty w repozytorium (<code>ConfigurableItemModifier</code>) ma trzy części:</p>
-  <ul class="reveal">
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Rules</b> to wyjątki i promocje zapisane jako osobne, nazwane reguły. Każda reguła mówi: <b>kiedy</b> działa (warunek), <b>co</b> zmienia (np. −10%) i <b>czego nie wolno</b> (np. zejść poniżej marży).</p>
+    <div class="kv">
+      <b>Analogia</b><span>Regulamin promocji na kartce przy kasie: „−20% na ogród, nie łączy się z kartą stałego klienta, cena nie niższa niż…”. Kasjer stosuje punkty po kolei, a paragon pokazuje każdy rabat osobno.</span>
+      <b>Rozwiązuje</b><span>if-y „jeśli VIP i ogród, ale nie w czwartek” rozsiane po kodzie, spory o kolejność rabatów, pytanie klienta „dlaczego nie dostałem zniżki?”.</span>
+      <b>Czym NIE jest</b><span>Nie jest cennikiem. Cena bazowa przychodzi z <a href="#pricing">Pricing</a>, a reguły ją modyfikują. Nie jest też ogólnym „silnikiem reguł” do wszystkiego: to model jednej rodziny decyzji z jawną kolejnością.</span>
+    </div>
+  </div>
+
+  <figure class="fig wide an-fig" id="an-rules">
+    <div class="ftitle">▶ Anatomia: Rules <span>kliknij część</span></div>
+    <div class="ctrl"></div><div class="an-grid"></div><div class="an-panel"></div><div class="status"></div>
+    <figcaption>Nazwy w nawiasach pochodzą z modułu rules repozytorium szkolenia (część o rabatach). Algebry reguł opisuje rozdział <a href="#algebra">Algebra reguł</a> (poziom 3).</figcaption>
+  </figure>
+
+  <div class="nb-when reveal">
+    <div class="yes"><h5>✅ Sięgnij, gdy</h5><ul>
+      <li>w wymaganiach są zdania „chyba że”, „nie łączy się z”, „tylko dla”;</li>
+      <li>dział marketingu chce dodawać promocje bez wdrożeń;</li>
+      <li>trzeba pokazać klientowi, która reguła dała ile;</li>
+      <li>istnieje granica, której żadna promocja nie może przekroczyć (marża, cena minimalna).</li>
+    </ul></div>
+    <div class="no"><h5>⛔ Odpuść, gdy</h5><ul>
+      <li>jest jeden rabat, który nigdy się nie zmienia. Wystarczy komponent ceny;</li>
+      <li>„reguła” to w istocie proces z krokami i decyzjami ludzi. Wtedy modeluj proces, a nie regułę.</li>
+    </ul></div>
+  </div>
+
+  <h3 class="reveal">Opcje i konfiguracje</h3>
+  <div class="scroll-x reveal">
+  <table class="mini opts">
+    <thead><tr><th>Opcja</th><th>Co robi</th><th>Kiedy wybrać</th><th>Koszt / ryzyko</th></tr></thead>
+    <tbody>
+      <tr><td>Warunek na pozycji</td><td>Sprawdza pozycję: który produkt, czy droższa niż X. Warunki łączy się przez i, lub, nie.</td><td>Promocje na kategorie, produkty, progi cenowe.</td><td>W repozytorium warunek na ilości jest tylko szkicem. Trzeba go dopisać.</td></tr>
+      <tr><td>Warunek na kliencie</td><td>Osobny warunek mówi, którzy klienci dostają regułę: status (np. VIP), staż, suma wydatków.</td><td>Programy lojalnościowe, segmenty klientów.</td><td>Dane o kliencie muszą być aktualne w chwili liczenia.</td></tr>
+      <tr><td>Zmiana: procent od bazy</td><td>Liczy procent od ceny bazowej, niezależnie od innych reguł.</td><td>Gdy rabaty mają się sumować „od ceny katalogowej”.</td><td>Kilka rabatów może dać cenę bliską zeru. Dodaj strażnika.</td></tr>
+      <tr><td>Zmiana: procent od wyniku</td><td>Liczy procent od ceny po poprzednich regułach.</td><td>Gdy rabaty mają się „składać” (−10%, potem −20% od tego).</td><td>Wynik zależy od kolejności reguł.</td></tr>
+      <tr><td>Zmiana: kwota</td><td>Odejmuje stałą kwotę od bieżącej ceny.</td><td>„−15 zł przy koszyku powyżej 200 zł”.</td><td>Kolejność względem procentów zmienia wynik.</td></tr>
+      <tr><td>Zmiana: cena stała</td><td>Ustawia cenę na podaną kwotę.</td><td>„Wszystko po 9,99 zł”.</td><td>Unieważnia wcześniejsze reguły w łańcuchu.</td></tr>
+      <tr><td>Strażnik</td><td>Odrzuca zmianę, gdy wynik jest niedopuszczalny, np. poniżej 75% ceny bazowej. Pozycja zostaje bez zmian.</td><td>Ochrona marży, ceny minimalne z umów.</td><td>Klient może nie rozumieć, czemu rabat „nie zadziałał”. Pokazuj listę zmian.</td></tr>
+      <tr><td>Łańcuch i kolejność</td><td>Reguły działają po kolei. Każda zapisuje w pozycji nazwaną zmianę.</td><td>Zawsze, gdy reguł jest więcej niż jedna.</td><td>Kolejność to decyzja biznesowa. Zapisz ją jawnie.</td></tr>
+      <tr><td>Źródło konfiguracji: kod</td><td>Reguły wpisane na stałe w klasie konfiguracji.</td><td>Mało reguł, rzadkie zmiany.</td><td>Każda zmiana to wdrożenie.</td></tr>
+      <tr><td>Źródło konfiguracji: wyliczane</td><td>Reguły tworzone z danych, np. rabat na produkty, których jest za dużo w magazynie.</td><td>Promocje sterowane stanem firmy.</td><td>Trzeba testować wynik dla różnych stanów danych.</td></tr>
+      <tr><td>Źródło konfiguracji: baza</td><td>Reguły i ich parametry zapisane jako wiersze w bazie i składane w obiekty.</td><td>Marketing zmienia promocje sam.</td><td>Potrzebne wersje i podgląd skutków przed publikacją.</td></tr>
+      <tr><td>Algebry interpretacji</td><td>To samo wyrażenie reguły daje odpowiedź „tak/nie”, „jak bardzo”, „ile punktów” albo „dlaczego”.</td><td>Lojalność, scoring, wyjaśnienia dla obsługi klienta.</td><td>Wyższy próg wejścia. Opisane na poziomie 3.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Minimum na start, rozbudowa na sygnał</span>
+    <ol>
+      <li><b>Dzień pierwszy:</b> jedna reguła = warunek + zmiana + nazwa. Każda zastosowana zmiana jest zapisana w pozycji.</li>
+      <li><b>Sygnał „promocje się łączą”:</b> łańcuch z jawną kolejnością i decyzją „od bazy” albo „od wyniku”.</li>
+      <li><b>Sygnał „nie poniżej marży”:</b> strażnik.</li>
+      <li><b>Sygnał „marketing chce sam”:</b> konfiguracja z bazy, z wersjami i podglądem.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Typowe błędy początkujących</span>
+    <ul>
+      <li>Rabaty jako if-y w metodzie liczącej cenę. Skutek: nikt nie wie, w jakiej kolejności działają.</li>
+      <li>Brak decyzji „od bazy czy od wyniku”. Skutek: ta sama promocja daje inne kwoty w sklepie i w aplikacji.</li>
+      <li>Brak listy zastosowanych zmian. Skutek: reklamacja „gdzie mój rabat?” wymaga przeglądania logów.</li>
+    </ul>
+  </div>
+
+  <h3 class="reveal nb-sep" data-level="2">W praktyce i w repozytorium</h3>
+
+  <p class="reveal" data-level="2">Szkielet modyfikatora oferty w repozytorium (<code>ConfigurableItemModifier</code>) ma trzy części:</p>
+  <ul class="reveal" data-level="2">
     <li><b>Predykat</b>: czy reguła dotyczy tej pozycji (kategoria, status klienta, ilość, „droższe niż”). Predykaty składają się przez <code>and</code>, <code>or</code> i <code>not</code>.</li>
     <li><b>Aplikator</b>: jak zmienia cenę. <code>PercentageFromBase</code> liczy procent od ceny bazowej, a <code>PercentageAccumulated</code> od ceny już zmienionej przez poprzednie reguły. Jest też stała cena.</li>
     <li><b>Strażnik</b> (<i>guardian</i>): czy wynik jest dopuszczalny. <code>MarginGuardian</code> odrzuca zmianę, jeśli cena końcowa spadłaby poniżej zadanego procentu ceny bazowej. Wtedy pozycja zostaje <b>niezmieniona</b>.</li>
   </ul>
-  <p class="reveal">Modyfikatory łączy się w łańcuch (<code>ChainOfferItemModifier</code>). Każda zastosowana zmiana zapisuje się w pozycji jako nazwana modyfikacja, więc klient i dział reklamacji widzą, która reguła ile dała.</p>
+  <p class="reveal" data-level="2">Modyfikatory łączy się w łańcuch (<code>ChainOfferItemModifier</code>). Każda zastosowana zmiana zapisuje się w pozycji jako nazwana modyfikacja, więc klient i dział reklamacji widzą, która reguła ile dała.</p>
 
   <figure class="fig wide" id="fig-rule">
     <div class="ftitle">▶ Łańcuch rabatów <span>zmieniaj kolejność i sposób liczenia, włącz strażnika marży</span></div>
@@ -1213,7 +1949,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
     <figcaption>Promocje i kwoty są ilustracyjne. Mechanika (predykat, aplikator „od bazy” lub „od wyniku”, strażnik, który zostawia pozycję bez zmian) odpowiada modułowi rules z repozytorium szkolenia.</figcaption>
   </figure>
 
-  <div class="box fireside reveal"><span class="lbl">🔥 Rozmowa przy kominku</span>
+  <div class="box fireside reveal" data-level="2"><span class="lbl">🔥 Rozmowa przy kominku</span>
     <div class="fire">
       <div class="line l1"><span class="who">Marketing</span><span>Chcę, żeby promocje się sumowały. Klienci to lubią.</span></div>
       <div class="line l2"><span class="who">Strażnik marży</span><span>Sumuj, ile chcesz. Ale jeśli wynik zejdzie poniżej 75% ceny bazowej, ta zmiana się nie stanie. Pozycja zostanie, jaka była przed tą regułą.</span></div>
@@ -1222,7 +1958,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
     </div>
   </div>
 
-  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+  <div class="box bullets reveal" data-level="2"><span class="lbl">📌 W punktach</span>
     <ul>
       <li>Reguła = predykat (czy dotyczy) + aplikator (jak zmienia) + strażnik (czy wynik dopuszczalny).</li>
       <li>„Procent od bazy” i „procent od wyniku” dają różne ceny. To decyzja biznesowa, a nie szczegół.</li>
@@ -1277,17 +2013,73 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
 <section class="chapter" id="inventory" data-level="1" data-title="Inventory i dostępność">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Inventory: trzy rodzaje dostępności</h2><span class="tag">rezonans, zbiornik i pokój hotelowy</span></div></div>
-  <p class="reveal">Scenariusze repozytorium szkolenia pokazują trzy zupełnie różne „czy jest wolne?”. Radiologia rezerwuje <b>rezonans magnetyczny</b>: jest jeden, albo wolny, albo zajęty. Firmy flotowe rezerwują <b>paliwo ze zbiornika</b> 10 000 litrów: każda bierze ile chce, dopóki starcza. Gość rezerwuje <b>pokój 101 na noc 15 czerwca</b>: ten sam pokój jest wolny 14 i 16 czerwca. Trzy modele, jeden archetyp:</p>
+  <p class="reveal">Scenariusze repozytorium szkolenia pokazują trzy zupełnie różne „czy jest wolne?”. Radiologia rezerwuje <b>rezonans magnetyczny</b>: jest jeden, albo wolny, albo zajęty. Firmy flotowe rezerwują <b>paliwo ze zbiornika</b> 10 000 litrów: każda bierze ile chce, dopóki starcza. Gość rezerwuje <b>pokój 101 na noc 15 czerwca</b>: ten sam pokój jest wolny 14 i 16 czerwca. Trzy modele dostępności, jeden archetyp.</p>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Inventory</b> odpowiada na pytanie „czy jest wolne?”. Wie, jakie zasoby istnieją, ile ich jest i <b>kto, na ile i na jak długo</b> je zablokował.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Recepcja hotelu z tablicą kluczy i grafikiem pokoi. Recepcjonista nie wie, ile kosztuje pobyt, ale wie, który pokój jest wolny w którą noc i dla kogo jest odłożony.</span>
+      <b>Rozwiązuje</b><span>sprzedaż tego samego miejsca dwóm osobom, porzucone koszyki blokujące towar, rezerwacje „wszystko albo nic” (pokój na trzy noce, sala z zespołem), kolejki chętnych.</span>
+      <b>Czym NIE jest</b><span>Nie jest katalogiem produktów (<a href="#product">Product</a>) ani zamówieniem (<a href="#ordering">Ordering</a>). Nie liczy cen. Nie jest też księgowością magazynową: wartość zapasów to <a href="#accounting">Accounting</a>.</span>
+    </div>
+  </div>
+
+  <figure class="fig wide an-fig" id="an-inventory">
+    <div class="ftitle">▶ Anatomia: Inventory <span>kliknij część</span></div>
+    <div class="ctrl"></div><div class="an-grid"></div><div class="an-panel"></div><div class="status"></div>
+    <figcaption>Nazwy w nawiasach pochodzą z repozytorium szkolenia. Blokady, rezerwacje i listy oczekujących opisuje szerzej rozdział <a href="#locks">Blokady i kolejki</a> (poziom 3).</figcaption>
+  </figure>
+
+  <div class="nb-when reveal">
+    <div class="yes"><h5>✅ Sięgnij, gdy</h5><ul>
+      <li>dwie osoby mogą chcieć tego samego naraz (miejsce, termin, urządzenie, towar);</li>
+      <li>coś trzeba „odłożyć” na chwilę: koszyk, rezerwacja wstępna, przedsprzedaż;</li>
+      <li>zasób jest dostępny w czasie: pokój na noc, gabinet na godzinę, auto na dzień;</li>
+      <li>kilka zasobów trzeba zarezerwować razem albo wcale.</li>
+    </ul></div>
+    <div class="no"><h5>⛔ Odpuść, gdy</h5><ul>
+      <li>zasób jest praktycznie nieograniczony (pliki do pobrania, licencje bez limitu);</li>
+      <li>jedyne pytanie to „ile mamy na stanie?” bez rezerwacji i bez konkurencji o zasób. Wystarczy saldo ilości.</li>
+    </ul></div>
+  </div>
+
+  <h3 class="reveal">Opcje i konfiguracje</h3>
   <div class="scroll-x reveal">
-  <table class="mini">
-    <thead><tr><th>Model</th><th>Zasób</th><th>Blokada</th><th>Przykłady z repozytorium i z życia</th></tr></thead>
+  <table class="mini opts">
+    <thead><tr><th>Opcja</th><th>Co robi</th><th>Kiedy wybrać</th><th>Koszt / ryzyko</th></tr></thead>
     <tbody>
-      <tr><td><b>Individual</b></td><td>konkretny egzemplarz</td><td>całego egzemplarza</td><td>rezonans, auto zastępcze o numerze VIN, laptop z wypożyczalni</td></tr>
-      <tr><td><b>Pool</b></td><td>pula o pojemności (Quantity)</td><td>części puli</td><td>paliwo w zbiorniku, miejsca na parkingu bez numeracji, limit wejściówek</td></tr>
-      <tr><td><b>Temporal</b></td><td>zasób w przedziale czasu (<code>TimeSlot</code>)</td><td>slotu</td><td>noc w pokoju hotelowym, wizyta 9:00–9:30 u dr. Kowalskiego, sala operacyjna</td></tr>
+      <tr><td>Dostępność indywidualna</td><td>Jeden konkretny zasób: wolny albo zajęty w całości.</td><td>Rezonans, auto o numerze VIN, laptop z wypożyczalni.</td><td>Niski.</td></tr>
+      <tr><td>Pula</td><td>Zasób o pojemności (ilość). Każdy bierze część, dopóki starcza.</td><td>Paliwo w zbiorniku, miejsca bez numerów, limit wejściówek.</td><td>Nie wiadomo, „która” część jest czyja. Gdy to ważne, wybierz indywidualną.</td></tr>
+      <tr><td>Dostępność w czasie</td><td>Zasób w przedziale czasu (slocie). Ten sam pokój jest wolny 14 i zajęty 15 czerwca.</td><td>Hotele, wizyty, sale, sprzęt na godziny.</td><td>Trzeba ustalić długość slotów i strefę czasową.</td></tr>
+      <tr><td>Grupa slotów</td><td>Rezerwacja kilku slotów naraz: wszystkie albo żaden.</td><td>Pobyt na kilka nocy, cykl zabiegów.</td><td>Większa szansa odmowy. Warto podpowiadać inne terminy.</td></tr>
+      <tr><td>Zasób złożony</td><td>Kilka różnych zasobów blokowanych razem. Gdy jeden się nie uda, reszta jest zwalniana.</td><td>Sala operacyjna z anestezjologiem i aparatem.</td><td>Trudniej znaleźć termin wspólny dla wszystkich składników.</td></tr>
+      <tr><td>Blokada bezterminowa</td><td>Zajęcie trwa, dopóki ktoś go nie zwolni.</td><td>Ostateczny przydział po opłaceniu.</td><td>Zapomniana blokada to zasób stracony na zawsze.</td></tr>
+      <tr><td>Blokada czasowa</td><td>Zajęcie wygasa samo po zadanym czasie.</td><td>Koszyk, rezerwacja wstępna, „trzymamy dla Ciebie 15 minut”.</td><td>Ktoś musi regularnie zwalniać wygasłe blokady.</td></tr>
+      <tr><td>Cel rezerwacji</td><td>Rezerwacja (<code>BOOKING</code>), przydział (<code>ALLOCATION</code>), odłożenie (<code>HOLD</code>), blokada chwilowa (<code>TEMPORARY_LOCK</code>).</td><td>Gdy różne cele mają różne reguły i raporty.</td><td>Niski.</td></tr>
+      <tr><td>Status rezerwacji</td><td>Oczekująca, potwierdzona, anulowana, wygasła, zrealizowana.</td><td>Każda rezerwacja z cyklem życia.</td><td>Przejścia między statusami trzeba pilnować.</td></tr>
+      <tr><td>Lista oczekujących</td><td>Kolejka chętnych z pojemnością i polityką: kolejność zgłoszeń, priorytet, kwoty dla grup, „kogo da się obsłużyć”.</td><td>Przedsprzedaż, zapisy, szczepienia, miejsca w przedszkolu.</td><td>Polityka bywa regulowana prawem. Zapisz ją w modelu.</td></tr>
     </tbody>
   </table>
   </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Minimum na start, rozbudowa na sygnał</span>
+    <ol>
+      <li><b>Dzień pierwszy:</b> jeden model dostępności (indywidualna, pula albo czas), blokada z właścicielem, operacje zablokuj i zwolnij.</li>
+      <li><b>Sygnał „koszyk”, „trzymamy przez 15 minut”:</b> blokady czasowe i regularne zwalnianie wygasłych.</li>
+      <li><b>Sygnał „kilka nocy”, „razem z zespołem”:</b> grupy slotów i zasoby złożone.</li>
+      <li><b>Sygnał „zapisz mnie, jak się zwolni”:</b> lista oczekujących z polityką.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Typowe błędy początkujących</span>
+    <ul>
+      <li>Kolumna <code>zajety = true</code>. Skutek: nie wiadomo, kto zajął, do kiedy i czy to jeszcze aktualne.</li>
+      <li>Sprawdzenie „czy wolne” i zapis rezerwacji w dwóch krokach bez blokady. Skutek: dwie osoby dostają to samo miejsce.</li>
+      <li>Rezerwacja wielu nocy jako osobne rezerwacje. Skutek: klient dostaje dwie noce z trzech.</li>
+    </ul>
+  </div>
+
+  <h3 class="reveal nb-sep">W praktyce i w repozytorium</h3>
   <p class="reveal">W repozytorium wszystkie trzy implementują wspólny interfejs <code>ResourceAvailability</code>: <code>lock</code>, <code>unlock</code>, <code>isAvailable</code>, <code>availableQuantity</code> i <code>releaseExpired</code>. Wpis magazynowy (<code>InventoryEntry</code>) łączy produkt z jego egzemplarzami, a egzemplarze z zasobami, których dostępność się śledzi. Inventory nie trzyma zamówień i cen. Wie tylko, <b>co, ile i kiedy jest zablokowane i przez kogo</b>.</p>
 
   <figure class="fig wide" id="fig-avail">
@@ -1332,6 +2124,16 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
 <section class="chapter" id="locks" data-level="3" data-title="Blokady i kolejki">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Blokady, wygasanie i lista oczekujących</h2><span class="tag">kto dostaje zwolnione miejsce?</span></div></div>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Blokada</b> to zajęcie zasobu przez konkretnego właściciela, na zawsze albo na określony czas. <b>Rezerwacja</b> grupuje blokady i ma cel oraz status. <b>Lista oczekujących</b> decyduje, kto dostaje zwolnione miejsce.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Bilet w kasie kina trzymany przez 15 minut na Twoje nazwisko. Jeśli nie odbierzesz, wraca do puli, a kasjer bierze następną osobę z listy.</span>
+      <b>Rozwiązuje</b><span>porzucone koszyki, które blokują towar, rezerwacje „na zawsze”, spory o to, kto powinien dostać zwolnione miejsce.</span>
+      <b>Czym NIE jest</b><span>Nie jest flagą „zajęte”. Blokada zawsze wie, czyja jest i do kiedy obowiązuje.</span>
+    </div>
+  </div>
+
   <p class="reveal">Szczepienia w 2021 roku, przedsprzedaż biletów na koncert, wolne miejsca w przedszkolu: zasób się zwalnia, a chętnych jest wielu. „Kto pierwszy, ten lepszy” to tylko jedna z polityk. Repozytorium szkolenia rozbiera ten problem na części:</p>
   <ul class="reveal">
     <li><b>Blokada</b> (<code>Blockade</code>) ma właściciela (<code>OwnerId</code>), chwilę założenia i <b>czas trwania</b> (<code>LockDuration</code>): bezterminowy albo czasowy. Blokada czasowa sama wygasa, a <code>releaseExpired()</code> zwalnia przeterminowane.</li>
@@ -1381,6 +2183,74 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 <section class="chapter" id="ordering" data-level="1" data-title="Ordering">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Ordering: cykl życia i role w zamówieniu</h2><span class="tag">kto zamawia, kto płaci, kto odbiera</span></div></div>
   <p class="reveal">Zamówienie korporacyjne: dział zakupów centrali <b>zamawia</b>, księgowość spółki zależnej <b>płaci</b>, a towar trafia do trzech oddziałów, każdy z <b>innym odbiorcą</b> i <b>inną osobą do kontaktu przy dostawie</b>. Jedna linia jest do odbioru osobistego przez upoważnionego kierowcę. Model „zamówienie ma klienta i adres” tego nie udźwignie. Scenariusze repozytorium szkolenia (zamówienia korporacyjne, różni odbiorcy na liniach) testują dokładnie takie przypadki.</p>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Ordering</b> modeluje zlecenie: <b>kto</b> zamawia, płaci, odbiera i wykonuje, <b>co</b> jest zamówione (linie), <b>za ile</b> (wycena każdej linii) i <b>w jakim stanie</b> jest całość.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Kartka zamówienia w restauracji. Stolik zamawia, jedna osoba płaci za wszystkich, każde danie trafia do innej osoby, a kuchnia odhacza, co już wydała.</span>
+      <b>Rozwiązuje</b><span>„zamówienie ma jednego klienta i jeden adres”, zmiany po zatwierdzeniu bez kontroli, ceny ręczne bez śladu, zamówienia zawieszone po nieudanej płatności.</span>
+      <b>Czym NIE jest</b><span>Nie jest fakturą, płatnością ani wysyłką. To osobne byty, z którymi zamówienie rozmawia przez porty. Nie przechowuje też „żywych” danych klienta, tylko ich migawkę.</span>
+    </div>
+  </div>
+
+  <figure class="fig wide an-fig" id="an-ordering">
+    <div class="ftitle">▶ Anatomia: Ordering <span>kliknij część</span></div>
+    <div class="ctrl"></div><div class="an-grid"></div><div class="an-panel"></div><div class="status"></div>
+    <figcaption>Nazwy w nawiasach pochodzą z repozytorium szkolenia. Porty to interfejsy, przez które zamówienie prosi inne moduły o alokację, płatność, realizację i wycenę.</figcaption>
+  </figure>
+
+  <div class="nb-when reveal">
+    <div class="yes"><h5>✅ Sięgnij, gdy</h5><ul>
+      <li>zamawia ktoś inny niż płaci albo odbiera;</li>
+      <li>zamówienie ma stany i reguły, co wolno zmienić w którym stanie;</li>
+      <li>linie mają różnych odbiorców, terminy lub sposoby realizacji;</li>
+      <li>zatwierdzenie uruchamia kilka kroków: rezerwację, płatność, realizację.</li>
+    </ul></div>
+    <div class="no"><h5>⛔ Odpuść, gdy</h5><ul>
+      <li>„zamówienie” to natychmiastowa sprzedaż przy kasie bez stanów pośrednich. Wystarczy paragon i zapis w Accounting;</li>
+      <li>zamówieniami zarządza zewnętrzna platforma, a Ty dostajesz tylko gotowe zlecenia do realizacji.</li>
+    </ul></div>
+  </div>
+
+  <h3 class="reveal">Opcje i konfiguracje</h3>
+  <div class="scroll-x reveal">
+  <table class="mini opts">
+    <thead><tr><th>Opcja</th><th>Co robi</th><th>Kiedy wybrać</th><th>Koszt / ryzyko</th></tr></thead>
+    <tbody>
+      <tr><td>Role w zamówieniu</td><td>Sześć ról: zamawiający, płatnik, odbiorca, wykonawca, kontakt przy dostawie, osoba upoważniona do odbioru.</td><td>Zamówienia firmowe, dostawy do wielu miejsc, odbiór osobisty.</td><td>Każda rola to migawka danych strony, którą trzeba aktualizować świadomie.</td></tr>
+      <tr><td>Polityka ról zamówienia</td><td>Ilu może być zamawiających, płatników i odbiorców na całe zamówienie.</td><td>Zawsze. W repozytorium: jeden zamawiający, jeden wykonawca, najwyżej jeden płatnik.</td><td>Płatność „po równo przez kilku” wymaga zmiany polityki albo osobnych zamówień.</td></tr>
+      <tr><td>Polityka ról linii</td><td>Które role wolno przypiąć do pojedynczej linii.</td><td>Różni odbiorcy i osoby kontaktowe per linia.</td><td>Reguły na dwóch poziomach trzeba testować razem.</td></tr>
+      <tr><td>Migawki stron</td><td>Zamówienie zapisuje identyfikator i kopię danych strony z chwili złożenia.</td><td>Zawsze. Dokument ma pokazywać dane z dnia złożenia.</td><td>Migawki trzeba objąć polityką retencji danych osobowych.</td></tr>
+      <tr><td>Wycena linii: brak</td><td>Linia jeszcze nie ma ceny.</td><td>Szkic zamówienia, zapytanie ofertowe.</td><td>Nie wolno zatwierdzić bez ceny ostatecznej.</td></tr>
+      <tr><td>Wycena linii: wstępna</td><td>Cena orientacyjna, nieostateczna.</td><td>B2B, kursy walut, dostępność do potwierdzenia.</td><td>Klient może traktować ją jak obietnicę.</td></tr>
+      <tr><td>Wycena linii: wyliczona</td><td>Cena z kalkulatora z rozbiciem. Ostateczna.</td><td>Standardowa sprzedaż.</td><td>Niski.</td></tr>
+      <tr><td>Wycena linii: ręczna</td><td>Cena wpisana przez człowieka, z polem na powód. Ostateczna.</td><td>Negocjacje, wyjątki handlowe.</td><td>Powód trzeba wymusić. Repozytorium go nie waliduje.</td></tr>
+      <tr><td>Stany zamówienia</td><td>Szkic, zatwierdzone, oczekujące na alokację, w realizacji, zrealizowane, zamknięte, anulowane. W repozytorium dwa z nich (oczekujące na alokację i zamknięte) są w słowniku stanów, ale zamówienie jeszcze do nich nie przechodzi.</td><td>Zawsze.</td><td>Każde przejście potrzebuje reguły, co wolno w danym stanie.</td></tr>
+      <tr><td>Porty do innych modułów</td><td>Magazyn, płatności, realizacja, wycena, fakturowanie jako interfejsy.</td><td>Gdy zatwierdzenie dotyka innych archetypów.</td><td>Porażka w połowie wymaga kompensacji.</td></tr>
+      <tr><td>Kompensacja albo blokady czasowe</td><td>Cofnięcie wcześniejszych kroków, gdy późniejszy się nie uda, albo blokady, które same wygasną.</td><td>Płatność kartą po rezerwacji towaru.</td><td>Bez tego odrzucone płatności „zjadają” stan magazynu.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Minimum na start, rozbudowa na sygnał</span>
+    <ol>
+      <li><b>Dzień pierwszy:</b> zamawiający jako migawka, linie z produktem i ilością, wycena wyliczona, stany szkic → zatwierdzone → zrealizowane.</li>
+      <li><b>Sygnał „płaci kto inny”, „dostawa do oddziałów”:</b> role na zamówieniu i liniach z politykami.</li>
+      <li><b>Sygnał „cena do negocjacji”:</b> wyceny wstępne i ręczne z powodem.</li>
+      <li><b>Sygnał „płatność się nie udała”:</b> kompensacja albo blokady czasowe w Inventory.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Typowe błędy początkujących</span>
+    <ul>
+      <li>Referencja do klienta zamiast migawki. Skutek: stare zamówienie nagle pokazuje nowy adres.</li>
+      <li>Status jako dowolny tekst. Skutek: „wysłane”, „Wysłane” i „w drodze” w jednym raporcie.</li>
+      <li>Faktury, płatności i wysyłki jako pola zamówienia. Skutek: druga rata albo druga paczka wymaga przebudowy.</li>
+    </ul>
+  </div>
+
+  <h3 class="reveal nb-sep">W praktyce i w repozytorium</h3>
+
   <p class="reveal">Szkielet z repozytorium:</p>
   <ul class="reveal">
     <li><b>Strony w zamówieniu</b> (<code>PartyInOrder</code>): migawka Party (identyfikator, nazwa, kontakt) + <b>rola w zamówieniu</b>: <code>ORDERER</code>, <code>PAYER</code>, <code>RECEIVER</code>, <code>EXECUTOR</code>, <code>DELIVERY_CONTACT</code>, <code>PICKUP_AUTHORIZED</code>.</li>
@@ -1441,6 +2311,73 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 <section class="chapter" id="accounting" data-level="1" data-title="Accounting">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Accounting: konta, zapisy, transakcje</h2><span class="tag">saldo się liczy, nie zapisuje</span></div></div>
   <p class="reveal">Luca Pacioli opisał podwójny zapis w 1494 roku. Od tamtej pory działa ta sama zasada: <b>nie nadpisujesz salda, tylko dopisujesz zapisy</b>, a każda operacja ma dwie strony, które się równoważą. Ten archetyp nie dotyczy tylko działu księgowości. Działa wszędzie, gdzie jest saldo: punkty lojalnościowe, minuty w abonamencie, limit karty flotowej, portfel w aplikacji, kaucje, środki pobrania u kuriera. Fowler w <i>Analysis Patterns</i> łączy go z magazynem w jednym rozdziale („Inventory and Accounting”), bo konto może trzymać ilość czegokolwiek, nie tylko pieniądze.</p>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Accounting</b> modeluje wszystko, co ma <b>saldo</b>. Saldo nie jest polem, które się nadpisuje. To suma <b>niezmiennych zapisów</b> na koncie, a każda operacja (transakcja) przenosi wartość między kontami tak, że nic nie ginie i nic nie powstaje z niczego.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Wyciąg z konta bankowego. Bank nie „poprawia salda”. Dopisuje wpływy i obciążenia, a błędny przelew cofa kolejnym zapisem, który też widać na wyciągu.</span>
+      <b>Rozwiązuje</b><span>„skąd wzięło się to saldo?”, znikające punkty i bonusy, limity, które się nie zgadzają, korekty, które niszczą historię, salda „na dzień”.</span>
+      <b>Czym NIE jest</b><span>Nie jest tylko programem księgowym firmy. Ten sam szkielet obsługuje punkty lojalnościowe, minuty w abonamencie, limity kart i portfele w aplikacji.</span>
+    </div>
+  </div>
+
+  <figure class="fig wide an-fig" id="an-accounting">
+    <div class="ftitle">▶ Anatomia: Accounting <span>kliknij część</span></div>
+    <div class="ctrl"></div><div class="an-grid"></div><div class="an-panel"></div><div class="status"></div>
+    <figcaption>Nazwy w nawiasach pochodzą z repozytorium szkolenia. Reguły księgowania i czas w księgowości mają osobne rozdziały na poziomie 3: <a href="#posting">Posting rules</a> i <a href="#acctime">Czas w księgowości</a>.</figcaption>
+  </figure>
+
+  <div class="nb-when reveal">
+    <div class="yes"><h5>✅ Sięgnij, gdy</h5><ul>
+      <li>w wymaganiach jest „saldo”, „limit”, „punkty”, „portfel”, „do wykorzystania”;</li>
+      <li>trzeba udowodnić, skąd się wzięła kwota (spory, audyt, reklamacje);</li>
+      <li>wartości wygasają albo mają datę obowiązywania;</li>
+      <li>jedna operacja zmienia kilka sald naraz (wpłata dzielona na kapitał, odsetki i opłaty).</li>
+    </ul></div>
+    <div class="no"><h5>⛔ Odpuść, gdy</h5><ul>
+      <li>liczba to tylko licznik bez znaczenia finansowego i bez sporów (np. liczba wyświetleń);</li>
+      <li>salda prowadzi zewnętrzny system (bank, ERP), a Ty tylko je wyświetlasz.</li>
+    </ul></div>
+  </div>
+
+  <h3 class="reveal">Opcje i konfiguracje</h3>
+  <div class="scroll-x reveal">
+  <table class="mini opts">
+    <thead><tr><th>Opcja</th><th>Co robi</th><th>Kiedy wybrać</th><th>Koszt / ryzyko</th></tr></thead>
+    <tbody>
+      <tr><td>Konta bilansowe</td><td>Aktywa, zobowiązania, przychody, koszty. Transakcja na nich zawsze sumuje się do zera.</td><td>Pieniądze firmy i klientów.</td><td>Trzeba dobrać typ konta. Pieniądze klienta to zobowiązanie, a nie przychód.</td></tr>
+      <tr><td>Konta pozabilansowe</td><td>Konta poza zasadą „suma zero”.</td><td>Limity, bonusy, punkty, ewidencje pomocnicze.</td><td>Łatwo pomylić z bilansowymi. Nazwij je jasno.</td></tr>
+      <tr><td>Typy transakcji</td><td>Otwarcie, przeniesienie, odwrócenie, przealokowanie, kompensacja wygaśnięcia albo własny typ.</td><td>Zawsze. Typ odpowiada na pytanie „co to była za operacja?”.</td><td>Niski.</td></tr>
+      <tr><td>Dwie daty zapisu</td><td>Kiedy zapis zarejestrowano i od kiedy obowiązuje.</td><td>Wpłaty z datą wsteczną, operacje z przyszłą datą, salda „na dzień”.</td><td>Każde pytanie o saldo musi mówić „na kiedy”.</td></tr>
+      <tr><td>Ważność zapisu</td><td>Zapis obowiązuje do daty. Po niej niewykorzystana reszta jest jawnie przenoszona transakcją kompensującą.</td><td>Bonusy, punkty, vouchery, limity okresowe.</td><td>Ktoś musi regularnie uruchamiać wygaszanie.</td></tr>
+      <tr><td>Kolejność zużycia</td><td>Najstarsze najpierw (FIFO), najnowsze najpierw (LIFO) albo wskazane ręcznie.</td><td>Gdy zapisy mają różne daty ważności albo różne źródła.</td><td>Zmiana kolejności zmienia, co wygaśnie.</td></tr>
+      <tr><td>Reguły księgowania</td><td>Zapis na koncie automatycznie tworzy kolejne zapisy: podatek, prowizję, bonus. Reguły mają warunek, sposób liczenia i priorytet.</td><td>Powtarzalne skutki operacji, które biznes chce zmieniać bez wdrożeń.</td><td>Reguła może wywołać samą siebie. Sprawdzaj cykle.</td></tr>
+      <tr><td>Konta-projekcje</td><td>Konto „wirtualne” z filtrem na zapisach, bez własnych zapisów.</td><td>Raporty przekrojowe: przychody z jednego regionu, opłaty jednego segmentu.</td><td>Wydajność filtra przy dużej liczbie zapisów.</td></tr>
+      <tr><td>Korekty</td><td>Odwrócenie, czyli transakcja typu <code>reversal</code> z repozytorium, a w razie potrzeby po nim nowa, poprawna transakcja. Poza repozytorium: korekta różnicowa (Fowler) oraz storno czerwone lub czarne (polska praktyka księgowa).</td><td>Każdy błąd w zaksięgowanej operacji.</td><td>Nigdy edycja zapisu. Wybór rodzaju korekty bywa wymogiem prawa.</td></tr>
+      <tr><td>Migawka salda</td><td>Saldo zapamiętane na dzień i dalej liczone od migawki. To opcja projektowa spoza repozytorium.</td><td>Miliony zapisów na koncie.</td><td>Migawka to pamięć podręczna. Źródłem prawdy są zapisy.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Minimum na start, rozbudowa na sygnał</span>
+    <ol>
+      <li><b>Dzień pierwszy:</b> konta z typem, niezmienne zapisy, transakcja sumująca się do zera, saldo liczone z zapisów, korekta przez odwrócenie.</li>
+      <li><b>Sygnał „limit”, „bonus”:</b> konta pozabilansowe.</li>
+      <li><b>Sygnał „wygasa”, „na dzień”:</b> dwie daty, ważność zapisu i kompensacja wygaśnięcia.</li>
+      <li><b>Sygnał „zawsze, gdy wpłynie…, nalicz…”:</b> reguły księgowania.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Typowe błędy początkujących</span>
+    <ul>
+      <li>Kolumna <code>saldo</code> aktualizowana przy każdej operacji. Skutek: przy pierwszym sporze nie da się pokazać, skąd się wzięła kwota.</li>
+      <li>Edycja błędnego zapisu. Skutek: raport z wczoraj i raport z dziś pokazują różne liczby bez śladu dlaczego.</li>
+      <li>Pieniądze klienta (pobranie, kaucja) na koncie przychodu. Skutek: zawyżony przychód i podatek od cudzych pieniędzy.</li>
+    </ul>
+  </div>
+
+  <h3 class="reveal nb-sep">W praktyce i w repozytorium</h3>
+
   <p class="reveal">Szkielet z repozytorium szkolenia:</p>
   <ul class="reveal">
     <li><b>Konto</b> (<code>Account</code>) ma typ: <code>ASSET</code>, <code>LIABILITY</code>, <code>REVENUE</code>, <code>EXPENSE</code> (bilansowe, w podwójnym zapisie) albo <code>OFF_BALANCE</code> (pozabilansowe, poza podwójnym zapisem: bonusy, limity, ewidencje pomocnicze).</li>
@@ -1590,6 +2527,72 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
 <section class="chapter" id="sched" data-level="1" data-title="Scheduling">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Scheduling: pod spodem zawsze graf</h2><span class="tag">kolejność, cykle, ścieżka krytyczna</span></div></div>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Scheduling</b> układa kroki w czasie na podstawie <b>zależności</b> między nimi („tynki po instalacjach”). Zależności tworzą graf, a daty startu i końca są <b>wynikiem</b> liczenia, a nie ręcznie wpisanymi polami.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Gotowanie obiadu. Ziemniaki muszą się ugotować, zanim zrobisz puree. Sos możesz robić w tym czasie. Gdy ziemniaki gotują się dłużej, wiesz od razu, co się przesunie.</span>
+      <b>Rozwiązuje</b><span>ręczne przesuwanie dat po każdym opóźnieniu, zależności w kółko („A po B, B po A”), pytanie „co jest krytyczne?”, planowanie zadań, które się wykluczają.</span>
+      <b>Czym NIE jest</b><span>Nie jest wykresem Gantta: Gantt to tylko widok wyniku. Nie jest też kalendarzem rezerwacji. To, czy sala jest wolna, wie <a href="#inventory">Inventory</a>.</span>
+    </div>
+  </div>
+
+  <figure class="fig wide an-fig" id="an-sched">
+    <div class="ftitle">▶ Anatomia: Scheduling <span>kliknij część</span></div>
+    <div class="ctrl"></div><div class="an-grid"></div><div class="an-panel"></div><div class="status"></div>
+    <figcaption>Nazwy w nawiasach pochodzą z modułu graphs repozytorium szkolenia. Moduł graphs liczy kolejność (porządek topologiczny), a gdy w grafie jest cykl, zgłasza błąd. Ma też osobne wyszukiwanie cyklu (<code>findFirstCycle</code>). Czasy trwania, daty, typy SS/FF/SF, zwłoki i ścieżkę krytyczną (klasyczna metoda CPM) dopisujesz sam.</figcaption>
+  </figure>
+
+  <div class="nb-when reveal">
+    <div class="yes"><h5>✅ Sięgnij, gdy</h5><ul>
+      <li>w wymaganiach jest „nie wcześniej niż”, „po zakończeniu”, „równolegle z”;</li>
+      <li>opóźnienie jednego kroku ma przesuwać kolejne;</li>
+      <li>trzeba wiedzieć, które kroki są krytyczne, a które mają zapas;</li>
+      <li>kroki się wykluczają (ta sama sala, ta sama ekipa) albo na siebie wpływają.</li>
+    </ul></div>
+    <div class="no"><h5>⛔ Odpuść, gdy</h5><ul>
+      <li>kroki nie zależą od siebie, liczy się tylko termin każdego z nich;</li>
+      <li>kolejność jest zawsze ta sama i zapisana w procesie (np. stałe etapy obsługi zgłoszenia).</li>
+    </ul></div>
+  </div>
+
+  <h3 class="reveal">Opcje i konfiguracje</h3>
+  <div class="scroll-x reveal">
+  <table class="mini opts">
+    <thead><tr><th>Opcja</th><th>Co robi</th><th>Kiedy wybrać</th><th>Koszt / ryzyko</th></tr></thead>
+    <tbody>
+      <tr><td>Graf zależności</td><td>Kroki to wierzchołki, zależności to krawędzie. Kolejność wynika z porządku topologicznego.</td><td>Zawsze, gdy kroki zależą od siebie.</td><td>Niski.</td></tr>
+      <tr><td>Typ zależności: koniec–start (FS)</td><td>B zaczyna się po końcu A.</td><td>Najczęstszy przypadek.</td><td>Niski.</td></tr>
+      <tr><td>Typy SS, FF, SF (poza repozytorium)</td><td>Start–start, koniec–koniec, start–koniec.</td><td>Prace równoległe z przesunięciem, odbiory, zmiany wart.</td><td>Trudniejsze do wyjaśnienia użytkownikom.</td></tr>
+      <tr><td>Zwłoka, lag (poza repozytorium)</td><td>Wymagany odstęp na zależności, np. 28 dni dojrzewania betonu.</td><td>Czasy technologiczne, okresy oczekiwania.</td><td>Trzeba ustalić, czy zwłoka liczy się w dniach kalendarzowych, czy roboczych.</td></tr>
+      <tr><td>Wykrywanie cykli</td><td>Odrzuca zależność, która tworzy pętlę.</td><td>Zawsze, gdy zależności wpisują ludzie lub integracje.</td><td>Sprawdzaj przy zapisie, a nie przy liczeniu.</td></tr>
+      <tr><td>Ścieżka krytyczna i zapas</td><td>Najdłuższa ścieżka wyznacza koniec. Zapas mówi, o ile krok może się spóźnić.</td><td>Projekty, budowy, wdrożenia.</td><td>Wymaga czasów trwania kroków.</td></tr>
+      <tr><td>Kolorowanie konfliktów</td><td>Kroki, które się wykluczają, dostają różne „kolory” (sale, ekipy, środowiska).</td><td>Planowanie egzaminów, środowisk testowych.</td><td>Szybki algorytm daje górną granicę, a nie zawsze minimum.</td></tr>
+      <tr><td>Składowe i punkty artykulacji</td><td>Grupy elementów, które na siebie wpływają, i elementy, które je łączą.</td><td>Analiza wpływu zmian w rezerwacjach.</td><td>Poziom 3.</td></tr>
+      <tr><td>Cykl zamian</td><td>Wykrywa łańcuch „A chce slotu B, B slotu C, C slotu A” i wykonuje go paczką.</td><td>Zamiany terminów, wymiany.</td><td>Cała paczka musi być jedną transakcją.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Minimum na start, rozbudowa na sygnał</span>
+    <ol>
+      <li><b>Dzień pierwszy:</b> kroki z czasem trwania, zależności koniec–start, wykrywanie cykli przy zapisie, daty liczone z grafu.</li>
+      <li><b>Sygnał „równolegle, ale z przesunięciem”:</b> typy SS i FF oraz zwłoka.</li>
+      <li><b>Sygnał „co nam opóźni koniec?”:</b> ścieżka krytyczna i zapas.</li>
+      <li><b>Sygnał „nie mogą iść naraz”:</b> graf konfliktów i kolorowanie.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Typowe błędy początkujących</span>
+    <ul>
+      <li>Daty startu i końca jako jedyne dane. Skutek: każde opóźnienie to ręczne przesuwanie wszystkiego.</li>
+      <li>Brak sprawdzania cykli. Skutek: harmonogram „liczy się w nieskończoność” albo pokazuje bzdury.</li>
+      <li>Mylenie harmonogramu z dostępnością. Skutek: plan zakłada salę, która jest zajęta.</li>
+    </ul>
+  </div>
+
+  <h3 class="reveal nb-sep">W praktyce i w repozytorium</h3>
+
   <p class="reveal">Strona szkolenia: „Tworzysz złożony harmonogram. […] Pod spodem to zawsze graf zależności”. Przykłady stamtąd to planowanie zadań na budowie i ścieżka nauki nowej technologii, a domeny to logistyka, edukacja i finanse. Wierzchołki to kroki, krawędzie to zależności, a harmonogram to <b>porządek topologiczny</b> z czasami.</p>
   <p class="reveal">Ten aparat ma długą historię. Metodę ścieżki krytycznej (CPM) opracowali pod koniec lat 50. James Kelley z Remington Rand i Morgan Walker z DuPont. Równolegle marynarka wojenna USA stworzyła PERT dla programu rakiet Polaris. Współczesne narzędzia do harmonogramów używają metody diagramów następstw (PDM) z czterema typami zależności:</p>
   <div class="scroll-x reveal">
@@ -1689,12 +2692,79 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
   </div>
 </section>
 
-<section class="chapter" id="planexec" data-level="2" data-title="Plan vs Execution">
+<section class="chapter" id="planexec" data-level="1" data-title="Plan vs Execution">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Plan vs Execution: plan musi istnieć</h2><span class="tag">„jaki był plan wczoraj?”</span></div></div>
-  <p class="reveal">Repozytorium szkolenia zaczyna ten moduł od antywzorca. Serwis „liczy” planowaną datę dostawy z SLA klienta, pojemności magazynu, kalendarza dni roboczych i dostępności kierowców. Plan nie jest bytem, tylko <b>wnioskiem z zapytania</b>. Gdy ktoś zmieni SLA klienta z 3 na 5 dni, plan wszystkich otwartych dostaw zmienia się wstecz. Nie da się odpowiedzieć na pytania: jaki był plan wczoraj, dlaczego się zmienił, czy to była decyzja biznesowa, czy poprawka błędu. Nie da się też porównać dzisiejszego wykonania z wczorajszym planem.</p>
-  <p class="reveal">Fowler w <i>Analysis Patterns</i> poświęca planowaniu cały rozdział i oddziela <b>działanie zaproponowane</b> (<i>proposed action</i>) od <b>zrealizowanego</b> (<i>implemented action</i>). Repozytorium szkolenia robi to samo dla harmonogramów płatności i produkcji. <b>Plan</b> to osobny byt z wersjami. <b>Wykonanie</b> to fakty: wpłaty, wyprodukowane partie. <b>Delta</b> to wynik porównania według jawnej <b>strategii tolerancji</b>.</p>
+
+  <div class="box newbie reveal"><span class="lbl">🔰 Co to jest</span>
+    <p class="nb-def"><b>Plan vs Execution</b> trzyma <b>plan</b> jako osobny, zapisany byt (najlepiej z wersjami), a <b>wykonanie</b> jako fakty. Porównanie obu daje <b>deltę</b> według jawnej reguły tolerancji: co zgodne, co spóźnione, czego brakuje, co ponad plan.</p>
+    <div class="kv">
+      <b>Analogia</b><span>Budżet domowy i paragony. Budżet zapisujesz na początku miesiąca. Paragony zbierasz przez miesiąc. Na koniec porównujesz, a różnica 3 zł na zakupach to „w normie”, bo taką tolerancję ustaliliście w domu.</span>
+      <b>Rozwiązuje</b><span>pytania „jaki był plan wczoraj?”, „dlaczego raport się zmienił?”, spory o to, co jest spóźnieniem, porównania planu miesięcznego z wykonaniem dziennym, symulacje „co, jeśli”.</span>
+      <b>Czym NIE jest</b><span>Nie jest zapytaniem, które „liczy plan” z bieżących ustawień. Nie jest też harmonogramem: <a href="#sched">Scheduling</a> układa kroki, a ten archetyp porównuje zamiar z faktami.</span>
+    </div>
+  </div>
+
+  <figure class="fig wide an-fig" id="an-planexec">
+    <div class="ftitle">▶ Anatomia: Plan vs Execution <span>kliknij część</span></div>
+    <div class="ctrl"></div><div class="an-grid"></div><div class="an-panel"></div><div class="status"></div>
+    <figcaption>Nazwy w nawiasach pochodzą z modułu planvsexecution repozytorium szkolenia. Rozdzielczość i symulacje opisuje rozdział <a href="#resolution">Rozdzielczość i symulacje</a> (poziom 3). Wersji planu repozytorium nie ma: to zalecane rozszerzenie.</figcaption>
+  </figure>
+
+  <div class="nb-when reveal">
+    <div class="yes"><h5>✅ Sięgnij, gdy</h5><ul>
+      <li>w wymaganiach jest „planowaliśmy, a wyszło”, „harmonogram”, „odchylenie”, „zaległość”;</li>
+      <li>trzeba odtworzyć, jaki plan obowiązywał w danym dniu;</li>
+      <li>od wyniku porównania zależą pieniądze lub prawo (odsetki, kary, monity, premie);</li>
+      <li>biznes chce sprawdzać scenariusze „co, jeśli zmienimy plan”.</li>
+    </ul></div>
+    <div class="no"><h5>⛔ Odpuść, gdy</h5><ul>
+      <li>nikt nie pyta o przeszłe plany, a porównanie jest tylko informacyjne;</li>
+      <li>plan nie zmienia się w trakcie, a wykonanie jest zawsze „tak albo nie” (np. lista kontrolna).</li>
+    </ul></div>
+  </div>
+
+  <h3 class="reveal">Opcje i konfiguracje</h3>
   <div class="scroll-x reveal">
-  <table class="mini">
+  <table class="mini opts">
+    <thead><tr><th>Opcja</th><th>Co robi</th><th>Kiedy wybrać</th><th>Koszt / ryzyko</th></tr></thead>
+    <tbody>
+      <tr><td>Plan jako byt z wersjami</td><td>Plan jest zapisany. Zmiana planu tworzy nową wersję z datą i powodem. Repozytorium trzyma tylko bieżący plan: wersje to zalecane rozszerzenie.</td><td>Zawsze, gdy ktoś zapyta o plan z przeszłości.</td><td>Trzeba zdecydować, kto może zatwierdzić nową wersję.</td></tr>
+      <tr><td>Tolerancja dokładna</td><td>Zgodne tylko identyczne kwoty i daty.</td><td>Rzadko. Pokazuje, ile „szumu” jest w danych.</td><td>Prawie wszystko wygląda na odchylenie.</td></tr>
+      <tr><td>Tolerancja kwoty</td><td>Zgodne, gdy różnica kwot nie przekracza progu (np. 5 gr).</td><td>Wpłaty z zaokrągleniami, prowizje banków.</td><td>Próg to decyzja biznesowa z konsekwencjami.</td></tr>
+      <tr><td>Tolerancja daty</td><td>Zgodne, gdy różnica dat nie przekracza N dni.</td><td>Karencja, weekendy, sesje rozliczeniowe.</td><td>Jak wyżej.</td></tr>
+      <tr><td>Tolerancja ilości lub procentu</td><td>Zgodne, gdy różnica ilości mieści się w sztukach albo procentach.</td><td>Produkcja, dostawy, zużycie energii.</td><td>Jak wyżej.</td></tr>
+      <tr><td>Tolerancja łączona</td><td>Wszystkie warunki naraz, np. „do 5 gr i do 3 dni”.</td><td>Harmonogramy płatności.</td><td>Trudniej wyjaśnić, który warunek nie przeszedł.</td></tr>
+      <tr><td>Wpłaty częściowe</td><td>Suma kilku wpłat może pokryć jedną ratę.</td><td>Klienci płacący ratę w częściach.</td><td>Trzeba ustalić, której racie przypisać nadwyżkę.</td></tr>
+      <tr><td>Wynik porównania (delta)</td><td>Dopasowane pary, pozycje planu bez wykonania, wykonania spoza planu i statystyki.</td><td>Zawsze.</td><td>Niski.</td></tr>
+      <tr><td>Rozdzielczość porównania</td><td>Wykonanie sumuje się do szczegółowości planu (np. dni do miesiąca).</td><td>Plan miesięczny, wykonanie dzienne.</td><td>Trzeba ustalić, co się liczy (np. poprawki tak, braki nie).</td></tr>
+      <tr><td>Symulacje i modyfikatory</td><td>Modyfikator dostaje plan i deltę, a zwraca nowy plan: bufor, rozłożenie reszty, usunięcie raty. W repozytorium nowy plan zastępuje aktywny. Symulację na kopii dopisujesz sam.</td><td>„Co, jeśli zaplanujemy więcej?”, restrukturyzacja.</td><td>Symulacja nie może nadpisać planu. Zatwierdzona to nowa wersja.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Minimum na start, rozbudowa na sygnał</span>
+    <ol>
+      <li><b>Dzień pierwszy:</b> plan zapisany jako byt, wykonanie jako fakty, jedna tolerancja (kwoty albo daty), wynik z dopasowaniami i brakami.</li>
+      <li><b>Sygnał „plan się zmienia”:</b> wersje planu z datą i powodem.</li>
+      <li><b>Sygnał „płacą w częściach”, „do 3 dni to nie spóźnienie”:</b> tolerancje łączone i wpłaty częściowe.</li>
+      <li><b>Sygnał „plan miesięczny, dane dzienne”, „co, jeśli”:</b> agregacja do rozdzielczości planu i symulacje.</li>
+    </ol>
+  </div>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Typowe błędy początkujących</span>
+    <ul>
+      <li>Plan liczony zapytaniem z bieżących ustawień. Skutek: zmiana SLA zmienia wstecz plan wszystkich otwartych spraw.</li>
+      <li>Tolerancja wpisana w kod raportu. Skutek: wczorajszy i dzisiejszy raport różnią się bez wyjaśnienia.</li>
+      <li>Porównywanie dnia z dniem, gdy plan jest miesięczny. Skutek: same „odchylenia”, choć miesiąc się zgadza.</li>
+    </ul>
+  </div>
+
+  <h3 class="reveal nb-sep" data-level="2">W praktyce i w repozytorium</h3>
+
+  <p class="reveal" data-level="2">Repozytorium szkolenia zaczyna ten moduł od antywzorca. Serwis „liczy” planowaną datę dostawy z SLA klienta, pojemności magazynu, kalendarza dni roboczych i dostępności kierowców. Plan nie jest bytem, tylko <b>wnioskiem z zapytania</b>. Gdy ktoś zmieni SLA klienta z 3 na 5 dni, plan wszystkich otwartych dostaw zmienia się wstecz. Nie da się odpowiedzieć na pytania: jaki był plan wczoraj, dlaczego się zmienił, czy to była decyzja biznesowa, czy poprawka błędu. Nie da się też porównać dzisiejszego wykonania z wczorajszym planem.</p>
+  <p class="reveal" data-level="2">Fowler w <i>Analysis Patterns</i> poświęca planowaniu cały rozdział i oddziela <b>działanie zaproponowane</b> (<i>proposed action</i>) od <b>zrealizowanego</b> (<i>implemented action</i>). Repozytorium szkolenia robi to samo dla harmonogramów płatności i produkcji. <b>Plan</b> to osobny byt z wersjami. <b>Wykonanie</b> to fakty: wpłaty, wyprodukowane partie. <b>Delta</b> to wynik porównania według jawnej <b>strategii tolerancji</b>.</p>
+  <div class="scroll-x reveal" data-level="2">
+  <table class="mini" data-level="2">
     <thead><tr><th>Tolerancja</th><th>Dopasowuje, gdy…</th><th>Kiedy</th></tr></thead>
     <tbody>
       <tr><td><code>ExactMatch</code></td><td>kwota i data są identyczne</td><td>rzadko: pokazuje, ile „szumu” jest w danych</td></tr>
@@ -1706,7 +2776,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
     </tbody>
   </table>
   </div>
-  <p class="reveal">Moduły analizy w repozytorium zwracają <code>DeltaResult</code>: dopasowane pary plan–wykonanie, pozycje planu bez wykonania, wykonania spoza planu i statystyki (np. kwoty niedopłat i nadpłat, liczba wpłat spóźnionych). Moduł z antywzorcem ma dodatkowo enum <code>DeltaType</code>, który dobrze nazywa możliwe wyniki porównania: <code>PERFECT_MATCH</code>, <code>LATE</code>, <code>EARLY</code>, <code>UNDER_DELIVERED</code>, <code>OVER_DELIVERED</code>, <code>DEVIATION</code>, <code>NO_EXECUTION</code>. Tych nazw używa diagram poniżej.</p>
+  <p class="reveal" data-level="2">Moduły analizy w repozytorium zwracają <code>DeltaResult</code>: dopasowane pary plan–wykonanie, pozycje planu bez wykonania, wykonania spoza planu i statystyki (np. kwoty niedopłat i nadpłat, liczba wpłat spóźnionych). Moduł z antywzorcem ma dodatkowo enum <code>DeltaType</code>, który dobrze nazywa możliwe wyniki porównania: <code>PERFECT_MATCH</code>, <code>LATE</code>, <code>EARLY</code>, <code>UNDER_DELIVERED</code>, <code>OVER_DELIVERED</code>, <code>DEVIATION</code>, <code>NO_EXECUTION</code>. Tych nazw używa diagram poniżej.</p>
 
   <figure class="fig wide" id="fig-pve">
     <div class="ftitle">▶ Harmonogram rat kontra wpłaty <span>stroisz tolerancję, a raport się zmienia</span></div>
@@ -1722,11 +2792,11 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
     <figcaption>Raty i wpłaty są ilustracyjne. Zjawiska (odchyłki o grosz, dopasowane przy tolerancji 5 gr; rata zapłacona w dwóch częściach; wpłaty na czas i spóźnione) odpowiadają scenariuszom analizy harmonogramu płatności w repozytorium. Uproszczenie: tolerancja dni rozstrzyga tu, czy wpłata „pasuje”, a typ delty mówi, czy była spóźniona.</figcaption>
   </figure>
 
-  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga</span>
+  <div class="box watch reveal" data-level="2"><span class="lbl">⚠️ Uwaga</span>
     <p>Tolerancja to <b>decyzja biznesowa z konsekwencjami prawnymi</b>. Czy wpłata 2 dni po terminie to opóźnienie, od którego liczysz odsetki? Czy niedopłata 3 grosze to zaległość, która uruchamia monit? Zapisz tolerancję jako konfigurację z wersją. Inaczej po zmianie progu nie wytłumaczysz, dlaczego wczorajszy raport różni się od dzisiejszego.</p>
   </div>
 
-  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+  <div class="box bullets reveal" data-level="2"><span class="lbl">📌 W punktach</span>
     <ul>
       <li>Plan jest bytem z wersjami, a nie wynikiem zapytania po bieżących ustawieniach.</li>
       <li>Wykonanie to fakty. Delta to porównanie według jawnej strategii tolerancji.</li>
@@ -1944,7 +3014,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
 <section class="chapter" id="decide" data-level="1" data-title="Drzewo decyzyjne">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Który archetyp i jaka konfiguracja?</h2><span class="tag">drzewo decyzyjne w kilku pytaniach</span></div></div>
-  <p class="reveal">Drzewo zbiera heurystyki z całego kompendium. Zaczyna od pytania „co modelujesz?” i schodzi do konkretnej konfiguracji: strategii śledzenia, modelu dostępności, rodzaju korekty. Jedno przejście daje jeden archetyp. Prawdziwy system przechodzi drzewo wiele razy, raz dla każdego zdania z wymagań.</p>
+  <p class="reveal">To pełna wersja drzewa. Prostsza, dla początkujących, jest w rozdziale <a href="#startmap">Mapa decyzji na start</a>. Drzewo zbiera heurystyki z całego kompendium. Zaczyna od pytania „co modelujesz?” i schodzi do konkretnej konfiguracji: strategii śledzenia, modelu dostępności, rodzaju korekty. Jedno przejście daje jeden archetyp. Prawdziwy system przechodzi drzewo wiele razy, raz dla każdego zdania z wymagań.</p>
 
   <figure class="fig wide" id="fig-tree">
     <div class="ftitle">▶ Drzewo decyzyjne <span>odpowiadaj na pytania</span></div>
@@ -1965,28 +3035,29 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
 <section class="chapter" id="glossary" data-level="1" data-title="Słownik i literatura">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Słownik pojęć i mapa literatury</h2><span class="tag">PL ↔ EN, i gdzie czytać dalej</span></div></div>
+  <p class="reveal">Polskie terminy prowadzą do rozdziałów, w których pojęcie jest wyjaśnione od podstaw (blok 🔰 „Co to jest”). Najprostsze definicje z analogiami są w <a href="#start5">słowniczku startowym</a>.</p>
   <div class="scroll-x reveal">
   <table class="mini">
     <thead><tr><th>Polski</th><th>Angielski (repozytorium / literatura)</th><th>Znaczenie</th></tr></thead>
     <tbody>
-      <tr><td>strona, podmiot</td><td><code>Party</code> (<code>Person</code>, <code>Organization</code>)</td><td>identyfikowalna osoba lub organizacja</td></tr>
-      <tr><td>rola strony</td><td><code>Role</code>, <code>PartyRole</code></td><td>kapelusz, w którym strona występuje</td></tr>
-      <tr><td>relacja między stronami</td><td><code>PartyRelationship</code>; Fowler: <i>Accountability</i></td><td>nazwane powiązanie dwóch ról z okresem ważności</td></tr>
-      <tr><td>kompetencja, zakres działania</td><td><code>Capability</code>, <code>OperatingScope</code></td><td>co strona potrafi, gdzie, kiedy, ile, na jakim poziomie</td></tr>
-      <tr><td>typ produktu, egzemplarz</td><td><code>ProductType</code>, <code>ProductInstance</code></td><td>opis katalogowy a konkretna rzecz, umowa lub wykonanie usługi</td></tr>
-      <tr><td>strategia śledzenia</td><td><code>ProductTrackingStrategy</code></td><td>unikat, numer seryjny, partia, oba, zamienne</td></tr>
-      <tr><td>pakiet, zestaw, reguła wyboru</td><td><code>PackageType</code>, <code>ProductSet</code>, <code>SelectionRule</code></td><td>produkt złożony z nazwanych zestawów z regułami</td></tr>
-      <tr><td>komponent ceny, kalkulator</td><td><code>Component</code>, <code>Calculator</code></td><td>nazwany element ceny i funkcja, która go liczy</td></tr>
-      <tr><td>interpretacja ceny</td><td><code>Interpretation</code>: TOTAL, UNIT, MARGINAL</td><td>cena całkowita, średnia jednostkowa, cena n-tej jednostki</td></tr>
-      <tr><td>ważność</td><td><code>Validity</code> (validFrom, validTo)</td><td>okres, w którym coś obowiązuje</td></tr>
-      <tr><td>predykat, aplikator, strażnik</td><td><i>predicate</i>, <i>applier</i>, <i>guardian</i></td><td>czy reguła dotyczy, jak zmienia, czy wynik jest dopuszczalny</td></tr>
-      <tr><td>dostępność: indywidualna, pula, czasowa</td><td><code>Individual</code>/<code>Pool</code>/<code>TemporalResourceAvailability</code></td><td>egzemplarz, ilość z pojemności, zasób w slocie</td></tr>
-      <tr><td>blokada, lista oczekujących</td><td><code>Blockade</code>, <code>LockDuration</code>, <code>WaitList</code></td><td>zajęcie zasobu przez właściciela na czas i kolejka z polityką</td></tr>
-      <tr><td>role w zamówieniu</td><td><code>RoleInOrder</code>: ORDERER, PAYER, RECEIVER, EXECUTOR…</td><td>kto zamawia, płaci, odbiera, wykonuje</td></tr>
-      <tr><td>migawka</td><td><i>snapshot</i>, <code>PartySnapshot</code></td><td>kopia danych z chwili zdarzenia</td></tr>
-      <tr><td>konto, zapis, transakcja</td><td><code>Account</code>, <code>Entry</code>, <code>Transaction</code></td><td>saldo jako suma niezmiennych zapisów</td></tr>
-      <tr><td>reguła księgowania</td><td><code>PostingRule</code></td><td>zapis wywołuje kolejne zapisy</td></tr>
-      <tr><td>czas zdarzenia / czas zapisu</td><td><code>appliesAt</code> / <code>occurredAt</code>; Fowler: <i>actual</i> / <i>record time</i></td><td>od kiedy obowiązuje / kiedy się dowiedzieliśmy</td></tr>
+      <tr><td><a href="#party">strona, podmiot</a></td><td><code>Party</code> (<code>Person</code>, <code>Organization</code>)</td><td>identyfikowalna osoba lub organizacja</td></tr>
+      <tr><td><a href="#party">rola strony</a></td><td><code>Role</code>, <code>PartyRole</code></td><td>kapelusz, w którym strona występuje</td></tr>
+      <tr><td><a href="#relations">relacja między stronami</a></td><td><code>PartyRelationship</code>; Fowler: <i>Accountability</i></td><td>nazwane powiązanie dwóch ról z okresem ważności</td></tr>
+      <tr><td><a href="#capab">kompetencja, zakres działania</a></td><td><code>Capability</code>, <code>OperatingScope</code></td><td>co strona potrafi, gdzie, kiedy, ile, na jakim poziomie</td></tr>
+      <tr><td><a href="#product">typ produktu, egzemplarz</a></td><td><code>ProductType</code>, <code>ProductInstance</code></td><td>opis katalogowy a konkretna rzecz, umowa lub wykonanie usługi</td></tr>
+      <tr><td><a href="#product">strategia śledzenia</a></td><td><code>ProductTrackingStrategy</code></td><td>unikat, numer seryjny, partia, oba, zamienne</td></tr>
+      <tr><td><a href="#packages">pakiet, zestaw, reguła wyboru</a></td><td><code>PackageType</code>, <code>ProductSet</code>, <code>SelectionRule</code></td><td>produkt złożony z nazwanych zestawów z regułami</td></tr>
+      <tr><td><a href="#pricing">komponent ceny, kalkulator</a></td><td><code>Component</code>, <code>Calculator</code></td><td>nazwany element ceny i funkcja, która go liczy</td></tr>
+      <tr><td><a href="#pricing">interpretacja ceny</a></td><td><code>Interpretation</code>: TOTAL, UNIT, MARGINAL</td><td>cena całkowita, średnia jednostkowa, cena n-tej jednostki</td></tr>
+      <tr><td><a href="#pricetime">ważność</a></td><td><code>Validity</code> (validFrom, validTo)</td><td>okres, w którym coś obowiązuje</td></tr>
+      <tr><td><a href="#rules">predykat, aplikator, strażnik</a></td><td><i>predicate</i>, <i>applier</i>, <i>guardian</i></td><td>czy reguła dotyczy, jak zmienia, czy wynik jest dopuszczalny</td></tr>
+      <tr><td><a href="#inventory">dostępność: indywidualna, pula, czasowa</a></td><td><code>Individual</code>/<code>Pool</code>/<code>TemporalResourceAvailability</code></td><td>egzemplarz, ilość z pojemności, zasób w slocie</td></tr>
+      <tr><td><a href="#locks">blokada, lista oczekujących</a></td><td><code>Blockade</code>, <code>LockDuration</code>, <code>WaitList</code></td><td>zajęcie zasobu przez właściciela na czas i kolejka z polityką</td></tr>
+      <tr><td><a href="#ordering">role w zamówieniu</a></td><td><code>RoleInOrder</code>: ORDERER, PAYER, RECEIVER, EXECUTOR…</td><td>kto zamawia, płaci, odbiera, wykonuje</td></tr>
+      <tr><td><a href="#start5">migawka</a></td><td><i>snapshot</i>, <code>PartySnapshot</code></td><td>kopia danych z chwili zdarzenia</td></tr>
+      <tr><td><a href="#accounting">konto, zapis, transakcja</a></td><td><code>Account</code>, <code>Entry</code>, <code>Transaction</code></td><td>saldo jako suma niezmiennych zapisów</td></tr>
+      <tr><td><a href="#posting">reguła księgowania</a></td><td><code>PostingRule</code></td><td>zapis wywołuje kolejne zapisy</td></tr>
+      <tr><td><a href="#acctime">czas zdarzenia / czas zapisu</a></td><td><code>appliesAt</code> / <code>occurredAt</code>; Fowler: <i>actual</i> / <i>record time</i></td><td>od kiedy obowiązuje / kiedy się dowiedzieliśmy</td></tr>
       <tr><td>odwrócenie, storno</td><td><i>reversal</i></td><td>korekta przez nową transakcję przeciwną</td></tr>
       <tr><td>ścieżka krytyczna</td><td><i>critical path</i> (CPM)</td><td>najdłuższa ścieżka w grafie zadań</td></tr>
       <tr><td>tolerancja, delta</td><td><code>ToleranceStrategy</code>, <code>DeltaResult</code></td><td>jak porównać plan z wykonaniem i jaki jest wynik</td></tr>
@@ -2015,33 +3086,33 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
 <section class="chapter" id="final" data-title="Egzamin i ściąga">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Egzamin i ściąga</h2><span class="tag">sprawdź, co zostało</span></div></div>
-  <p class="reveal">Jedno pytanie na rozdział. Błędne odpowiedzi to nieporozumienia, które rozdziały próbowały rozbroić. Pytania oznaczone (L3) i (L4) dotyczą bloków eksperckich i studiów przypadków.</p>
+  <p class="reveal">Najpierw pytania dla początkujących: po jednym na rozdział Części 0 i na każdy archetyp. Potem jedno pytanie na rozdział. Błędne odpowiedzi to nieporozumienia, które rozdziały próbowały rozbroić. Pytania oznaczone (L3) i (L4) dotyczą bloków eksperckich i studiów przypadków.</p>
   <div id="quiz"></div>
   <div class="score" id="score">Wynik: 0 / 0</div>
 
   <h3 class="reveal">Ściąga</h3>
   <div class="scroll-x reveal">
   <table class="mini cheat">
-    <thead><tr><th>Archetyp / element</th><th>Sygnał w wymaganiach</th><th>Konfiguracje i decyzje</th></tr></thead>
+    <thead><tr><th>Archetyp / element</th><th>W jednym zdaniu</th><th>Sygnał w wymaganiach</th><th>Konfiguracje i decyzje</th></tr></thead>
     <tbody>
-      <tr><td>Quantity / Money</td><td>liczba z jednostką lub walutą</td><td>wartość + jednostka; brak cichej konwersji; alokacja zamiast dzielenia; reguła zaokrągleń</td></tr>
-      <tr><td>Party</td><td>ta sama osoba/firma w wielu tabelach</td><td>Person/Organization(Company, Unit); role przez politykę; identyfikatory z polityką; adresy z użyciami</td></tr>
-      <tr><td>PartyRelationship</td><td>„kto był … w marcu?”</td><td>relacja ról + nazwa + Validity; polityka relacji; udział lub zakres jako rozszerzenie (w repozytorium relacja ich nie ma)</td></tr>
-      <tr><td>Capability</td><td>uprawnienia, region, poziom, „kto może”</td><td>7 rodzajów OperatingScope; RoleRequirements; ważność sprawdzana w chwili przydziału</td></tr>
-      <tr><td>Product</td><td>numer seryjny, partia, wariant, katalog</td><td>typ vs egzemplarz; cechy z ograniczeniami; UNIQUE / INDIVIDUALLY / BATCH / BOTH / IDENTICAL</td></tr>
-      <tr><td>Package</td><td>„dokładnie jeden”, „najwyżej dwa”, „tylko z…”</td><td>ProductSet + SelectionRule (single, optional, required, isSubsetOf, and/or/not, ifThen); relacje produktów</td></tr>
-      <tr><td>Pricing</td><td>„cena zależy od…”</td><td>drzewo komponentów; kalkulatory; zależności (ValueOf/SumOf…); TOTAL/UNIT/MARGINAL</td></tr>
-      <tr><td>Wersje cen</td><td>„ile kosztowało wtedy?”</td><td>validFrom/validTo + definedAt; najmłodszy validFrom wygrywa; REJECT_IDENTICAL / REJECT_OVERLAPPING / ALLOW_ALL</td></tr>
-      <tr><td>Rules</td><td>„chyba że”, promocje, wyjątki</td><td>predykat + aplikator (od bazy / od wyniku) + strażnik; łańcuch; algebry: logiczna, rozmyta, punktowa, wyjaśniająca</td></tr>
-      <tr><td>Inventory</td><td>„czy jest wolne?”, rezerwacja</td><td>Individual / Pool / Temporal; grupowanie slotów; zasób złożony (wszystko albo nic)</td></tr>
-      <tr><td>Blokady i kolejka</td><td>koszyk, przedsprzedaż, „kto dostanie zwolnione”</td><td>LockDuration (czasowa/bezterminowa); releaseExpired; WaitList: FIFO / priorytet / kwota / kryterium</td></tr>
-      <tr><td>Ordering</td><td>kto zamawia, płaci, odbiera; statusy</td><td>role na zamówieniu i liniach; migawki; DRAFT→CONFIRMED→(PENDING_ALLOCATION)→PROCESSING→FULFILLED→CLOSED, albo CANCELLED (w repozytorium PENDING_ALLOCATION i CLOSED są w enumie, ale Order nie wykonuje do nich przejść); stany wyceny linii</td></tr>
-      <tr><td>Accounting</td><td>saldo, limit, punkty, portfel</td><td>konta (ASSET, LIABILITY, REVENUE, EXPENSE, OFF_BALANCE); transakcja = 0 na bilansowych; korekty jako transakcje</td></tr>
-      <tr><td>Posting rules</td><td>„gdy wpłynie, to nalicz…”</td><td>warunek + kalkulator + cel + priorytet; konta-projekcje; ochronę przed cyklami trzeba dodać samemu (repozytorium jej nie ma)</td></tr>
-      <tr><td>Czas w księgowości</td><td>„na dzień”, „wstecz”, „wygasa”</td><td>occurredAt vs appliesAt; balanceAsOf; ważność zapisu + expiration_compensation; FIFO / LIFO / MANUAL</td></tr>
-      <tr><td>Scheduling</td><td>„nie wcześniej niż…”, kolejność</td><td>graf + porządek topologiczny; FS/SS/FF/SF + lag; cykle przy zapisie; CPM i zapas</td></tr>
-      <tr><td>Grafy w biznesie</td><td>konflikty, wpływy, zamiany</td><td>kolorowanie (górna granica); składowe; punkty artykulacji; cykl zamian wykonywany paczką</td></tr>
-      <tr><td>Plan vs Execution</td><td>„planowaliśmy, a wyszło”</td><td>plan jako byt z wersjami; tolerancje (kwota, dni, ilość, %; and); delty; agregacja do rozdzielczości planu; symulacje na kopii</td></tr>
+      <tr><td>Quantity / Money</td><td>liczba zawsze z jednostką, kwota zawsze z walutą</td><td>liczba z jednostką lub walutą</td><td>wartość + jednostka; brak cichej konwersji; alokacja zamiast dzielenia; reguła zaokrągleń</td></tr>
+      <tr><td>Party</td><td>osoba albo organizacja w wielu rolach</td><td>ta sama osoba/firma w wielu tabelach</td><td>Person/Organization(Company, Unit); role przez politykę; identyfikatory z polityką; adresy z użyciami</td></tr>
+      <tr><td>PartyRelationship</td><td>nazwane powiązanie dwóch ról z okresem ważności</td><td>„kto był … w marcu?”</td><td>relacja ról + nazwa + Validity; polityka relacji; udział lub zakres jako rozszerzenie (w repozytorium relacja ich nie ma)</td></tr>
+      <tr><td>Capability</td><td>co strona potrafi, gdzie, kiedy, ile i na jakim poziomie</td><td>uprawnienia, region, poziom, „kto może”</td><td>7 rodzajów OperatingScope; RoleRequirements; ważność sprawdzana w chwili przydziału</td></tr>
+      <tr><td>Product</td><td>typ z katalogu i konkretny egzemplarz</td><td>numer seryjny, partia, wariant, katalog</td><td>typ vs egzemplarz; cechy z ograniczeniami; UNIQUE / INDIVIDUALLY / BATCH / BOTH / IDENTICAL</td></tr>
+      <tr><td>Package</td><td>produkt z zestawów i reguł wyboru</td><td>„dokładnie jeden”, „najwyżej dwa”, „tylko z…”</td><td>ProductSet + SelectionRule (single, optional, required, isSubsetOf, and/or/not, ifThen); relacje produktów</td></tr>
+      <tr><td>Pricing</td><td>cena jako drzewo nazwanych składników</td><td>„cena zależy od…”</td><td>drzewo komponentów; kalkulatory; zależności (ValueOf/SumOf…); TOTAL/UNIT/MARGINAL</td></tr>
+      <tr><td>Wersje cen</td><td>cena z okresem obowiązywania i nakładkami</td><td>„ile kosztowało wtedy?”</td><td>validFrom/validTo + definedAt; najmłodszy validFrom wygrywa; REJECT_IDENTICAL / REJECT_OVERLAPPING / ALLOW_ALL</td></tr>
+      <tr><td>Rules</td><td>wyjątek jako warunek, zmiana i strażnik</td><td>„chyba że”, promocje, wyjątki</td><td>predykat + aplikator (od bazy / od wyniku) + strażnik; łańcuch; algebry: logiczna, rozmyta, punktowa, wyjaśniająca</td></tr>
+      <tr><td>Inventory</td><td>co jest wolne i kto to zablokował</td><td>„czy jest wolne?”, rezerwacja</td><td>Individual / Pool / Temporal; grupowanie slotów; zasób złożony (wszystko albo nic)</td></tr>
+      <tr><td>Blokady i kolejka</td><td>zajęcie z właścicielem i czasem, kolejka z polityką</td><td>koszyk, przedsprzedaż, „kto dostanie zwolnione”</td><td>LockDuration (czasowa/bezterminowa); releaseExpired; WaitList: FIFO / priorytet / kwota / kryterium</td></tr>
+      <tr><td>Ordering</td><td>zlecenie ze stronami w rolach, liniami, wyceną i stanami</td><td>kto zamawia, płaci, odbiera; statusy</td><td>role na zamówieniu i liniach; migawki; DRAFT→CONFIRMED→(PENDING_ALLOCATION)→PROCESSING→FULFILLED→CLOSED, albo CANCELLED (w repozytorium PENDING_ALLOCATION i CLOSED są w enumie, ale Order nie wykonuje do nich przejść); stany wyceny linii</td></tr>
+      <tr><td>Accounting</td><td>saldo jako suma niezmiennych zapisów</td><td>saldo, limit, punkty, portfel</td><td>konta (ASSET, LIABILITY, REVENUE, EXPENSE, OFF_BALANCE); transakcja = 0 na bilansowych; korekty jako transakcje</td></tr>
+      <tr><td>Posting rules</td><td>zapis, który wywołuje kolejne zapisy</td><td>„gdy wpłynie, to nalicz…”</td><td>warunek + kalkulator + cel + priorytet; konta-projekcje; ochronę przed cyklami trzeba dodać samemu (repozytorium jej nie ma)</td></tr>
+      <tr><td>Czas w księgowości</td><td>kiedy zarejestrowano, od kiedy obowiązuje, do kiedy ważne</td><td>„na dzień”, „wstecz”, „wygasa”</td><td>occurredAt vs appliesAt; balanceAsOf; ważność zapisu + expiration_compensation; FIFO / LIFO / MANUAL</td></tr>
+      <tr><td>Scheduling</td><td>harmonogram jako graf zależności</td><td>„nie wcześniej niż…”, kolejność</td><td>graf + porządek topologiczny; FS/SS/FF/SF + lag (repozytorium ma gotowy tylko FS); cykle przy zapisie; CPM i zapas (do dopisania, repozytorium ich nie liczy)</td></tr>
+      <tr><td>Grafy w biznesie</td><td>konflikty, wpływy i zamiany jako problemy grafowe</td><td>konflikty, wpływy, zamiany</td><td>kolorowanie (górna granica); składowe; punkty artykulacji; cykl zamian wykonywany paczką</td></tr>
+      <tr><td>Plan vs Execution</td><td>plan jako byt porównywany z faktami jawną tolerancją</td><td>„planowaliśmy, a wyszło”</td><td>plan jako byt z wersjami; tolerancje (kwota, dni, ilość, %; and); delty; agregacja do rozdzielczości planu; symulacje na kopii</td></tr>
     </tbody>
   </table>
   </div>
@@ -3535,9 +4606,453 @@ reqx($('#fig-clinic'), [
   registerFig(root, { async first() { const my = run; for (const lab of ['Czy jest dostępne', 'Tak', 'Tak']) { await sleep(700); if (my !== run) return; const b = $$('.dt-opts .btn', qEl).find(x => x.textContent === lab); if (b) b.click(); } } });
 })();
 
+/* ---------- shared: anatomy engine ---------- */
+/* anat(id, spec): spec = { rows:[{via?, ids:[…]}], parts:{id:{n, r?, d, lose, opt?}}, min, brk:{id, btn, say}, done } */
+function anat(id, spec) {
+  const root = $('#' + id); if (!root) return;
+  const ctrl = $('.ctrl', root), grid = $('.an-grid', root), panel = $('.an-panel', root), st = $('.status', root);
+  ctrl.innerHTML = '<button class="btn primary" data-act="build">▶ Złóż szkielet</button>' +
+    '<button class="btn" data-act="min">✂️ Wersja minimalna</button>' +
+    `<button class="btn bad" data-act="break">💥 ${spec.brk.btn}</button>` +
+    '<button class="btn" data-act="reset">↺ Reset</button>';
+  const P = spec.parts, order = [];
+  spec.rows.forEach(r => {
+    if (r.via) H('div', 'an-via', `↓ ${r.via}`, grid);
+    const row = H('div', 'an-row', null, grid);
+    r.ids.forEach(k => {
+      const p = P[k];
+      const c = H('button', 'an-part' + (p.opt ? ' opt' : ''), `<b>${p.n}</b>${p.r ? `<code>${wbr(p.r)}</code>` : ''}`, row);
+      c.type = 'button'; c.onclick = () => pick(k); p.el = c; order.push(k);
+    });
+  });
+  H('div', 'an-legend', 'Ramka ciągła: rdzeń archetypu. Ramka przerywana: część opcjonalna, dokładana na sygnał z wymagań.', grid);
+  const enqueue = makeQueue();
+  let run = 0;
+  function pick(k) {
+    const p = P[k];
+    order.forEach(o => P[o].el.classList.remove('sel'));
+    p.el.classList.add('sel');
+    panel.innerHTML = `<h5>${p.n} · ${p.opt ? 'opcjonalna' : 'rdzeń'}</h5><p>${p.d}</p><p class="an-lose"><b>Bez tego:</b> ${p.lose}</p>`;
+  }
+  function reset() {
+    run++;
+    order.forEach(o => P[o].el.classList.remove('sel', 'pre', 'off', 'gone'));
+    panel.innerHTML = '<h5>Kliknij część schematu</h5><p class="mut">Zobaczysz, czym jest, i co się psuje, gdy jej zabraknie.</p>';
+    say(st, 'Kliknij dowolną część albo „Złóż szkielet”.');
+  }
+  async function build() {
+    reset(); const my = run;
+    order.forEach(o => P[o].el.classList.add('pre'));
+    for (let i = 0; i < order.length; i++) {
+      const p = P[order[i]];
+      p.el.classList.remove('pre'); pick(order[i]);
+      say(st, `<b>${i + 1}/${order.length}. ${p.n}.</b> ${p.opt ? 'Część opcjonalna.' : 'Rdzeń.'}`);
+      await sleep(700); if (my !== run) return;
+    }
+    say(st, `<b>Gotowe.</b> ${spec.done}`, 'ok');
+  }
+  function min() {
+    reset();
+    order.forEach(o => P[o].el.classList.toggle('off', !!P[o].opt));
+    panel.innerHTML = `<h5>Wersja minimalna</h5><p>${spec.min}</p>`;
+    say(st, '<b>Minimum na start.</b> Wyszarzone części dokładasz dopiero wtedy, gdy wymagania ich zażądają.', 'warn');
+  }
+  function brk() {
+    reset();
+    const p = P[spec.brk.id];
+    p.el.classList.add('gone');
+    panel.innerHTML = `<h5>Bez części: ${p.n}</h5><p class="an-lose">${spec.brk.say}</p>`;
+    say(st, `<b>Zepsute celowo.</b> ${p.lose}`, 'bad');
+  }
+  $('[data-act=build]', root).onclick = () => enqueue(build);
+  $('[data-act=min]', root).onclick = min;
+  $('[data-act=break]', root).onclick = brk;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(build); } });
+}
+
+/* ---------- 40. silos (start) ---------- */
+(() => {
+  const root = $('#fig-silo'); if (!root) return;
+  const grid = $('#sl-grid'), st = $('#sl-status');
+  const OLD = 'ul. Lipowa 1, Kraków', NEW = 'ul. Polna 7, Gdańsk';
+  const SYS = [
+    { n: 'CRM (dział sprzedaży)', f: ['Klient: Jan Kowalski', 'tel. 600 100 200'], role: 'klient' },
+    { n: 'Fakturowanie', f: ['Kontrahent: J. Kowalski', 'NIP osobny dla działalności'], role: 'nabywca na fakturze' },
+    { n: 'Sklep internetowy', f: ['Użytkownik: jan.k@example.com', 'adres dostawy z koszyka'], role: 'kupujący' }
+  ];
+  let mode, addr, run = 0;
+  const enqueue = makeQueue();
+  function paint(stale) {
+    grid.innerHTML = '';
+    if (mode === 'silo') {
+      SYS.forEach((s, i) => {
+        const a = addr[i];
+        H('div', 'sl-card', `<h5>${s.n}</h5>${s.f.map(x => `<div class="sl-f">${x}</div>`).join('')}<div class="sl-f ${a === NEW ? 'new' : stale ? 'stale' : ''}">adres: ${a}</div>`, grid);
+      });
+    } else {
+      const c = H('div', 'sl-card party', `<h5>${ach('party')} jeden Party: osoba Jan Kowalski</h5>` +
+        `<div class="sl-f">role: ${SYS.map(s => s.role).join(', ')}</div>` +
+        `<div class="sl-f ${addr[0] === NEW ? 'new' : ''}">adres (zastosowania: rozliczeniowy, dostawy): ${addr[0]}</div>` +
+        '<div class="sl-views"></div>', grid);
+      const v = $('.sl-views', c);
+      SYS.forEach(s => H('div', '', `<b>${s.n}</b><br>widzi rolę „${s.role}” i adres ${addr[0]}`, v));
+    }
+  }
+  function reset() { run++; mode = 'silo'; addr = [OLD, OLD, OLD]; paint(false); say(st, 'Trzy systemy, trzy kartoteki tego samego człowieka.'); }
+  async function move() {
+    const my = run;
+    if (mode === 'silo') {
+      addr = [OLD, OLD, NEW]; paint(false);
+      say(st, 'Jan wpisuje nowy adres w sklepie…');
+      await sleep(900); if (my !== run) return;
+      paint(true);
+      say(st, '<b>Zepsute celowo.</b> Sklep zna nowy adres, a CRM i fakturowanie nadal stary. Faktura pójdzie na Lipową, a handlowiec zadzwoni do „nowego klienta” z Gdańska.', 'bad');
+    } else {
+      addr = [NEW, NEW, NEW]; paint(false);
+      say(st, '<b>Jedna zmiana, trzy widoki.</b> Adres zmienia się w jednym miejscu, a każdy system widzi go przez swoją rolę.', 'ok');
+    }
+  }
+  async function merge() {
+    const my = run; mode = 'party'; addr = [addr[2], addr[2], addr[2]];
+    grid.innerHTML = ''; await sleep(250); if (my !== run) return;
+    paint(false);
+    say(st, '<b>Party z rolami.</b> Jeden byt „kto”, trzy role „w jakim charakterze”. Teraz kliknij „Przeprowadzka”.', 'ok');
+  }
+  $('[data-act=merge]', root).onclick = () => enqueue(merge);
+  $('[data-act=move]', root).onclick = () => enqueue(move);
+  $('[data-act=silo]', root).onclick = () => { reset(); enqueue(move); };
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { reset(); enqueue(move); } });
+})();
+
+/* ---------- 41. process stepper (start) ---------- */
+(() => {
+  const root = $('#fig-steps'); if (!root) return;
+  const list = $('#ps-list'), panel = $('#ps-panel'), steps = $('#ps-steps'), st = $('#ps-status');
+  const S = [
+    { t: 'Użytkownik to osoba prywatna albo pracownik firmy, która płaci za jego przejazdy.', m: 'osoba prywatna albo pracownik firmy, która płaci', a: ['party'], cfg: 'osoba i organizacja; role „użytkownik” i „płatnik”; relacja „zatrudniony w” z okresem ważności' },
+    { t: 'Każdy rower ma numer ramy, a serwis zna historię napraw każdego roweru.', m: 'numer ramy', a: ['product'], cfg: 'typy „rower miejski” i „rower elektryczny”; egzemplarz z numerem ramy (śledzenie indywidualne)' },
+    { t: 'Stacja ma 20 stojaków. Aplikacja pokazuje, ile rowerów jest do wzięcia i ile miejsc na zwrot.', m: '20 stojaków', a: ['inv'], cfg: 'stojaki stacji jako pula o pojemności 20; rower jako zasób indywidualny' },
+    { t: 'Rower można zarezerwować na 15 minut przed wypożyczeniem.', m: 'zarezerwować na 15 minut', a: ['inv'], cfg: 'blokada czasowa na 15 minut, która sama wygasa' },
+    { t: 'Pierwsze 20 minut jest za darmo, potem 1 zł za każde rozpoczęte 10 minut. W abonamencie taniej.', m: 'za darmo, potem 1 zł', a: ['pricing', 'rules'], cfg: 'kalkulator progowy po czasie; abonament jako reguła albo osobny komponent ceny' },
+    { t: 'Przejazd ma start i koniec. Można go anulować w ciągu 2 minut bez opłaty.', m: 'start i koniec', a: ['order'], cfg: 'przejazd jako zlecenie z cyklem życia: zarezerwowany → w trakcie → zakończony albo anulowany' },
+    { t: 'Klient doładowuje portfel, a opłaty za przejazdy schodzą z jego salda.', m: 'saldo', a: ['acc'], cfg: 'konto portfela klienta; transakcja doładowania i transakcja opłaty' }
+  ];
+  const STEPS = ['1. Zdania', '2. Sygnały', '3. Konfiguracja', '4. Połączenia', '5. Minimum'];
+  const LINKS = [
+    [ach('order') + ' → ' + ach('party'), 'przejazd trzyma identyfikator użytkownika i płatnika oraz migawkę ich danych z chwili startu'],
+    [ach('order') + ' → ' + ach('inv'), 'przejazd prosi o blokadę roweru (identyfikator egzemplarza) i zwalnia ją na końcu'],
+    [ach('order') + ' → ' + ach('pricing'), 'po zakończeniu przejazd prosi o wycenę i zapisuje jej rozbicie'],
+    [ach('order') + ' → ' + ach('acc'), 'zdarzenie „przejazd zakończony” uruchamia transakcję: opłata schodzi z portfela'],
+    [ach('product') + ' → ' + ach('inv'), 'Inventory wie, który egzemplarz stoi w której stacji, ale nie wie, ile kosztuje przejazd']
+  ];
+  const NAIVE = ['Uzytkownik', 'UzytkownikFirmowy', 'Rower', 'RowerElektryczny', 'Stacja', 'Rezerwacja', 'Przejazd', 'Cennik', 'CennikAbonamentowy', 'Portfel'];
+  let step = 0, run = 0;
+  const enqueue = makeQueue();
+  steps.innerHTML = STEPS.map(s => `<span>${s}</span>`).join('');
+  function paint() {
+    $$('span', steps).forEach((s, i) => { s.className = i === step - 1 ? 'on' : i < step - 1 ? 'done' : ''; });
+    list.innerHTML = '';
+    S.forEach(s => {
+      const txt = step >= 2 ? s.t.replace(s.m, `<mark>${s.m}</mark>`) : s.t;
+      H('div', 'ps-it', `${txt}${step >= 2 ? `<span class="ps-tag">${s.a.map(ach).join('')}</span>` : ''}`, list);
+    });
+    if (step <= 1) panel.innerHTML = '<h5>Krok 1: wypisz zdania</h5><p>Zbierz wymagania jako pełne zdania od ludzi z biznesu, a nie jako listę rzeczowników. Zdanie niesie czasowniki, liczby i wyjątki. To w nich siedzą archetypy.</p>';
+    else if (step === 2) panel.innerHTML = '<h5>Krok 2: znajdź sygnały</h5><p>Zaznacz frazy, które coś zdradzają: „osoba albo firma, która płaci” to role, „numer ramy” to egzemplarz, „20 stojaków” to pojemność, „zarezerwować na 15 minut” to blokada z czasem, „saldo” to konto. Każde zdanie dostaje co najmniej jeden archetyp.</p>';
+    else if (step === 3) panel.innerHTML = '<h5>Krok 3: wybierz konfigurację</h5><ul>' + S.map(s => `<li>${s.a.map(ach).join('')} ${s.cfg}</li>`).join('') + '</ul>';
+    else if (step === 4) panel.innerHTML = '<h5>Krok 4: połącz archetypy</h5><ul>' + LINKS.map(([a, b]) => `<li>${a}: ${b}</li>`).join('') + '</ul><p>Archetypy rozmawiają przez <b>identyfikatory</b>, <b>migawki</b> i <b>zdarzenia</b>. Żaden nie sięga do tabel drugiego.</p>';
+    else panel.innerHTML = '<h5>Krok 5: zacznij od minimum</h5><p><b>Dzień pierwszy:</b> osoba z rolą użytkownika, rower z numerem ramy, rower jako zasób indywidualny, jeden kalkulator ceny, portfel jako konto, przejazd z czterema stanami.</p><p><b>Na sygnał:</b> firmy-płatnicy (relacje z ważnością), abonamenty (wersje cen albo reguły), lista oczekujących na rower, pula stojaków, gdy pojawi się zwrot do pełnej stacji.</p>';
+  }
+  function reset() { run++; step = 1; paint(); say(st, 'Wypożyczalnia rowerów miejskich: siedem zdań wymagań. Klikaj „Krok ▶”.'); }
+  const SAY = ['', 'Zdania zamiast rzeczowników.', 'Każde zdanie dostało archetyp.', 'Każdy archetyp dostał swoją konfigurację.', 'Pięć połączeń, każde przez identyfikator, migawkę albo zdarzenie.', 'Model, który da się zbudować w tydzień i rozwijać latami.'];
+  function go(d) {
+    run++;
+    step = Math.max(1, Math.min(5, step + d)); paint();
+    say(st, `<b>${STEPS[step - 1]}.</b> ${SAY[step]}`, step === 5 ? 'ok' : '');
+  }
+  async function naive() {
+    reset(); const my = run; step = 0;
+    $$('span', steps).forEach(s => { s.className = ''; });
+    list.innerHTML = '';
+    for (const n of NAIVE) { H('div', 'ps-it bad', `class ${n}`, list); await sleep(160); if (my !== run) return; }
+    panel.innerHTML = '<h5>Model z rzeczowników</h5><ul class="bad"><li>Dwie klasy użytkownika: pracownik, który odchodzi z firmy, musi „zmienić klasę”.</li><li>Cena jako pole <code>Rower.cenaZaMinute</code>: abonament i promocja to nowe if-y.</li><li>Saldo jako kolumna <code>Portfel.saldo</code>: przy sporze nie da się pokazać, skąd się wzięło.</li><li>Rezerwacja bez czasu trwania: porzucona rezerwacja blokuje rower na zawsze.</li></ul>';
+    say(st, '<b>Zepsute celowo.</b> Dziesięć klas, każda z if-ami, i żadna nie odpowiada na pytanie „co się zmieni za rok?”.', 'bad');
+  }
+  $('[data-act=next]', root).onclick = () => go(1);
+  $('[data-act=prev]', root).onclick = () => go(-1);
+  $('[data-act=naive]', root).onclick = () => enqueue(naive);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(async () => { const my = run; await sleep(900); if (my === run) go(1); }); } });
+})();
+
+/* ---------- 42. layers (start) ---------- */
+anat('an-layers', {
+  rows: [
+    { ids: ['api'] },
+    { via: 'wywołuje', ids: ['facade'] },
+    { via: 'deleguje', ids: ['model', 'policy'] },
+    { via: 'zapisuje i ogłasza', ids: ['repo', 'events'] },
+    { via: 'słuchają', ids: ['others'] }
+  ],
+  parts: {
+    api: { n: 'Ekran, API, integracja', d: 'Wejście do systemu: formularz, endpoint REST, kolejka z innego systemu. Tłumaczy żądanie na polecenie dla modułu i nic więcej.', lose: 'nikt z zewnątrz nie użyje modułu.' },
+    facade: { n: 'Fasada modułu', r: 'PartiesFacade, PricingFacade…', d: 'Jedyne drzwi do archetypu. Przyjmuje polecenia (np. „dodaj rolę”) i zwraca wyniki albo widoki. W repozytorium szkolenia większość modułów ma taką fasadę (np. <code>PartiesFacade</code>, <code>PricingFacade</code>, <code>AccountingFacade</code>).', lose: 'inne moduły zaczynają wołać klasy wewnętrzne i każda zmiana modelu psuje pół systemu.' },
+    model: { n: 'Model archetypu', r: 'Party, Component, Account…', d: 'Szkielet z rozdziału: obiekty, ich niezmienniki i operacje. To tu jest „Party ma role”, „transakcja sumuje się do zera”, „blokada ma właściciela”.', lose: 'reguły trafiają do serwisów i kontrolerów, a archetyp zostaje pustą tabelą.' },
+    policy: { n: 'Polityki i konfiguracja', r: '…DefiningPolicy, kalkulatory, reguły', opt: true, d: 'Część, którą zmienia biznes: dozwolone role, kalkulatory cen, reguły księgowania, tolerancje. Na początku mogą być stałymi w kodzie, później danymi z wersją.', lose: 'każdy nowy wariant biznesu wymaga zmiany kodu i wdrożenia.' },
+    repo: { n: 'Repozytorium', r: '…Repository (port)', d: 'Zapis i odczyt modelu. Interfejs w module, implementacja (baza, pamięć) na zewnątrz. Testy repozytorium szkolenia używają implementacji w pamięci.', lose: 'model zna bazę danych i nie da się go przetestować bez niej.' },
+    events: { n: 'Zdarzenia', r: 'RoleAdded, CreditEntryRegistered…', opt: true, d: 'Informacja „coś się stało”, wysyłana po każdej zmianie. Inne moduły na nią reagują, nie znając wnętrza nadawcy.', lose: 'moduły muszą się nawzajem wołać i odpytywać, więc rosną zależności w obie strony.' },
+    others: { n: 'Inne moduły', r: 'Ordering, Accounting…', d: 'Pozostałe archetypy. Znają tylko identyfikatory, migawki i zdarzenia tego modułu, nigdy jego tabele.', lose: '—' }
+  },
+  min: 'Na start wystarczą fasada, model i repozytorium. Polityki mogą być stałymi w kodzie, a zdarzenia dodasz, gdy drugi moduł zacznie reagować na zmiany pierwszego.',
+  brk: { id: 'facade', btn: 'Omiń fasadę', say: 'Ordering czyta tabelę ról Party przez JOIN, a raport księgowy liczy saldo własnym zapytaniem. Po pierwszej zmianie modelu Party oba się psują, a nikt nie wie, że zależały od jego wnętrza.' },
+  done: 'Archetyp to moduł z jedną fasadą. Wnętrze się zmienia, a granica zostaje.'
+});
+
+/* ---------- 43. start questions (start) ---------- */
+(() => {
+  const root = $('#fig-start'); if (!root) return;
+  const qs = $('#sq-list'), out = $('#sq-out'), st = $('#sq-status');
+  const Q = [
+    ['Ta sama osoba lub firma występuje w kilku rolach (klient, dostawca, pracownik)?', 'party', '#party'],
+    ['Liczysz ilości w jednostkach albo kwoty w walutach?', 'qty', '#qty'],
+    ['Sprzedajesz coś z katalogu, w wariantach, z numerami seryjnymi lub partiami?', 'product', '#product'],
+    ['Cena zależy od ilości, czasu, klienta albo pakietu?', 'pricing', '#pricing'],
+    ['Są promocje, wyjątki i zdania „chyba że”?', 'rules', '#rules'],
+    ['Ktoś pyta „czy jest wolne?” albo coś się rezerwuje?', 'inv', '#inventory'],
+    ['Ktoś zamawia, ktoś płaci, ktoś odbiera, a zlecenie ma statusy?', 'order', '#ordering'],
+    ['Jest saldo: pieniądze, punkty, limit, minuty?', 'acc', '#accounting'],
+    ['Kroki zależą od siebie i trzeba ułożyć ich kolejność w czasie?', 'sched', '#sched'],
+    ['Trzeba porównać, co zaplanowano, z tym, co się stało?', 'plan', '#planexec']
+  ];
+  const on = new Set();
+  const els = Q.map((q, i) => {
+    const b = H('button', 'sq-q', q[0], qs); b.type = 'button';
+    b.onclick = () => { on.has(i) ? on.delete(i) : on.add(i); paint(); };
+    return b;
+  });
+  function paint() {
+    els.forEach((e, i) => e.classList.toggle('on', on.has(i)));
+    if (!on.size) { out.innerHTML = '<p class="mut">Zaznacz pytania, na które odpowiadasz „tak” dla swojego projektu.</p>'; say(st, 'Kliknij pytania, które pasują do Twojego projektu.'); return; }
+    const sel = [...on].sort((a, b) => a - b);
+    out.innerHTML = '<b>Twoja ścieżka czytania:</b><ol>' + sel.map(i => `<li>${ach(Q[i][1])} <a href="${Q[i][2]}">przejdź do rozdziału</a></li>`).join('') + '</ol>';
+    say(st, sel.length <= 4 ? `<b>${sel.length} z 10.</b> Zacznij od tych rozdziałów. Resztę przeczytasz, gdy pojawi się sygnał.` : `<b>${sel.length} z 10.</b> Dużo naraz. Zacznij od dwóch, które dotyczą najczęstszego zdania z wymagań.`, sel.length <= 4 ? 'ok' : 'warn');
+  }
+  function reset() { on.clear(); paint(); }
+  $('[data-act=demo]', root).onclick = () => { on.clear(); [0, 3, 5, 7].forEach(i => on.add(i)); paint(); };
+  $('[data-act=all]', root).onclick = () => {
+    Q.forEach((q, i) => on.add(i)); paint();
+    say(st, '<b>Zepsute celowo.</b> Dziesięć archetypów w pierwszej wersji to platforma, a nie produkt. Archetyp kosztuje: dobierz go do zdania z wymagań, a nie „na zapas”.', 'bad');
+  };
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { $('[data-act=demo]', root).click(); } });
+})();
+
+/* ---------- 44. anatomy: quantity ---------- */
+anat('an-qty', {
+  rows: [{ ids: ['amount', 'unit'] }, { via: 'razem tworzą', ids: ['qtyo'] }, { via: 'dla pieniędzy', ids: ['money', 'pct'] }, { via: 'opcje', ids: ['conv', 'round', 'alloc'] }],
+  parts: {
+    amount: { n: 'Wartość', r: 'BigDecimal', d: 'Liczba w typie dziesiętnym. Typ dziesiętny zapisuje 0,1 dokładnie, a binarny <code>double</code> nie.', lose: 'grosze „pływają”: 0.1 + 0.2 daje 0.30000000000000004.' },
+    unit: { n: 'Jednostka', r: 'Unit', d: 'Symbol i nazwa jednostki. Repozytorium ma gotowe jednostki (m.in. sztuki, kilogramy, litry, metry, godziny, minuty) i pozwala tworzyć własne.', lose: 'nie wiadomo, czy 10 to litry, czy kilogramy.' },
+    qtyo: { n: 'Ilość', r: 'Quantity', d: 'Para wartość + jednostka. Dodawanie i odejmowanie sprawdzają, czy jednostki są te same, a ujemna wartość jest odrzucana.', lose: 'ktoś doda 5 kg do 10 lb i dostanie 15 „czegoś”.' },
+    money: { n: 'Pieniądze', r: 'Money', d: 'Kwota z walutą, opakowanie biblioteki JavaMoney (JSR 354). Kwot w różnych walutach nie da się dodać bez przeliczenia.', lose: 'złotówki i euro sumują się w jedną liczbę bez znaczenia.' },
+    pct: { n: 'Procent', r: 'Percentage', opt: true, d: 'Osobny typ procentu. Mnożenie kwoty przez procent jest jawną operacją.', lose: 'ktoś zapisze 5% jako 5 i naliczy pięciokrotność kwoty.' },
+    conv: { n: 'Konwersja jednostek', opt: true, d: 'Jawne przeliczenie ze współczynnikiem (Fowler: <i>Conversion Ratio</i>). Repozytorium jej nie ma: różne jednostki po prostu się nie sumują.', lose: 'stała w kodzie przelicza litry na tony z jedną gęstością na zawsze.' },
+    round: { n: 'Polityka zaokrągleń', opt: true, d: 'Reguła: kiedy zaokrąglać (linia czy suma), jak (połówki w górę, do parzystej) i gdzie trafia różnica.', lose: 'VAT wychodzi inaczej w sklepie i na fakturze.' },
+    alloc: { n: 'Alokacja', opt: true, d: 'Podział kwoty na części, których suma zawsze równa się całości. Reszta groszy trafia według ustalonej zasady.', lose: '100 zł na trzy raty daje 99,99 zł.' }
+  },
+  min: 'Wartość dziesiętna z jednostką dla ilości, kwota z walutą dla pieniędzy. Procent, konwersję, zaokrąglenia i alokację dodasz, gdy pojawią się raty, podatki albo druga jednostka.',
+  brk: { id: 'unit', btn: 'Usuń jednostkę', say: 'Bez jednostki 10 + 5 = 15 wygląda poprawnie, dopóki jedno to funty, a drugie kilogramy. Podobna pomyłka jednostek kosztowała NASA sondę Mars Climate Orbiter w 1999 roku.' },
+  done: 'Ilość i pieniądze zawsze niosą swoją jednostkę, a operacje jej pilnują.'
+});
+
+/* ---------- 45. anatomy: party ---------- */
+anat('an-party', {
+  rows: [{ ids: ['party'] }, { via: 'jest jednym z', ids: ['person', 'org', 'unit'] }, { via: 'ma', ids: ['roles', 'ids', 'addr'] }, { via: 'łączy się z innymi przez', ids: ['rel', 'cap'] }, { via: 'każda zmiana daje', ids: ['events'] }],
+  parts: {
+    party: { n: 'Party', r: 'Party', d: 'Strona: identyfikowalna osoba albo organizacja, z identyfikatorem i wersją.', lose: 'każdy system ma własną kartotekę klientów.' },
+    person: { n: 'Osoba', r: 'Person', d: 'Człowiek z danymi osobowymi.', lose: 'klient prywatny musi udawać firmę z pustym NIP-em.' },
+    org: { n: 'Firma', r: 'Company', d: 'Organizacja, np. spółka.', lose: 'firma musi udawać osobę, a jej nazwa trafia do pola „nazwisko”.' },
+    unit: { n: 'Jednostka organizacyjna', r: 'OrganizationUnit', opt: true, d: 'Dział, oddział, filia. To też organizacja, więc też może mieć role.', lose: 'oddział nie może być osobnym płatnikiem ani odbiorcą.' },
+    roles: { n: 'Role', r: 'Role, PartyRoleDefiningPolicy', d: 'Nazwane kapelusze: klient, dostawca, pracownik. Polityka decyduje, kto może mieć jaką rolę. Ponowne dodanie tej samej roli niczego nie zmienia.', lose: 'typ klienta to kolumna, a „klient, który jest też dostawcą” to duplikat.' },
+    ids: { n: 'Identyfikatory', r: 'RegisteredIdentifier', d: 'PESEL, paszport, NIP i inne numery jako osobne obiekty. Polityka może pilnować, że numery osobowe ma tylko osoba.', lose: 'jedno pole „numer” raz zawiera PESEL, raz NIP, raz numer paszportu.' },
+    addr: { n: 'Adresy', r: 'Addresses, GeoAddress, EmailAddress…', opt: true, d: 'Osobny byt z rodzajami (pocztowy, e-mail, telefon, WWW) i zastosowaniami (rozliczeniowy, dostawy i inne).', lose: 'faktura i paczka muszą iść na ten sam adres.' },
+    rel: { n: 'Relacje', r: 'PartyRelationship', opt: true, d: 'Nazwane powiązanie dwóch ról z okresem ważności, tworzone przez politykę relacji.', lose: 'nie odpowiesz na pytanie „kto był pełnomocnikiem w marcu?”.' },
+    cap: { n: 'Kompetencje', r: 'Capability', opt: true, d: 'Co strona potrafi, gdzie, kiedy, ile i na jakim poziomie, z datą ważności.', lose: 'zlecenie trafia do wykonawcy bez uprawnień.' },
+    events: { n: 'Zdarzenia', r: 'PartyRegistered, RoleAdded…', opt: true, d: 'Informacja o każdej zmianie, np. rejestracji strony albo dodaniu roli. Inne moduły na nią reagują.', lose: 'inne moduły muszą co chwilę pytać Party o zmiany.' }
+  },
+  min: 'Osoba i firma, role, jeden identyfikator. Jednostki, adresy jako osobny byt, relacje, kompetencje i zdarzenia dokładasz na sygnał.',
+  brk: { id: 'roles', btn: 'Usuń role', say: 'Bez ról jedyny sposób na „klienta, który jest też dostawcą” to dwa rekordy. Dział ryzyka nie zobaczy, że to ta sama firma, a zmiana adresu trafi tylko do jednego z nich.' },
+  done: 'Jedna strona, wiele ról, a powiązania i kompetencje jako osobne byty z datami.'
+});
+
+/* ---------- 46. anatomy: product ---------- */
+anat('an-product', {
+  rows: [{ ids: ['type'] }, { via: 'opisuje', ids: ['features', 'track', 'appl'] }, { via: 'według typu powstaje', ids: ['inst', 'batch'] }, { via: 'w ofercie i w zestawach', ids: ['catalog', 'pkg', 'rel'] }],
+  parts: {
+    type: { n: 'Typ produktu', r: 'ProductType', d: 'Opis z katalogu: identyfikator (UUID, GTIN, ISBN), nazwa, preferowana jednostka, cechy i strategia śledzenia.', lose: 'każdy egzemplarz sam opisuje, czym jest, i opisy się rozjeżdżają.' },
+    features: { n: 'Cechy', r: 'ProductFeatureType', opt: true, d: 'Definicje cech: typ wartości (tekst, liczba całkowita, dziesiętna, data, tak/nie), obowiązkowość i ograniczenia (lista, zakres, wyrażenie regularne).', lose: 'każdy wariant to nowa kolumna albo nowy produkt.' },
+    track: { n: 'Strategia śledzenia', r: 'ProductTrackingStrategy', d: 'Unikat, numer seryjny, partia, numer i partia albo egzemplarze zamienne.', lose: 'przy wycofaniu nie wiadomo, czy szukać numeru, partii, czy wycofać wszystko.' },
+    appl: { n: 'Stosowalność', r: 'ApplicabilityConstraint', opt: true, d: 'Warunek, komu i w jakim kontekście wolno zaproponować produkt.', lose: 'warunki dostępności oferty to if-y w kodzie sklepu.' },
+    inst: { n: 'Egzemplarz', r: 'ProductInstance', d: 'Konkretna rzecz, umowa albo wykonanie usługi, z wartościami cech i numerem seryjnym lub partią.', lose: 'nie wiadomo, który egzemplarz dostał który klient.' },
+    batch: { n: 'Partia', r: 'Batch', opt: true, d: 'Grupa egzemplarzy z datą produkcji, datami „sprzedaj do”, „zużyj do”, „najlepiej spożyć przed” i zakresem numerów.', lose: 'wycofanie jednej partii oznacza wycofanie wszystkiego.' },
+    catalog: { n: 'Wpis w katalogu', r: 'CatalogEntry', opt: true, d: 'Nazwa wyświetlana, kategorie i okres obecności w ofercie.', lose: 'zniknięcie z oferty wymaga usunięcia produktu, a stare umowy tracą swój typ.' },
+    pkg: { n: 'Pakiet', r: 'PackageType, SelectionRule', opt: true, d: 'Produkt z nazwanymi zestawami i regułami wyboru.', lose: 'konfigurator to if-y, które przepuszczają niedozwolone kombinacje.' },
+    rel: { n: 'Relacje produktów', r: 'ProductRelationshipType', opt: true, d: 'Ulepszenie, zamiennik, następca, uzupełnienie, zgodność, niezgodność.', lose: 'ścieżki migracji taryf są zakodowane po nazwach produktów.' }
+  },
+  min: 'Typ z nazwą i jednostką, strategia śledzenia i egzemplarz. Cechy dodajesz przy wariantach, partie przy wycofaniach, katalog przy ofercie zmiennej w czasie, pakiety i relacje przy zestawach i migracjach.',
+  brk: { id: 'inst', btn: 'Usuń egzemplarz', say: 'Bez egzemplarza jest tylko „iPhone 15, sztuk 120”. Klient zgłasza reklamację, a serwis nie wie, czy to telefon z wadliwej serii, kiedy go sprzedano i czy ma gwarancję.' },
+  done: 'Typ opisuje, egzemplarz istnieje, a katalog, pakiety i relacje porządkują ofertę.'
+});
+
+/* ---------- 47. anatomy: pricing ---------- */
+anat('an-pricing', {
+  rows: [{ ids: ['calc'] }, { via: 'nazwany i złożony w', ids: ['comp', 'composite'] }, { via: 'wejście i znaczenie', ids: ['params', 'deps', 'interp'] }, { via: 'w czasie i dla kogo', ids: ['versions', 'appl'] }, { via: 'wynik', ids: ['breakdown'] }],
+  parts: {
+    calc: { n: 'Kalkulator', r: 'Calculator, CalculatorType', d: 'Czysta funkcja „parametry → kwota”. Osiem rodzajów: stała, odsetki, progowa, punkty, dzienny przyrost, liniowa w czasie, procent, złożona.', lose: 'każda formuła ceny jest ręcznie pisaną metodą.' },
+    comp: { n: 'Komponent prosty', r: 'Component', d: 'Nazwany składnik ceny („opłata za sesję”) z kalkulatorem i mapowaniem nazw parametrów.', lose: 'rachunek ma jedną liczbę bez nazw.' },
+    composite: { n: 'Komponent złożony', opt: true, d: 'Grupa komponentów, np. „opłaty bazowe” albo cały rachunek.', lose: 'nie da się pokazać sum pośrednich ani policzyć VAT od sumy.' },
+    params: { n: 'Parametry', r: 'Parameters', d: 'Nazwane wartości wejściowe: ilość, czas, data, kwota bazowa.', lose: 'kalkulator czyta dane z całego systemu i nie da się go przetestować osobno.' },
+    deps: { n: 'Zależności', r: 'ValueOf, SumOf, DifferenceOf, ProductOf', opt: true, d: 'Parametr jednego komponentu to wynik innego.', lose: 'VAT liczony od kwoty wpisanej ręcznie, a nie od faktycznej sumy netto.' },
+    interp: { n: 'Interpretacja', r: 'Interpretation', opt: true, d: 'Czy wynik to cena całkowita, jednostkowa czy marginalna. Adaptery przeliczają między nimi.', lose: 'cena n-tej kWh brana jako cena za całość.' },
+    versions: { n: 'Wersje', r: 'ComponentVersion, Validity', opt: true, d: 'Okresy obowiązywania. Promocja to nakładka na krótszy okres.', lose: 'nie da się przeliczyć reklamacji sprzed zmiany cennika.' },
+    appl: { n: 'Stosowalność', r: 'ApplicabilityConstraint', opt: true, d: 'Warunek, kiedy komponent w ogóle się liczy.', lose: 'dopłaty dla wybranych klientów to if-y.' },
+    breakdown: { n: 'Rozbicie', r: 'ComponentBreakdown', d: 'Wynik jako drzewo kwot: każdy komponent ze swoją kwotą.', lose: 'na pytanie „za co płacę?” odpowiada tylko programista.' }
+  },
+  min: 'Kalkulator stały lub procentowy, komponenty proste, parametry i rozbicie. Komponenty złożone, zależności, interpretacje, wersje i stosowalność dodajesz na sygnał.',
+  brk: { id: 'breakdown', btn: 'Usuń rozbicie', say: 'Klient dostaje rachunek na 81 zł netto i dzwoni z pytaniem dlaczego. Bez rozbicia konsultant nie widzi, że 45 zł to opłaty bazowe, 6 zł nadwyżka danych, a 30 zł roaming.' },
+  done: 'Cena to drzewo nazwanych składników, a każdy ma swój kalkulator i swoją historię.'
+});
+
+/* ---------- 48. anatomy: rules ---------- */
+anat('an-rules', {
+  rows: [{ ids: ['pred', 'client'] }, { via: 'gdy pasuje, działa', ids: ['applier'] }, { via: 'wynik sprawdza', ids: ['guard'] }, { via: 'reguły łączy', ids: ['chain', 'mods'] }, { via: 'źródło i interpretacja', ids: ['config', 'algebra'] }],
+  parts: {
+    pred: { n: 'Warunek na pozycji', r: 'ItemIdPredicate, MoreExpensiveThanPredicate…', d: 'Czy reguła dotyczy tej pozycji. Warunki łączy się przez i, lub, nie.', lose: 'rabat na „ogród” dostaje cały koszyk.' },
+    client: { n: 'Warunek na kliencie', r: 'StatusRule, ExpensesRule, TimeBeingCustomer', opt: true, d: 'Którzy klienci dostają regułę: status, suma wydatków, staż.', lose: 'promocja dla VIP-ów działa dla wszystkich.' },
+    applier: { n: 'Zmiana (aplikator)', r: 'PercentageFromBase, PercentageAccumulated, Amount, FixedPrice', d: 'Jak reguła zmienia cenę: procent od bazy, procent od wyniku, kwota albo cena stała.', lose: 'reguła wie, kiedy działać, ale nie wie, co zrobić.' },
+    guard: { n: 'Strażnik', r: 'MarginGuardian', opt: true, d: 'Odrzuca zmianę, gdy wynik jest niedopuszczalny. Pozycja zostaje bez zmian.', lose: 'kilka promocji naraz schodzi poniżej opłacalności.' },
+    chain: { n: 'Łańcuch', r: 'ChainOfferItemModifier', opt: true, d: 'Reguły działają po kolei, w jawnej kolejności.', lose: 'kolejność rabatów zależy od przypadku, a wynik od kolejności.' },
+    mods: { n: 'Lista zmian', r: 'Modification', d: 'Każda zastosowana reguła zapisuje w pozycji nazwaną zmianę.', lose: 'klient nie wie, który rabat dostał, a który nie.' },
+    config: { n: 'Konfiguracja', r: 'ConfigProvider', opt: true, d: 'Skąd biorą się reguły: z kodu, z danych firmy (np. nadmiar towaru w magazynie) albo z wierszy w bazie.', lose: 'każda nowa promocja wymaga wdrożenia.' },
+    algebra: { n: 'Algebra', r: 'Algebra<R>', opt: true, d: 'Ta sama reguła czytana jako tak/nie, stopień spełnienia, punkty albo wyjaśnienie.', lose: 'trzy kopie tej samej reguły dla sklepu, marketingu i obsługi klienta.' }
+  },
+  min: 'Warunek na pozycji, zmiana i lista zmian. Warunki na kliencie, strażnika, łańcuch, konfigurację z bazy i algebry dodajesz na sygnał.',
+  brk: { id: 'guard', btn: 'Usuń strażnika', say: 'VIP −10%, ogród −20% i Black Friday −40%, liczone od wyniku, dają grill za 43,20 zł przy cenie bazowej 100 zł (kwoty ilustracyjne). Bez strażnika nic tego nie zatrzyma, dopóki dział finansów nie zobaczy marży.' },
+  done: 'Reguła to warunek, zmiana i strażnik, a każda zastosowana zmiana ma nazwę.'
+});
+
+/* ---------- 49. anatomy: inventory ---------- */
+anat('an-inventory', {
+  rows: [{ ids: ['resource'] }, { via: 'dostępność według modelu', ids: ['ind', 'pool', 'temp'] }, { via: 'złożenia', ids: ['group', 'composite'] }, { via: 'zajmowanie', ids: ['lock', 'resv'] }, { via: 'gdy brak miejsca', ids: ['wait'] }],
+  parts: {
+    resource: { n: 'Zasób', r: 'ResourceId, InventoryEntry', d: 'Coś, czego dostępność śledzisz: egzemplarz, pojemność, pokój, gabinet. Wpis magazynowy łączy produkt z jego egzemplarzami i zasobami.', lose: 'nie ma czego blokować.' },
+    ind: { n: 'Indywidualna', r: 'IndividualResourceAvailability', d: 'Jeden zasób: wolny albo zajęty w całości. Najprostszy model.', lose: 'rezonans da się „zarezerwować w połowie”.' },
+    pool: { n: 'Pula', r: 'PoolResourceAvailability', opt: true, d: 'Pojemność jako ilość. Każdy bierze część, dopóki starcza. Wybierasz ją zamiast modelu indywidualnego, gdy części są zamienne.', lose: 'paliwo w zbiorniku trzeba by modelować jako 10 000 osobnych litrów.' },
+    temp: { n: 'Slot czasu', r: 'TemporalResourceAvailability, TimeSlot', opt: true, d: 'Zasób w przedziale czasu. Ten sam pokój ma osobną dostępność w każdą noc.', lose: 'pokój zajęty 15 czerwca wygląda na zajęty na zawsze.' },
+    group: { n: 'Grupa slotów', r: 'TemporalResourceGroupedAvailability', opt: true, d: 'Kilka slotów blokowanych razem: wszystkie albo żaden.', lose: 'klient dostaje dwie noce z trzech.' },
+    composite: { n: 'Zasób złożony', r: 'CompositeResourceAvailability', opt: true, d: 'Różne zasoby blokowane razem. Gdy jedna blokada się nie uda, reszta jest wycofywana.', lose: 'sala jest zarezerwowana, a anestezjologa nie ma.' },
+    lock: { n: 'Blokada', r: 'Blockade, OwnerId, LockDuration', d: 'Kto zajął zasób, kiedy i na jak długo: bezterminowo albo czasowo.', lose: 'wiadomo, że zajęte, ale nie wiadomo przez kogo i do kiedy.' },
+    resv: { n: 'Rezerwacja', r: 'Reservation', opt: true, d: 'Grupuje blokady, ma cel (rezerwacja, przydział, odłożenie, blokada chwilowa) i status.', lose: 'nie da się anulować „całej rezerwacji” jednym ruchem.' },
+    wait: { n: 'Lista oczekujących', r: 'WaitList, WaitListSelectionPolicy', opt: true, d: 'Kolejka chętnych z pojemnością i polityką wyboru: kolejność zgłoszeń, priorytet, kwoty, kryterium.', lose: 'zwolnione miejsce dostaje ten, kto pierwszy odświeży stronę.' }
+  },
+  min: 'Zasób, jeden model dostępności i blokada z właścicielem. Pozostałe modele, grupy, zasoby złożone, rezerwacje i kolejki dodajesz na sygnał.',
+  brk: { id: 'lock', btn: 'Usuń blokadę', say: 'Bez blokady „czy wolne?” i „zarezerwuj” to dwa osobne kroki. Dwie osoby sprawdzają naraz, obie widzą „wolne” i obie dostają potwierdzenie na ten sam pokój.' },
+  done: 'Zasób, model dostępności i blokada z właścicielem oraz czasem trwania.'
+});
+
+/* ---------- 50. anatomy: ordering ---------- */
+anat('an-ordering', {
+  rows: [{ ids: ['order'] }, { via: 'ma', ids: ['parties', 'lines'] }, { via: 'linia ma', ids: ['pricing', 'spec'] }, { via: 'zasady', ids: ['policies', 'states'] }, { via: 'na zewnątrz przez', ids: ['ports', 'events'] }],
+  parts: {
+    order: { n: 'Zamówienie', r: 'Order', d: 'Zlecenie z identyfikatorem, stronami, liniami i stanem.', lose: 'nie ma czego śledzić ani zatwierdzać.' },
+    parties: { n: 'Strony z rolami', r: 'PartyInOrder, RoleInOrder', d: 'Migawka strony + rola: zamawia, płaci, odbiera, wykonuje, kontakt przy dostawie, odbiór osobisty.', lose: 'zamówienie ma jednego „klienta”, który musi zamawiać, płacić i odbierać.' },
+    lines: { n: 'Linie', r: 'OrderLine', d: 'Produkt i ilość. Linia może mieć własne role, np. odbiorcę i kontakt przy dostawie.', lose: 'jedna dostawa i jeden odbiorca na całe zamówienie.' },
+    pricing: { n: 'Wycena linii', r: 'OrderLinePricing', d: 'Stan ceny linii: brak, wstępna, wyliczona, ręczna z powodem.', lose: 'nie wiadomo, czy cena jest ostateczna i kto ją zmienił.' },
+    spec: { n: 'Specyfikacja linii', r: 'OrderLineSpecification', opt: true, d: 'Szczegóły zamówionej pozycji, np. wybrany wariant.', lose: 'zamówienie mówi „laptop”, ale nie mówi który.' },
+    policies: { n: 'Polityki ról', r: 'OrderLevelRolePolicy, OrderLineLevelRolePolicy', opt: true, d: 'Ile ról jakiego rodzaju wolno na zamówieniu i na linii.', lose: 'zamówienie z dwoma zamawiającymi i bez wykonawcy przechodzi walidację.' },
+    states: { n: 'Stany', r: 'OrderStatus', d: 'Szkic, zatwierdzone, w realizacji, zrealizowane, anulowane i inne. Stan mówi, co wolno zmienić.', lose: 'linię można dopisać do wysłanego zamówienia.' },
+    ports: { n: 'Porty', r: 'InventoryService, PaymentService, FulfillmentService, PricingService…', d: 'Interfejsy do innych modułów: alokacja, płatność, realizacja, wycena.', lose: 'zamówienie samo zmienia stany magazynu i obciąża karty.' },
+    events: { n: 'Postęp realizacji', r: 'FulfillmentUpdated', opt: true, d: 'Zdarzenie od realizacji przesuwa zamówienie do „w realizacji” albo „zrealizowane”.', lose: 'zamówienie musi co chwilę pytać magazyn o status.' }
+  },
+  min: 'Zamówienie, strona zamawiająca, linie z wyceną wyliczoną, stany i porty. Polityki ról, role na liniach, specyfikacje, wyceny wstępne i ręczne oraz zdarzenia realizacji dodajesz na sygnał.',
+  brk: { id: 'parties', btn: 'Usuń role', say: 'Bez ról zamówienie ma jedno pole „klient”. Dział zakupów centrali zamawia, spółka zależna płaci, a trzy oddziały odbierają. Faktura trafia do centrali, a paczki na jeden adres.' },
+  done: 'Zamówienie łączy migawki stron z rolami, linie z wyceną i stany, a z resztą systemu rozmawia przez porty.'
+});
+
+/* ---------- 51. anatomy: accounting ---------- */
+anat('an-accounting', {
+  rows: [{ ids: ['account'] }, { via: 'saldo to suma', ids: ['entry'] }, { via: 'zapisy grupuje', ids: ['tx', 'ttype'] }, { via: 'czas', ids: ['dates', 'validity'] }, { via: 'automatyzacja i raporty', ids: ['posting', 'proj'] }],
+  parts: {
+    account: { n: 'Konto', r: 'Account, AccountType', d: 'Miejsce, które ma saldo. Typ: aktywa, zobowiązania, przychody, koszty albo pozabilansowe.', lose: 'nie ma gdzie trzymać salda.' },
+    entry: { n: 'Zapis', r: 'Entry: AccountCredited, AccountDebited', d: 'Niezmienny wpis. Uznanie zwiększa saldo, obciążenie je zmniejsza.', lose: 'saldo jest kolumną, którą każdy może nadpisać.' },
+    tx: { n: 'Transakcja', r: 'Transaction', d: 'Grupa zapisów. Na kontach bilansowych zawsze sumuje się do zera.', lose: 'pieniądze znikają albo powstają z niczego, bo zapisano tylko jedną stronę.' },
+    ttype: { n: 'Typ transakcji', r: 'TransactionType', opt: true, d: 'Otwarcie, przeniesienie, odwrócenie, przealokowanie, kompensacja wygaśnięcia albo własny typ.', lose: 'nie wiadomo, czy zapis to wpłata, korekta, czy wygaśnięcie.' },
+    dates: { n: 'Dwie daty', r: 'occurredAt, appliesAt', opt: true, d: 'Kiedy zapis zarejestrowano i od kiedy obowiązuje.', lose: 'wpłata z datą wsteczną psuje saldo „na dzień”.' },
+    validity: { n: 'Ważność zapisu', r: 'Validity, expiration_compensation', opt: true, d: 'Zapis obowiązuje do daty, a niewykorzystana reszta wygasa jawną transakcją.', lose: 'bonusy znikają bez śladu albo nie znikają wcale.' },
+    posting: { n: 'Reguły księgowania', r: 'PostingRule', opt: true, d: 'Zapis automatycznie tworzy kolejne zapisy według warunku, kalkulatora i priorytetu.', lose: 'prowizje i podatki dopisuje kod w wielu miejscach.' },
+    proj: { n: 'Konto-projekcja', r: 'ProjectionAccount', opt: true, d: 'Konto wirtualne z filtrem na zapisach, do raportów.', lose: 'raporty przekrojowe wymagają dodatkowych kont i podwójnego księgowania.' }
+  },
+  min: 'Konta z typem, zapisy i transakcje sumujące się do zera. Typy transakcji, dwie daty, ważność, reguły księgowania i projekcje dodajesz na sygnał.',
+  brk: { id: 'tx', btn: 'Usuń transakcję', say: 'Bez transakcji wpłata raty to kilka niezależnych zapisów. Gdy jeden się nie zapisze, kapitał spada, a odsetki nie. Nikt tego nie zauważy, bo nic nie sprawdza, czy całość się bilansuje.' },
+  done: 'Saldo to suma niezmiennych zapisów, a transakcja pilnuje, że nic nie ginie.'
+});
+
+/* ---------- 52. anatomy: scheduling ---------- */
+anat('an-sched', {
+  rows: [{ ids: ['task'] }, { via: 'połączone przez', ids: ['dep', 'lag'] }, { via: 'z grafu wynika', ids: ['order', 'cycle'] }, { via: 'analizy', ids: ['cpm', 'color', 'swap'] }],
+  parts: {
+    task: { n: 'Krok', r: 'wierzchołek grafu', d: 'Zadanie, np. fundamenty albo tynki. W repozytorium krok ma tylko nazwę. Czas trwania dodajesz, gdy liczysz daty.', lose: 'nie ma czego układać.' },
+    dep: { n: 'Zależność', r: 'DependencyType', d: 'Krawędź „B po A”. W metodzie PDM typ mówi, który koniec którego kroku wiąże: FS, SS, FF albo SF. Repozytorium ma gotowy typ koniec–start i pozwala definiować własne.', lose: 'daty trzeba przesuwać ręcznie.' },
+    lag: { n: 'Zwłoka', opt: true, d: 'Wymagany odstęp na zależności, np. czas dojrzewania betonu. Repozytorium jej nie ma: dopisujesz ją sam.', lose: 'tynki zaplanowane dzień po wylaniu betonu.' },
+    order: { n: 'Kolejność', d: 'Porządek topologiczny: każdy krok wypada po wszystkich, od których zależy. Repozytorium liczy samą kolejność. Daty z czasów trwania dopisujesz sam.', lose: 'krok startuje przed tym, od którego zależy.' },
+    cycle: { n: 'Wykrywanie cykli', r: 'findFirstCycle', d: 'Odrzuca zależność, która zamyka pętlę.', lose: 'harmonogram z pętlą nie ma żadnej poprawnej kolejności.' },
+    cpm: { n: 'Ścieżka krytyczna', opt: true, d: 'Najdłuższa ścieżka wyznacza koniec. Zapas mówi, o ile krok może się spóźnić. Repozytorium jej nie liczy.', lose: 'nie wiadomo, które opóźnienie przesuwa koniec.' },
+    color: { n: 'Kolorowanie konfliktów', r: 'Concurrency', opt: true, d: 'Kroki, które się wykluczają, dostają różne zasoby lub terminy.', lose: 'dwie ekipy zaplanowane naraz w tej samej sali.' },
+    swap: { n: 'Cykl zamian', r: 'BatchReservationUseCase', opt: true, d: 'Zamiany terminów w pętli wykonywane jedną paczką.', lose: 'zamiana trzech terminów jest niemożliwa, bo każdy docelowy jest zajęty.' }
+  },
+  min: 'Kroki, zależności, kolejność i wykrywanie cykli. Czasy trwania i daty, zwłoki, ścieżkę krytyczną, kolorowanie i zamiany dodajesz na sygnał.',
+  brk: { id: 'cycle', btn: 'Usuń wykrywanie cykli', say: 'Jeden dziekanat wpisuje „kurs A wymaga kursu B”, a drugi „kurs B wymaga kursu A”. Bez wykrywania cykli oba zapisy przechodzą, a w poniedziałek rano plan studiów nie ma żadnej poprawnej kolejności.' },
+  done: 'Kroki i zależności to dane, a kolejność (i po dodaniu czasów trwania: daty i ścieżka krytyczna) to wynik.'
+});
+
+/* ---------- 53. anatomy: plan vs execution ---------- */
+anat('an-planexec', {
+  rows: [{ ids: ['plan', 'exec'] }, { via: 'porównuje', ids: ['tol'] }, { via: 'daje', ids: ['delta'] }, { via: 'opcje', ids: ['ver', 'res', 'sim'] }],
+  parts: {
+    plan: { n: 'Plan', r: 'PaymentSchedule, ProductionPlan', d: 'Zapisany zamiar: raty, ilości, terminy.', lose: 'plan „liczy się” zapytaniem i zmienia wstecz.' },
+    exec: { n: 'Wykonanie', r: 'Payment, ActualProduction', d: 'Fakty: wpłaty, wyprodukowane ilości, dostawy.', lose: 'nie ma z czym porównać planu.' },
+    tol: { n: 'Tolerancja', r: 'ToleranceStrategy', d: 'Jawna reguła „co jest zgodne”: dokładnie, kwota, data, ilość, procent, łącznie, wpłaty częściowe.', lose: 'każdy raport ma inną definicję spóźnienia.' },
+    delta: { n: 'Delta', r: 'DeltaResult', d: 'Dopasowane pary, pozycje planu bez wykonania, wykonania spoza planu i statystyki.', lose: 'wynik porównania to tylko „zgadza się” albo „nie zgadza się”.' },
+    ver: { n: 'Wersje planu', opt: true, d: 'Każda zmiana planu to nowa wersja z datą i powodem. Repozytorium tego nie ma: to zalecane rozszerzenie.', lose: 'nie odpowiesz, jaki był plan wczoraj.' },
+    res: { n: 'Rozdzielczość', r: 'MonthlyProductionPlan, DailyProductionExecution', opt: true, d: 'Wykonanie sumowane do szczegółowości planu.', lose: 'plan miesięczny porównany dzień do dnia daje same odchylenia.' },
+    sim: { n: 'Symulacje', r: 'IncreaseBufferModifier, SpreadRemainingAmountModifier…', opt: true, d: 'Modyfikator dostaje plan i deltę, a zwraca nowy plan. Fakty wykonania zostają bez zmian. W repozytorium nowy plan zastępuje aktywny, więc symulację na kopii dopisujesz sam.', lose: '„co, jeśli” trzeba liczyć w arkuszu poza systemem.' }
+  },
+  min: 'Plan zapisany jako byt, wykonanie, jedna tolerancja i delta. Wersje, rozdzielczość i symulacje dodajesz na sygnał.',
+  brk: { id: 'plan', btn: 'Usuń plan jako byt', say: 'Plan liczony z bieżących ustawień: ktoś zmienia SLA klienta z 3 na 5 dni i nagle wszystkie otwarte dostawy „od zawsze” miały 5 dni. Wczorajsze spóźnienia znikają z raportu.' },
+  done: 'Plan i wykonanie żyją osobno, a delta powstaje według jawnej tolerancji.'
+});
+
 /* ---------- quiz ---------- */
 (() => {
   const Q = [   // [question, options, correctIndex, why] — wrong options = misconceptions from the chapters
+    ['Czym jest archetyp w najprostszym ujęciu?', ['Biblioteką, którą instaluje się w projekcie', 'Sprawdzonym szkieletem modelu dla pojęcia, które powtarza się w wielu biznesach', 'Wzorcem projektowym z katalogu Gang of Four'], 1, 'Archetyp to sposób modelowania: części obowiązkowe, opcjonalne i pytania do biznesu. Nie jest biblioteką ani wzorcem GoF.'],
+    ['Od czego zacząć modelowanie z archetypami?', ['Od listy rzeczowników z wymagań, każdy jako osobna klasa', 'Od pełnych zdań wymagań i sygnałów w tych zdaniach', 'Od schematu bazy danych'], 1, 'Sygnały siedzą w zdaniach z liczbami, czasem i wyjątkami. Model z rzeczowników daje pary klas typu Rower i RowerElektryczny.'],
+    ['Jak moduły archetypów powinny wymieniać dane?', ['Przez wspólne tabele i JOIN-y', 'Przez identyfikatory, migawki i zdarzenia', 'Przez referencje do obiektów z innych modułów'], 1, 'Granica modułu chroni jego wnętrze. Wspólne tabele wiążą moduły tak, że zmiana jednego psuje drugi.'],
+    ['Jakie jest minimum dla pieniędzy w modelu?', ['Kwota w typie double', 'Kwota w typie dziesiętnym razem z walutą', 'Liczba całkowita bez waluty, „bo i tak jest PLN”'], 1, 'Typ dziesiętny nie gubi groszy, a waluta chroni przed sumowaniem złotówek z euro.'],
+    ['Firma jest jednocześnie klientem i dostawcą. Jak to zamodelować?', ['Dwa rekordy: w tabeli klientów i w tabeli dostawców', 'Jedno Party z dwiema rolami', 'Klient z polem isSupplier'], 1, 'Party mówi, kto to jest, a rola mówi, w jakim charakterze występuje. Dwa rekordy rozjadą się przy pierwszej zmianie.'],
+    ['Czym różni się typ produktu od egzemplarza?', ['Typ to opis z katalogu, a egzemplarz to konkretna rzecz, umowa albo wykonanie usługi', 'Typ to tańsza wersja produktu', 'Niczym, to synonimy'], 0, 'Typ „iPhone 15 Pro 256 GB” jest jeden. Egzemplarzy z numerami IMEI są tysiące.'],
+    ['Dlaczego Pricing zwraca rozbicie ceny, a nie jedną liczbę?', ['Bo jedna liczba liczy się wolniej', 'Żeby klient i obsługa widzieli, z czego składa się kwota', 'Bo bazy danych nie przechowują liczb'], 1, 'Rozbicie odpowiada na pytanie „za co płacę?” bez udziału programisty.'],
+    ['Z jakich trzech części składa się reguła promocji?', ['Warunek, zmiana ceny i strażnik', 'Produkt, klient i faktura', 'Cena, waluta i VAT'], 0, 'Warunek mówi, kiedy reguła działa, zmiana mówi, co robi, a strażnik pilnuje, czego nie wolno.'],
+    ['Klient wkłada bilet do koszyka i zamyka kartę. Co chroni bilet przed zablokowaniem na zawsze?', ['Blokada czasowa, która sama wygasa', 'Flaga zajety = true', 'Ręczne sprzątanie raz w roku'], 0, 'Blokada ma właściciela i czas trwania. Po jego upływie zasób wraca do puli.'],
+    ['Płaci inna firma niż ta, która zamawia. Jak zapisać to w zamówieniu?', ['Jako rolę płatnika z migawką danych tej firmy', 'Jako komentarz w polu „uwagi”', 'Nie da się, zamówienie ma jednego klienta'], 0, 'Ordering ma role: zamawiający, płatnik, odbiorca, wykonawca i inne. Każda rola to migawka danych strony.'],
+    ['Skąd bierze się saldo w archetypie Accounting?', ['Z kolumny „saldo” aktualizowanej przy każdej operacji', 'Z sumy niezmiennych zapisów na koncie', 'Z ostatniego wyciągu wpisanego ręcznie'], 1, 'Zapisy są źródłem prawdy. Korekta to nowa transakcja, a nie edycja.'],
+    ['Co w Scheduling jest daną, a co wynikiem?', ['Daty są daną, a zależności wynikiem', 'Kroki i zależności są danymi, a daty wynikiem', 'Wszystko wpisuje się ręcznie'], 1, 'Gdy trzymasz graf zależności, zmiana jednego czasu przelicza resztę harmonogramu.'],
+    ['Dlaczego plan musi być zapisanym bytem, a nie zapytaniem?', ['Żeby porównać wykonanie z planem, który obowiązywał wtedy, a nie z dzisiejszymi ustawieniami', 'Bo zapytania są wolne', 'Bo wymaga tego SQL'], 0, 'Plan liczony z bieżących ustawień zmienia się wstecz po każdej zmianie konfiguracji.'],
     ['Co odróżnia archetyp od wzorca projektowego GoF?', ['Archetyp to szybsza implementacja wzorca Strategia', 'Archetyp porządkuje pojęcia biznesowe i ich reguły, a GoF porządkuje strukturę kodu', 'Archetyp działa tylko w projektach DDD'], 1, 'GoF mówi, jak obiekty się tworzą i komunikują. Archetyp mówi, jakie pojęcia biznesowe istnieją, jakie mają cechy i jak żyją w czasie.'],
     ['Który sygnał w kodzie najmocniej wskazuje, że typ powinien trafić na poziom wiedzy?', ['Dużo rzeczowników w wymaganiach', 'Rozsiane if-y i switch-e po typie klienta lub produktu', 'Duża liczba tabel w bazie'], 1, 'Ifologia po typie oznacza, że wariant żyje w kodzie, a powinien być daną. Rzeczowniki to słaby sygnał.'],
     ['(L2) Co jest główną zaletą poziomu wiedzy (knowledge level)?', ['Szybsze zapytania SQL', 'Nowy wariant biznesu to nowy wiersz danych, a nie nowa gałąź w kodzie', 'Brak potrzeby testów'], 1, 'Typy i reguły jako dane pozwalają dodać wariant bez wdrożenia. Konfiguracja nadal wymaga wersji i testów.'],
