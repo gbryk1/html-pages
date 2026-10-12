@@ -1,0 +1,2259 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docker od środka — kompendium dewelopera</title>
+<meta name="description" content="Animowane kompendium Dockera dla programistów: Dockerfile, warstwy, cache, multi-stage, BuildKit, sekrety, buildx, sieci, wolumeny, Compose, rejestry i bezpieczeństwo.">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper:#fbf8f1; --paper2:#ffffff; --ink:#1c1c22; --mut:#5d5f6b; --line:#d9d3c4; --shadow:#1c1c22;
+  --accent:#1b6fa8; --accent2:#e39b2d; --ok:#2f9e63; --bad:#d64545; --warn:#c98a00;
+  --pen:#b8431f; --note:#fff4c2; --card:#f1ece0; --code:#f3efe6; --dim:#9aa0ab;
+  --hand:"Segoe Print","Bradley Hand","Comic Neue","Comic Sans MS","Chalkboard SE","Marker Felt",cursive;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,"Palatino Linotype",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#15171c; --paper2:#1d2027; --ink:#e7e5df; --mut:#a3a6b1; --line:#383c49; --shadow:#000;
+          --accent:#5aa9e6; --accent2:#f0b34f; --ok:#4cc38a; --bad:#f06b6b; --warn:#f0c040;
+          --pen:#ff9a6b; --note:#3a3420; --card:#232730; --code:#22262e; --dim:#5d6270; }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.68 var(--serif); }
+a { color:var(--accent); }
+code, kbd { font:.86em var(--mono); background:var(--code); padding:.08em .35em; border-radius:4px; }
+pre { font:14px/1.5 var(--mono); background:var(--code); border-left:4px solid var(--accent); padding:.9rem 1rem; overflow:auto; border-radius:4px; }
+pre code { background:none; padding:0; font-size:inherit; }
+h1,h2,h3,h4 { font-family:var(--sans); line-height:1.2; }
+h3 { font-size:1.28rem; margin:2.2rem 0 .6rem; }
+strong, b { font-weight:700; }
+.hand { font-family:var(--hand); color:var(--pen); }
+.mut { color:var(--mut); }
+
+/* progress + toc */
+#progress { position:fixed; inset:0 0 auto 0; height:5px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform-origin:0 50%; transform:scaleX(0); z-index:50; }
+#toc { position:fixed; top:1.4rem; left:1rem; width:205px; font:13.5px/1.35 var(--sans); z-index:40; display:none; opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #toc { opacity:1; pointer-events:auto; }
+#toc b { display:block; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.5rem; }
+#toc a { display:block; padding:.28rem .55rem; border-left:3px solid var(--line); color:var(--mut); text-decoration:none; }
+#toc a:hover { color:var(--ink); }
+#toc a.active { border-color:var(--accent2); color:var(--ink); font-weight:700; background:var(--card); }
+@media (min-width:1440px) { #toc { display:block; } }
+
+/* cover */
+.cover { min-height:96vh; display:grid; place-items:center; padding:3rem 1.2rem; position:relative; overflow:hidden;
+         background:radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 55%), var(--paper); }
+.cover-inner { max-width:1040px; width:100%; display:grid; gap:2rem; grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px) { .cover-inner { grid-template-columns:1.1fr .9fr; } }
+.cover .kicker { font:700 .85rem var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); }
+.cover h1 { font-size:clamp(2.4rem,5.6vw,4.2rem); margin:.3rem 0 .6rem; letter-spacing:-.02em; }
+.cover h1 span { display:inline-block; background:var(--ink); color:var(--paper); padding:0 .25em; transform:rotate(-1.5deg); }
+.cover .sub { font-size:1.2rem; color:var(--mut); max-width:34em; }
+.cover .stamp { display:inline-block; margin-top:1.2rem; font:700 1rem var(--hand); color:var(--pen); border:3px solid var(--pen); padding:.3rem .8rem; border-radius:8px; transform:rotate(-4deg); }
+.cover svg { width:100%; max-width:400px; justify-self:center; overflow:visible; }
+.spin { animation:spin 50s linear infinite; transform-origin:200px 200px; }
+.spin-rev { animation:spin 34s linear infinite reverse; transform-origin:200px 200px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.cover .scroll-hint { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); font:1rem var(--hand); color:var(--mut); animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob { 50% { transform:translate(-50%,8px); } }
+
+/* layout */
+main { max-width:800px; margin:0 auto; padding:0 1.2rem 6rem; }
+.chapter { padding-top:4.5rem; }
+.chap-head { display:flex; gap:1.1rem; align-items:center; margin-bottom:1rem; }
+.chap-num { flex:none; width:4.2rem; height:4.2rem; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font:800 1.7rem var(--sans); transform:rotate(-6deg); box-shadow:4px 4px 0 var(--accent2); }
+.chap-head h2 { font-size:clamp(1.6rem,3.8vw,2.2rem); margin:0; }
+.chap-head .tag { font:1.02rem var(--hand); color:var(--pen); display:block; margin-top:.3rem; }
+
+/* reveal */
+.js .reveal { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.js .reveal.shown { opacity:1; transform:none; }
+
+/* head-first boxes */
+.box { position:relative; margin:2rem 0; padding:1.1rem 1.25rem 1rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper2); box-shadow:5px 5px 0 var(--shadow); }
+.box > .lbl { position:absolute; top:-1rem; left:1rem; font:800 .82rem var(--sans); letter-spacing:.06em; text-transform:uppercase; background:var(--ink); color:var(--paper); padding:.25rem .65rem; border-radius:4px; transform:rotate(-2deg); }
+.box.brain { border-style:dashed; background:color-mix(in srgb, var(--accent) 8%, var(--paper2)); }
+.box.brain > .lbl { background:var(--accent); color:#fff; }
+.box.pencil { background:color-mix(in srgb, var(--accent2) 10%, var(--paper2)); }
+.box.pencil > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.watch { border-color:var(--bad); box-shadow:5px 5px 0 var(--bad); }
+.box.watch > .lbl { background:var(--bad); color:#fff; }
+.box.geek { background:var(--card); font-size:.95em; }
+.box.geek > .lbl { background:var(--mut); }
+.box.relax { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); }
+.box.relax > .lbl { background:var(--ok); color:#fff; }
+.box.bullets { background:var(--note); transform:rotate(-.4deg); }
+.box.bullets ul { margin:.3rem 0 0; padding-left:1.2rem; }
+.box.bullets li { margin:.35rem 0; }
+.box.bullets li::marker { content:"▸ "; color:var(--pen); }
+.box.usecase { border-color:var(--accent); box-shadow:5px 5px 0 var(--accent); }
+.box.usecase > .lbl { background:var(--accent); color:#fff; }
+.box.usecase ol { margin:.5rem 0 .3rem; padding-left:1.3rem; }
+.box.usecase li { margin:.4rem 0; }
+.box p:first-of-type { margin-top:.4rem; }
+.box p:last-child { margin-bottom:0; }
+.qa { display:grid; grid-template-columns:auto 1fr; gap:.4rem .8rem; margin:.8rem 0 1rem; }
+.qa .q, .qa .a { font:800 1.15rem var(--sans); }
+.qa .q { color:var(--accent); } .qa .a { color:var(--pen); }
+.qa div { margin:0; }
+details { margin-top:.8rem; }
+summary { cursor:pointer; font:700 .95rem var(--sans); color:var(--pen); }
+.fire { display:grid; gap:.7rem; margin-top:.5rem; }
+.fire .who { font:800 .85rem var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.fire .line { display:grid; grid-template-columns:7.5rem 1fr; gap:.8rem; }
+.fire .line.l2 .who { color:var(--accent); } .fire .line.l1 .who { color:var(--pen); }
+@media (max-width:560px) { .fire .line { grid-template-columns:1fr; gap:.1rem; } }
+.anno { font:1.05rem/1.35 var(--hand); color:var(--pen); display:block; margin:.4rem 0 .4rem 1.2rem; transform:rotate(-1.2deg); }
+.anno::before { content:"↖ "; }
+.pull { font:italic 1.35rem/1.45 var(--serif); border-left:6px solid var(--accent2); padding:.2rem 0 .2rem 1rem; margin:1.6rem 0; }
+.prompt-ex { font:13.5px/1.5 var(--mono); background:var(--code); border:1.5px dashed var(--line); border-radius:6px; padding:.7rem .85rem; margin-top:.7rem; white-space:pre-wrap; }
+.prompt-ex b { font-family:var(--sans); color:var(--pen); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+
+/* figures (generic) */
+.fig { margin:2.2rem -1rem; padding:1rem 1rem .9rem; background:var(--paper2); border:2px solid var(--ink); border-radius:8px; box-shadow:6px 6px 0 var(--shadow); position:relative; }
+@media (min-width:1000px) { .fig.wide { margin-left:-6rem; margin-right:-6rem; } }
+.fig .ftitle { font:800 .95rem var(--sans); margin:0 0 .6rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.fig .ftitle span { font:400 .85rem var(--sans); color:var(--mut); }
+.fig figcaption, .fig .cap { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.6rem; }
+.fig svg { display:block; width:100%; height:auto; }
+.fig svg text { fill:var(--ink); font-family:var(--sans); }
+.ctrl { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.4rem 0 .6rem; font:14px var(--sans); }
+.btn { font:700 13.5px var(--sans); color:var(--ink); background:var(--paper2); border:2px solid var(--ink); border-radius:999px; padding:.33rem .85rem; box-shadow:2px 2px 0 var(--shadow); cursor:pointer; transition:transform .08s; }
+.btn:hover { background:var(--card); }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.on { background:var(--ink); color:var(--paper); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.ctrl input[type=text], .ctrl select, .calc input { font:14px var(--mono); padding:.3rem .5rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); }
+.ctrl input[type=text] { width:9rem; }
+.ctrl label { display:inline-flex; gap:.35rem; align-items:center; }
+.scroll-x { overflow-x:auto; }
+.scroll-x > svg { min-width:620px; }
+.two { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:720px) { .two { grid-template-columns:1.2fr 1fr; align-items:start; } }
+table.mini { width:100%; border-collapse:collapse; font:13.5px var(--sans); }
+table.mini th, table.mini td { text-align:left; padding:.28rem .4rem; border-bottom:1px solid var(--line); }
+table.mini th { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+table.mini tr.flash td { animation:flashbg 1.2s ease; }
+@keyframes flashbg { 0%{ background:color-mix(in srgb, var(--accent2) 45%, transparent);} 100%{ background:transparent;} }
+.chip { display:inline-block; min-width:1.6em; text-align:center; font:800 12px var(--sans); color:#fff; padding:.1rem .4rem; border-radius:999px; }
+.status { font:14px/1.45 var(--sans); padding:.55rem .75rem; border-radius:6px; background:var(--card); margin-top:.5rem; min-height:2.2rem; }
+.status.ok { background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.status.bad { background:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.status.warn { background:color-mix(in srgb, var(--warn) 20%, var(--paper2)); }
+.fly { pointer-events:none; }
+.small { font-size:11px; }
+.tiny { font-size:9.5px; }
+.edge { stroke:var(--line); stroke-width:2; }
+.nd circle, .nd rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2.2; transition:fill .3s, opacity .3s; }
+.nd text { font-weight:800; font-size:12px; pointer-events:none; }
+.nd.off circle, .nd.off rect { fill:var(--dim); opacity:.5; stroke-dasharray:4 3; }
+.nd.hot circle, .nd.hot rect { fill:var(--accent2); }
+.nd.pulse circle, .nd.pulse rect, .pop { animation:pulse .6s ease; transform-box:fill-box; transform-origin:center; }
+@keyframes pulse { 40% { transform:scale(1.3); } }
+
+
+/* ---- generic extras: meters, legends, logs, stacked token bars ---- */
+main, footer { overflow-wrap:break-word; }   /* long URLs / identifiers in prose must not widen the page */
+.two > * { min-width:0; }
+.ctrl label { flex-wrap:wrap; max-width:100%; }
+.ctrl select { max-width:100%; min-width:0; }
+.meter { height:12px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.meter > i { display:block; height:100%; width:0; background:var(--ok); transition:width .6s ease, background .4s; }
+.legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.3rem; background:var(--c); vertical-align:-1px; }
+.log { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; height:190px; overflow-y:auto; }
+.log div { opacity:0; transform:translateX(-6px); transition:opacity .3s, transform .3s; white-space:pre-wrap; }
+.log div.shown { opacity:1; transform:none; }
+.log .u { color:var(--accent); font-weight:700; } .log .e { color:var(--bad); } .log .g { color:var(--ok); }
+.stack { position:relative; height:34px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:var(--paper); display:flex; }
+.stack .seg { height:100%; transition:width .7s ease; overflow:hidden; white-space:nowrap; font:700 10.5px/34px var(--sans); color:#fff; text-indent:4px; }
+
+/* ---- multi-level structure: parts, level chips, depth switch, "go deeper", course map ---- */
+.part { margin:5rem 0 0; padding:1.4rem 1.3rem 1.2rem; border-radius:10px; background:var(--ink); color:var(--paper); box-shadow:6px 6px 0 var(--accent2); }
+.part .part-no { font:800 .8rem var(--sans); letter-spacing:.18em; text-transform:uppercase; color:var(--accent2); }
+.part h2 { margin:.2rem 0 .35rem; font-size:clamp(1.7rem,4vw,2.4rem); }
+.part p { margin:0; font-size:1rem; opacity:.85; }
+.lvl-chip { display:inline-block; vertical-align:middle; margin-left:.5rem; font:800 10.5px/1.5 var(--sans); letter-spacing:.06em; text-transform:uppercase; padding:.08rem .5rem; border-radius:999px; color:#fff; background:var(--ok); }
+.lvl-chip.l2 { background:var(--accent); } .lvl-chip.l3 { background:#8e44ad; } .lvl-chip.l4 { background:var(--bad); }
+.lvl-off { display:none !important; }
+details.deeper { border:2px dashed #8e44ad; border-radius:8px; padding:.6rem .9rem; margin:1.8rem 0; background:color-mix(in srgb, #8e44ad 6%, var(--paper2)); }
+details.deeper > summary { font:700 1rem var(--sans); color:var(--ink); }
+details.deeper > summary .lvl-chip { margin:0 .4rem 0 0; }
+details.deeper[open] > summary { margin-bottom:.5rem; }
+.lvl-hint { display:block; width:100%; text-align:left; margin:1.4rem 0 0; font:700 13px var(--sans); color:var(--accent); background:none; border:2px dashed var(--accent); border-radius:8px; padding:.45rem .8rem; cursor:pointer; }
+#depth { position:fixed; left:1rem; bottom:1rem; z-index:45; display:flex; gap:.2rem; align-items:center; font:700 12px var(--sans); background:var(--paper2); color:var(--ink); border:2px solid var(--ink); border-radius:999px; padding:.22rem .3rem .22rem .75rem; box-shadow:3px 3px 0 var(--shadow); opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #depth { opacity:1; pointer-events:auto; }
+#depth button { font:700 12px var(--sans); border:0; border-radius:999px; padding:.25rem .6rem; background:transparent; color:var(--ink); cursor:pointer; }
+#depth button.on { background:var(--ink); color:var(--paper); }
+@media (max-width:640px) { #depth .nm { display:none; } }
+#toc { max-height:calc(100vh - 5.5rem); overflow-y:auto; }
+.toc-part { font:800 .7rem var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:.8rem 0 .2rem .2rem; }
+#map { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.7rem; margin:1.5rem 0; }
+.map-part { border:2px solid var(--line); border-radius:10px; padding:.55rem .6rem; background:var(--paper2); }
+.map-part > b { display:block; font:800 11.5px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin-bottom:.35rem; }
+.map-ch { display:flex; gap:.45rem; align-items:baseline; font:13px/1.3 var(--sans); color:var(--ink); text-decoration:none; padding:.22rem .4rem; border-radius:6px; border-left:4px solid var(--ok); margin:.15rem 0; transition:background .3s; }
+.map-ch.l2 { border-left-color:var(--accent); } .map-ch.l3 { border-left-color:#8e44ad; } .map-ch.l4 { border-left-color:var(--bad); }
+.map-ch i { font:800 11px var(--mono); font-style:normal; color:var(--mut); min-width:1.4em; }
+.map-ch:hover { background:var(--card); }
+.map-ch.here { background:var(--accent2); color:#1c1c22; font-weight:700; }
+.map-ch.seen::after { content:"✓"; margin-left:auto; color:var(--ok); font-weight:800; }
+.map-ch.dim, #toc a.dim { opacity:.4; }
+
+/* ==== per-figure CSS goes here — prefix every class with the figure name (.ex-…) to avoid collisions ==== */
+/* ---- docker figures (prefix dk-) ---- */
+.dk-rows { display:grid; gap:.3rem; margin:.4rem 0; }
+.dk-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.5rem; align-items:center; font:12.5px/1.35 var(--mono); padding:.32rem .55rem; border:2px solid var(--line); border-radius:6px; background:var(--paper); transition:background .35s, border-color .35s, opacity .35s; min-width:0; }
+.dk-row > code, .dk-row > span:first-child { background:none; padding:0; overflow-wrap:anywhere; min-width:0; }
+.dk-row .dk-b { font:800 10.5px var(--sans); letter-spacing:.04em; padding:.12rem .45rem; border-radius:999px; background:var(--card); color:var(--mut); white-space:nowrap; }
+.dk-row.hit { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 13%, var(--paper2)); }
+.dk-row.hit .dk-b { background:var(--ok); color:#fff; }
+.dk-row.miss { border-color:var(--accent2); background:color-mix(in srgb, var(--accent2) 18%, var(--paper2)); }
+.dk-row.miss .dk-b { background:var(--accent2); color:#1c1c22; }
+.dk-row.bad { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 13%, var(--paper2)); }
+.dk-row.bad .dk-b { background:var(--bad); color:#fff; }
+.dk-row.meta { border-style:dashed; }
+.dk-row.meta .dk-b { background:var(--accent); color:#fff; }
+.dk-row.skip { opacity:.4; border-style:dotted; }
+.dk-row.cur { box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent); }
+.dk-grid { display:grid; gap:.5rem; grid-template-columns:repeat(var(--n,3), minmax(0,1fr)); margin:.5rem 0; }
+.dk-cell { border:2px solid var(--ink); border-radius:8px; padding:.45rem .5rem; background:var(--paper); font:12.5px/1.35 var(--sans); text-align:center; min-width:0; overflow-wrap:anywhere; transition:background .35s, opacity .35s, transform .35s; }
+.dk-cell b { display:block; font-size:12.5px; }
+.dk-cell small { display:block; color:var(--mut); font-size:11px; }
+.dk-cell.on { background:color-mix(in srgb, var(--accent2) 30%, var(--paper2)); transform:translateY(-2px); }
+.dk-cell.ok { background:color-mix(in srgb, var(--ok) 20%, var(--paper2)); border-color:var(--ok); }
+.dk-cell.bad { background:color-mix(in srgb, var(--bad) 18%, var(--paper2)); border-color:var(--bad); }
+.dk-cell.off { opacity:.35; border-style:dashed; }
+.dk-cell.ro { background:var(--card); }
+.dk-cell.k { background:var(--ink); color:var(--paper); }
+.dk-cell.k small { color:var(--dim); }
+.dk-flow { display:flex; flex-wrap:wrap; gap:.35rem; align-items:stretch; margin:.5rem 0; }
+.dk-flow .dk-cell { flex:1 1 92px; }
+.dk-flow .dk-arr { align-self:center; font:800 16px var(--sans); color:var(--mut); }
+.dk-kv { display:grid; grid-template-columns:auto minmax(0,1fr); gap:.2rem .7rem; font:13px/1.4 var(--sans); margin:.4rem 0; }
+.dk-kv b { font-family:var(--mono); font-size:12.5px; }
+.dk-out { font:12.5px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .65rem; overflow-wrap:anywhere; white-space:pre-wrap; margin:.4rem 0; min-height:2.4rem; }
+.dk-bars { display:grid; gap:.35rem; margin:.5rem 0; }
+.dk-bar { display:grid; grid-template-columns:8.5rem minmax(0,1fr) 4.6rem; gap:.5rem; align-items:center; font:12.5px var(--sans); }
+.dk-bar .meter { height:16px; }
+.dk-bar > span:last-child { font:700 12px var(--mono); text-align:right; }
+@media (max-width:520px) { .dk-bar { grid-template-columns:6.2rem minmax(0,1fr) 4rem; } .dk-grid { --n:2 !important; } }
+.dk-tl { position:relative; height:44px; border:2px solid var(--ink); border-radius:6px; background:var(--paper); overflow:hidden; margin:.4rem 0; }
+.dk-tl i { position:absolute; top:0; bottom:0; background:var(--accent); opacity:.85; transition:width .5s, left .5s; display:block; font:700 10.5px/40px var(--sans); color:#fff; text-indent:4px; white-space:nowrap; overflow:hidden; font-style:normal; }
+.dk-sel { display:flex; flex-wrap:wrap; gap:.35rem; align-items:center; }
+.dk-sel > b { font:800 11px var(--sans); text-transform:uppercase; letter-spacing:.05em; color:var(--mut); min-width:6.5rem; }
+/* quiz */
+.quiz-q { margin:1.2rem 0; padding:.9rem 1rem; border:2px solid var(--ink); border-radius:8px; background:var(--paper2); }
+.quiz-q h4 { margin:0 0 .6rem; font-size:1rem; }
+.quiz-q .opts { display:grid; gap:.4rem; }
+.quiz-q button { text-align:left; font:14px/1.4 var(--sans); color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:6px; padding:.45rem .7rem; cursor:pointer; }
+.quiz-q button:hover:not(:disabled) { border-color:var(--ink); }
+.quiz-q button.right { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+.quiz-q button.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); }
+.quiz-q .why { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.5rem; display:none; }
+.quiz-q.done .why { display:block; }
+.score { position:sticky; bottom:1rem; margin-left:auto; width:max-content; font:800 1rem var(--sans); background:var(--ink); color:var(--paper); padding:.45rem .9rem; border-radius:999px; box-shadow:3px 3px 0 var(--accent2); }
+.cheat td:first-child { font-family:var(--mono); font-size:12.5px; white-space:nowrap; }
+footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var(--sans); color:var(--mut); border-top:2px solid var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+  html { scroll-behavior:auto; }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Rozdziały"></nav>   <!-- built from parts/chapters by JS -->
+<div id="depth" role="group" aria-label="Głębokość czytania"></div>   <!-- built by JS when any data-level > 1 exists -->
+
+<header class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="kicker">Animowane kompendium · Docker</div>
+      <h1>Docker <span>od środka</span></h1>
+      <p class="sub">Wszystko, co developer powinien wiedzieć o Dockerze — z naciskiem na to, jak naprawdę powstaje obraz: warstwy, cache, multi-stage, BuildKit, sekrety i wiele platform. Przewijaj — diagramy ruszają same.</p>
+      <div class="stamp">25 rozdziałów · 25 symulacji 🧠</div>
+    </div>
+    <svg viewBox="0 0 400 400" aria-hidden="true">
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <g id="cover-nodes"></g>
+      </g>
+      <g class="spin-rev">
+        <circle cx="200" cy="200" r="95" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 10"/>
+      </g>
+      <circle cx="200" cy="200" r="46" fill="var(--accent)" stroke="var(--ink)" stroke-width="4"/>
+    </svg>
+  </div>
+  <div class="scroll-hint">przewiń ↓</div>
+</header>
+
+<main>
+<!-- Structure contract (all optional; a flat page works too):
+     section.part[data-level]      big divider opening a group of chapters (Part I · Foundations)
+     section.chapter[data-level]   data-title = short TOC/map title; empty .chap-num is auto-numbered
+     any block [data-level="2|3"]  hidden when the reader's depth is lower (boxes, paragraphs, figures)
+     details.deeper[data-level]    "go deeper" zoom-in block; its level chip is added automatically
+     #map                          clickable course map (parts × chapters, level colors, ✓ seen, ▶ here)
+     Level names: LEVELS in the script. Default depth = deepest; the reader's choice is remembered. -->
+
+<section class="chapter" id="intro" data-title="Jak czytać">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Jak czytać to kompendium</h2><span class="tag">mechanizmy, nie listy flag</span></div></div>
+  <p class="reveal">Większość problemów z Dockerem nie bierze się z nieznajomości komend. Bierze się z błędnego modelu w głowie: „kontener to lekka maszyna wirtualna”, „<code>RUN rm</code> zmniejsza obraz”, „<code>EXPOSE</code> otwiera port”. Każdy rozdział tłumaczy jeden mechanizm, pokazuje go na klikalnym diagramie i celowo go psuje (przycisk 💥), żebyś zobaczył objaw, zanim spotkasz go na produkcji.</p>
+  <p class="reveal">Największy nacisk leży na <b>budowaniu obrazów</b>: Dockerfile, kontekst, cache warstw, multi-stage, BuildKit, sekrety, wiele platform. Reszta — runtime, sieci, dane, Compose, rejestry, bezpieczeństwo — jest po to, żeby obraz miał sens w praktyce.</p>
+  <p class="reveal">Kompendium ma poziomy. Rozdziały i bloki mają znaczek —
+    <span class="lvl-chip">L1</span> podstawy, <span class="lvl-chip l2">L2</span> praktyk,
+    <span class="lvl-chip l3">L3</span> ekspert. Głębokość wybierasz przełącznikiem w lewym dolnym rogu; głębszy materiał chowa się, dopóki go nie zechcesz. Mapa poniżej skacze do dowolnego rozdziału i odhacza przeczytane.</p>
+  <div id="map" class="reveal"></div>
+  <div class="box brain reveal"><span class="lbl">🧠 Zagadka na start</span>
+    <p>Twój obraz Node.js waży 1,2 GB, a każda zmiana jednej linijki w <code>src/</code> powoduje 4-minutowy build z pełnym <code>npm install</code>. Co dokładnie poszło nie tak — i ile linijek Dockerfile trzeba zmienić, żeby build trwał sekundy, a obraz ważył kilkadziesiąt MB? Odpowiedź na końcu.</p>
+  </div>
+</section>
+
+<section class="part" id="part-1" data-level="1">
+  <span class="part-no">Część I</span><h2>Fundamenty</h2><p>Czym naprawdę jest kontener, kto go uruchamia i z czego zbudowany jest obraz.</p>
+</section>
+
+<section class="chapter" id="ch-vm" data-level="1" data-title="Kontener ≠ VM">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Kontener to nie maszyna wirtualna</h2><span class="tag">to zwykły proces w przebraniu</span></div></div>
+  <p class="reveal">Maszyna wirtualna emuluje sprzęt i uruchamia <em>własne jądro</em> systemu. Kontener niczego nie emuluje. To zwykły proces na jądrze hosta, któremu jądro pokazuje „okrojony świat”: własne drzewo procesów, własny interfejs sieciowy, własny system plików. Robią to dwa mechanizmy jądra Linux.</p>
+  <ul class="reveal">
+    <li><b>Namespaces</b> — izolują to, co proces <em>widzi</em>: <code>pid</code> (procesy), <code>net</code> (sieć), <code>mnt</code> (punkty montowania), <code>uts</code> (hostname), <code>ipc</code>, <code>user</code> (mapowanie UID).</li>
+    <li><b>Control groups (cgroups)</b> — ograniczają to, ile proces może <em>zużyć</em>: pamięć, CPU, I/O, liczbę procesów.</li>
+  </ul>
+  <figure class="fig wide" id="fig-vm">
+    <div class="ftitle">▶ Stos VM kontra stos kontenera <span>uruchom 3 instancje i porównaj</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="scale">➕ Uruchom 3 instancje</button>
+      <button class="btn bad" data-act="win">💥 Obraz Windows na hoście Linux</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="two">
+      <div><b class="mut" style="font:700 12px var(--sans)">Maszyny wirtualne</b><div class="dk-grid" id="vm-a" style="--n:3"></div></div>
+      <div><b class="mut" style="font:700 12px var(--sans)">Kontenery</b><div class="dk-grid" id="vm-b" style="--n:3"></div></div>
+    </div>
+    <div class="status" id="vm-st">Kliknij ➕.</div>
+    <figcaption>Uproszczenie: pomijamy hypervisor typu 1 vs 2 i Docker Desktop. Czasy startu i rozmiary są ilustracyjne, rząd wielkości — nie pomiar.</figcaption>
+  </figure>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>To jak działa Docker na Macu albo Windowsie, skoro nie ma tam jądra Linux?</div>
+      <div class="a">O:</div><div>Docker Desktop uruchamia lekką maszynę wirtualną z jądrem Linux, a kontenery żyją w niej. Dlatego bind mount z macOS bywa wolniejszy niż na natywnym Linuksie — pliki przechodzą przez warstwę współdzielenia plików z VM (nowsze mechanizmy, jak virtiofs, mocno to ograniczają).</div>
+    </div>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga</span>
+    <p>Wspólne jądro to też wspólna powierzchnia ataku. Izolacja kontenera jest słabsza niż izolacja VM. Dlatego w części V mówimy o capabilities, seccomp i trybie rootless.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Kontener = proces hosta + namespaces (co widzi) + cgroups (ile zużyje).</li>
+    <li>Nie ma własnego jądra, więc startuje szybko, ale obraz musi pasować do jądra i architektury hosta.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-arch" data-level="1" data-title="Architektura">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Kto naprawdę uruchamia kontener</h2><span class="tag">CLI tylko wysyła prośbę</span></div></div>
+  <p class="reveal">Docker to architektura klient–serwer. Polecenie <code>docker</code> to klient. Wysyła żądania przez REST API (domyślnie na gniazdo Unix <code>/var/run/docker.sock</code>) do demona <code>dockerd</code>. Demon zarządza obrazami, sieciami i wolumenami, a samo uruchamianie kontenerów deleguje do <code>containerd</code>. Ten z kolei używa runtime’u OCI <code>runc</code>, który tworzy namespaces i cgroups i odpala proces.</p>
+  <figure class="fig wide" id="fig-arch">
+    <div class="ftitle">▶ Droga polecenia <code>docker run nginx</code> <span>od klawiatury do procesu</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="run">▶ docker run nginx</button>
+      <button class="btn" data-act="again">▶ Uruchom drugi raz</button>
+      <button class="btn bad" data-act="down">💥 Demon nie działa</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-flow" id="arch-flow"></div>
+    <div class="status" id="arch-st">Kliknij ▶.</div>
+    <figcaption>Uproszczenie: pomijamy containerd-shim, sieć (CNI/libnetwork) i snapshotter. Kolejność kroków zgodna z dokumentacją, czasy animacji umowne.</figcaption>
+  </figure>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Dla dociekliwych</span>
+    <p>Między <code>containerd</code> a <code>runc</code> stoi <code>containerd-shim</code>. Shim zostaje rodzicem procesu kontenera po tym, jak <code>runc</code> się zakończy. Dzięki temu restart demona nie zabija kontenerów, o ile włączysz opcję <code>live-restore</code>. Kontekst klienta zmienisz przez <code>docker context use</code> albo zmienną <code>DOCKER_HOST</code> — wtedy ten sam CLI rozmawia ze zdalnym demonem.</p>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga</span>
+    <p>Dostęp do <code>/var/run/docker.sock</code> to w praktyce root na hoście: kto może wołać API, może uruchomić kontener z zamontowanym <code>/</code> hosta. Nie montuj gniazda do kontenerów „bo wygodnie”.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li><code>docker</code> (CLI) → REST API → <code>dockerd</code> → <code>containerd</code> → <code>runc</code> → proces.</li>
+    <li>Brak obrazu lokalnie = najpierw <code>pull</code> z rejestru (domyślnie Docker Hub).</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-ufs" data-level="1" data-title="Obraz i warstwy">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Obraz, warstwy i warstwa zapisu</h2><span class="tag">kanapka tylko do odczytu + jedna kartka na wierzchu</span></div></div>
+  <p class="reveal">Obraz to uporządkowany stos <b>warstw tylko do odczytu</b> plus konfiguracja (domyślne polecenie, zmienne, użytkownik…). Każda warstwa to zestaw zmian w systemie plików względem poprzedniej: dodane, zmienione i usunięte pliki. Sterownik storage (klasycznie <code>overlay2</code>; w świeżych instalacjach Docker Engine 29+ domyślnie containerd image store, również oparty na overlayfs) nakłada je na siebie i pokazuje jako jeden system plików.</p>
+  <p class="reveal">Uruchomienie kontenera dodaje na wierzch cienką <b>warstwę zapisu</b>. Wszystkie zmiany kontenera lądują tylko tam. Usunięcie kontenera usuwa tę warstwę — warstwy obrazu zostają nietknięte i współdzielone przez wszystkie kontenery z tego obrazu.</p>
+  <figure class="fig wide" id="fig-ufs">
+    <div class="ftitle">▶ Copy-on-write w akcji <span>czytaj, zmieniaj, usuwaj plik</span></div>
+    <div class="ctrl">
+      <button class="btn" data-act="read">📖 Czytaj /etc/app.conf</button>
+      <button class="btn primary" data-act="write">✏️ Zmień /etc/app.conf</button>
+      <button class="btn" data-act="del">🗑️ Usuń /usr/bin/curl</button>
+      <button class="btn" data-act="two">➕ Drugi kontener</button>
+      <button class="btn bad" data-act="rm">💥 docker rm</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-rows" id="ufs-rows"></div>
+    <div class="status" id="ufs-st">Wybierz akcję.</div>
+    <figcaption>Uproszczenie: warstwy pokazujemy jako listy plików; overlay2 kopiuje cały plik przy pierwszym zapisie (copy-up), a usunięcie oznacza plikiem „whiteout”. Nazwy plików przykładowe.</figcaption>
+  </figure>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Skoro kontener może usunąć plik, to czy zmniejsza to obraz?</div>
+      <div class="a">O:</div><div>Nie. Plik dalej leży w niższej warstwie. Warstwa wyżej tylko go „przykrywa” znacznikiem usunięcia. Ta sama zasada dotyczy <code>RUN rm</code> w Dockerfile — zobaczysz to w rozdziale o RUN.</div>
+    </div>
+  </div>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Dla dociekliwych</span>
+    <p>Pisanie dużo danych do warstwy zapisu jest wolniejsze niż do wolumenu i znika z kontenerem. Logi, bazy danych i uploady trzymaj w wolumenach (rozdział o danych). <code>docker container diff &lt;id&gt;</code> pokazuje, co kontener zmienił: <code>A</code> dodane, <code>C</code> zmienione, <code>D</code> usunięte.</p>
+  </div>
+  <details class="deeper" data-level="3">
+    <summary>🔬 Głębiej: overlay2 na dysku</summary>
+    <p>OverlayFS łączy katalogi <code>lowerdir</code> (warstwy obrazu, tylko do odczytu), <code>upperdir</code> (warstwa zapisu kontenera) i pokazuje wynik w <code>merged</code>. Pierwszy zapis do pliku z niższej warstwy wywołuje <b>copy_up</b>: cały plik jest kopiowany do <code>upperdir</code>, nawet jeśli zmieniasz jeden bajt. Przy dużych plikach (np. pliki bazy danych) to realny koszt. Usunięcie tworzy w <code>upperdir</code> plik „whiteout”, który ukrywa oryginał. Ścieżki zobaczysz w <code>docker inspect</code> pod <code>GraphDriver.Data</code> (przy klasycznym storage demona).</p>
+  </details>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Obraz = warstwy tylko do odczytu + konfiguracja. Kontener = obraz + warstwa zapisu.</li>
+    <li>Copy-on-write: zmiana pliku kopiuje go do warstwy zapisu; usunięcie tylko go zasłania.</li>
+    <li>Wiele kontenerów współdzieli warstwy obrazu — na dysku są raz.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-life" data-level="1" data-title="Cykl życia">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Cykl życia kontenera</h2><span class="tag">created → running → exited → removed</span></div></div>
+  <p class="reveal">Kontener żyje tak długo, jak jego <b>główny proces</b> (PID 1 w namespace kontenera). Gdy proces się kończy, kontener przechodzi w stan <code>exited</code> i zachowuje kod wyjścia. Zatrzymany kontener nadal istnieje — razem z warstwą zapisu i logami — dopóki go nie usuniesz.</p>
+  <figure class="fig wide" id="fig-life">
+    <div class="ftitle">▶ Maszyna stanów kontenera <span>klikaj komendy, obserwuj stan</span></div>
+    <div class="ctrl" id="life-btns">
+      <button class="btn" data-act="create">create</button>
+      <button class="btn primary" data-act="start">start</button>
+      <button class="btn" data-act="pause">pause</button>
+      <button class="btn" data-act="unpause">unpause</button>
+      <button class="btn" data-act="stop">stop</button>
+      <button class="btn" data-act="kill">kill</button>
+      <button class="btn bad" data-act="rm">💥 rm (bez -f)</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="life-g" style="--n:5"></div>
+    <div class="dk-out" id="life-out">$</div>
+    <div class="status" id="life-st">Zacznij od <code>create</code> albo od razu <code>start</code> (to wtedy jak <code>docker run</code>).</div>
+    <figcaption>Uproszczenie: pomijamy stany <code>restarting</code> i <code>dead</code>; zakładamy, że aplikacja obsługuje SIGTERM. Kod wyjścia 137 = 128+9 (SIGKILL).</figcaption>
+  </figure>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Komenda</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>docker run</code></td><td>create + start (+ pull, jeśli brak obrazu)</td><td>codziennie</td></tr>
+      <tr><td><code>docker run --rm</code></td><td>usuwa kontener po zakończeniu procesu</td><td>jednorazowe zadania, testy</td></tr>
+      <tr><td><code>docker run -d</code></td><td>tryb odłączony, zwraca ID</td><td>serwisy w tle</td></tr>
+      <tr><td><code>docker run -it</code></td><td>interaktywny TTY ze stdin</td><td>shell, REPL</td></tr>
+      <tr><td><code>docker stop</code></td><td>sygnał stopu (domyślnie SIGTERM), po limicie czasu SIGKILL</td><td>łagodne zamknięcie</td></tr>
+      <tr><td><code>docker kill</code></td><td>od razu SIGKILL (lub sygnał z <code>-s</code>)</td><td>proces nie reaguje</td></tr>
+      <tr><td><code>docker rm -f</code></td><td>usuwa, także działający (najpierw kill)</td><td>sprzątanie</td></tr>
+      <tr><td><code>docker ps -a</code></td><td>lista, także zatrzymanych</td><td>„gdzie mój kontener?”</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box pencil reveal"><span class="lbl">✏️ Zaostrz ołówek</span>
+    <p>Uruchamiasz <code>docker run ubuntu</code> i kontener od razu ma status <code>Exited (0)</code>. Dlaczego?</p>
+    <details><summary>Odpowiedź</summary><p>Domyślne polecenie obrazu <code>ubuntu</code> to <code>bash</code>. Bez <code>-it</code> stdin nie jest otwarty, więc bash od razu kończy pracę z kodem 0. Kontener żyje tyle, co jego główny proces.</p></details>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Kontener żyje tyle, co jego PID 1. Koniec procesu = <code>exited</code>.</li>
+    <li>Zatrzymany ≠ usunięty: warstwa zapisu i logi zostają do <code>docker rm</code>.</li></ul>
+  </div>
+</section>
+<section class="part" id="part-2" data-level="1">
+  <span class="part-no">Część II</span><h2>Dockerfile od podszewki</h2><p>Serce kompendium: jak powstaje obraz, jak działa cache, multi-stage, BuildKit, sekrety i wiele platform.</p>
+</section>
+
+<section class="chapter" id="ch-df" data-level="1" data-title="Anatomia Dockerfile">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Anatomia Dockerfile</h2><span class="tag">przepis, z którego każda linia coś zostawia</span></div></div>
+  <p class="reveal">Dockerfile to plik tekstowy z instrukcjami wykonywanymi po kolei. <code>docker build</code> wysyła go razem z <b>kontekstem</b> (zwykle bieżący katalog) do buildera BuildKit. BuildKit jest domyślnym builderem w Docker Desktop i Docker Engine. Instrukcje dzielą się na dwie grupy: takie, które zmieniają system plików (<code>RUN</code>, <code>COPY</code>, <code>ADD</code>) i tworzą warstwę z zawartością, oraz takie, które zmieniają tylko konfigurację obrazu (<code>ENV</code>, <code>CMD</code>, <code>LABEL</code>, <code>EXPOSE</code>…). Te drugie w <code>docker image history</code> mają rozmiar 0 B.</p>
+  <figure class="fig wide" id="fig-df">
+    <div class="ftitle">▶ Co zostawia każda linia <span>kliknij linię albo zbuduj całość</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="build">▶ docker build</button>
+      <button class="btn" data-act="hist">📜 docker image history</button>
+      <button class="btn bad" data-act="noFrom">💥 Usuń FROM</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-rows" id="df-rows"></div>
+    <div class="dk-out" id="df-out">$</div>
+    <div class="status" id="df-st">Kliknij dowolną linię.</div>
+    <figcaption>Rozmiary warstw ilustracyjne. Uproszczenie: pomijamy, że BuildKit może scalać i pomijać kroki oraz że parser directive <code># syntax</code> nie jest instrukcją.</figcaption>
+  </figure>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Instrukcja</th><th>Co robi</th><th>Kiedy / pułapka</th></tr></thead>
+    <tbody>
+      <tr><td><code>FROM img [AS name]</code></td><td>obraz bazowy, start etapu; <code>FROM scratch</code> = pusty</td><td>pinuj tag lub digest; <code>AS</code> w multi-stage</td></tr>
+      <tr><td><code>RUN</code></td><td>wykonuje polecenie w nowej warstwie</td><td>łącz powiązane polecenia przez <code>&amp;&amp;</code></td></tr>
+      <tr><td><code>COPY src dst</code></td><td>kopiuje z kontekstu (lub <code>--from</code> etapu/obrazu)</td><td>domyślny wybór do plików</td></tr>
+      <tr><td><code>ADD src dst</code></td><td>jak COPY + URL, repo Git, automatyczne rozpakowanie lokalnego tar</td><td>tylko gdy potrzebujesz tych funkcji; URL z <code>--checksum</code></td></tr>
+      <tr><td><code>WORKDIR /app</code></td><td>katalog roboczy dla kolejnych instrukcji; tworzy go, jeśli brak</td><td>zamiast <code>RUN cd …</code></td></tr>
+      <tr><td><code>ENV K=v</code></td><td>zmienna w buildzie <b>i</b> w działającym kontenerze</td><td>trwała — nie dla sekretów</td></tr>
+      <tr><td><code>ARG K[=v]</code></td><td>zmienna tylko w czasie budowania</td><td>nadpisywana <code>--build-arg</code>; nie dla sekretów</td></tr>
+      <tr><td><code>USER uid[:gid]</code></td><td>użytkownik dla kolejnych RUN, CMD, ENTRYPOINT</td><td>uruchamiaj aplikację jako nie-root</td></tr>
+      <tr><td><code>EXPOSE 8080</code></td><td>dokumentacja portu; <b>niczego nie publikuje</b></td><td>publikujesz przez <code>-p</code></td></tr>
+      <tr><td><code>CMD</code></td><td>domyślne polecenie / argumenty</td><td>nadpisywane argumentami <code>docker run</code></td></tr>
+      <tr><td><code>ENTRYPOINT</code></td><td>stały program kontenera</td><td>exec form; zmiana przez <code>--entrypoint</code></td></tr>
+      <tr><td><code>HEALTHCHECK</code></td><td>polecenie sprawdzające zdrowie</td><td>domyślnie co 30 s, timeout 30 s, 3 próby</td></tr>
+      <tr><td><code>LABEL k=v</code></td><td>metadane obrazu</td><td>np. <code>org.opencontainers.image.source</code></td></tr>
+      <tr><td><code>VOLUME /data</code></td><td>punkt montowania anonimowego wolumenu</td><td>zmiany w tej ścieżce po VOLUME w buildzie mogą przepaść</td></tr>
+      <tr><td><code>SHELL ["bash","-c"]</code></td><td>zmienia powłokę dla shell form</td><td>np. <code>-o pipefail</code></td></tr>
+      <tr><td><code>STOPSIGNAL</code></td><td>sygnał wysyłany przez <code>docker stop</code></td><td>aplikacja kończy się np. na SIGQUIT</td></tr>
+      <tr><td><code>ONBUILD</code></td><td>instrukcja odpalana w obrazie potomnym</td><td>rzadko; ukryta magia</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Parser directives</span>
+    <p>Pierwsza linia <code># syntax=docker/dockerfile:1</code> każe BuildKitowi pobrać najnowszą stabilną wersję frontendu Dockerfile w gałęzi 1.x. Dzięki temu nowe funkcje (heredoki, <code>COPY --link</code>, opcje <code>RUN --mount</code>) działają niezależnie od wersji demona. Druga dyrektywa, <code># check=</code>, steruje sprawdzeniami buildu; same sprawdzenia uruchomisz przez <code>docker build --check .</code>. Dyrektywy muszą stać na samej górze, przed jakąkolwiek instrukcją.</p>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ COPY czy ADD?</span>
+    <p><code>ADD archiwum.tar.gz /opt/</code> rozpakuje lokalne archiwum — czasem to pożądane, czasem niespodzianka. Używaj <code>COPY</code>, chyba że świadomie chcesz rozpakowania, pobrania z URL lub repozytorium Git.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li><code>RUN</code>, <code>COPY</code>, <code>ADD</code> zmieniają pliki; reszta zmienia metadane obrazu.</li>
+    <li><code>EXPOSE</code> to dokumentacja, nie publikacja portu.</li>
+    <li><code># syntax=docker/dockerfile:1</code> na górze = aktualny frontend.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-ctx" data-level="1" data-title="Kontekst i .dockerignore">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Kontekst budowania i .dockerignore</h2><span class="tag">kropka na końcu komendy ma znaczenie</span></div></div>
+  <p class="reveal">W <code>docker build -t app .</code> kropka to <b>kontekst</b> — zbiór plików, do których builder ma dostęp. <code>COPY</code> widzi wyłącznie pliki z kontekstu; <code>COPY ../secret .</code> nie zadziała. Kontekst może być lokalnym katalogiem, adresem repozytorium Git, archiwum tar albo pustym kontekstem (Dockerfile ze stdin: <code>docker build -</code>).</p>
+  <p class="reveal">Plik <code>.dockerignore</code> w katalogu głównym kontekstu wyklucza ścieżki z kontekstu. Składnia przypomina <code>.gitignore</code>: wzorce, <code>**</code> dla dowolnej głębokości, <code>!</code> dla wyjątków. Dla konkretnego Dockerfile możesz mieć osobny plik, np. <code>build.Dockerfile.dockerignore</code> obok <code>build.Dockerfile</code>.</p>
+  <figure class="fig wide" id="fig-ctx">
+    <div class="ftitle">▶ Co trafia do buildera <span>przełącz .dockerignore</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="send">▶ docker build .</button>
+      <button class="btn" data-act="ign">🧹 Włącz/wyłącz .dockerignore</button>
+      <button class="btn bad" data-act="leak">💥 COPY . . bez .dockerignore</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="ctx-g" style="--n:3"></div>
+    <div class="dk-bar"><span>Przesłany kontekst</span><div class="meter"><i id="ctx-m"></i></div><span id="ctx-v">0 MB</span></div>
+    <div class="status" id="ctx-st">.dockerignore: <b>wyłączony</b>.</div>
+    <figcaption>Rozmiary ilustracyjne. Uproszczenie: BuildKit przesyła kontekst przyrostowo i tylko pliki, których build faktycznie używa, ale <code>COPY . .</code> używa wszystkiego.</figcaption>
+  </figure>
+<pre class="reveal"><code># .dockerignore — przykład dla aplikacji Node.js
+.git
+node_modules
+dist
+**/*.log
+.env
+.env.*
+!.env.example
+Dockerfile*
+.dockerignore</code></pre>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Nazwane konteksty</span>
+    <p>Buildx pozwala dodać kolejne konteksty: <code>docker buildx build --build-context docs=../docs .</code>, a w Dockerfile <code>COPY --from=docs . /docs</code>. Kontekstem może być też obraz (<code>docker-image://alpine:3.20</code>) — w ten sposób podmieniasz obraz bazowy bez edycji Dockerfile.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Builder widzi tylko kontekst. Ścieżki poza nim są niedostępne.</li>
+    <li><code>.dockerignore</code> przyspiesza build, stabilizuje cache i chroni przed wyciekiem <code>.env</code> czy <code>.git</code>.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-cache" data-level="1" data-title="Cache warstw">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Cache warstw: kolejność to wszystko</h2><span class="tag">jedna zmiana unieważnia wszystko pod nią</span></div></div>
+  <p class="reveal">Builder przy każdej instrukcji sprawdza, czy ma w cache wynik dla identycznego wejścia. Jeśli tak — używa go (<code>CACHED</code>). Jeśli nie — wykonuje krok i <b>wszystkie kolejne kroki też</b>, bo ich wejściem jest zmieniona warstwa. Reguły:</p>
+  <ul class="reveal">
+    <li><b>RUN</b> — klucz to tekst polecenia (i warstwa pod nim). Builder nie wie, że <code>apt-get update</code> dałoby dziś inny wynik.</li>
+    <li><b>COPY / ADD</b> — klucz to suma kontrolna zawartości i metadanych kopiowanych plików. Sam czas modyfikacji (<code>mtime</code>) nie jest brany pod uwagę.</li>
+    <li><b>ARG</b> — zmiana wartości unieważnia cache przy pierwszym <em>użyciu</em> zmiennej, nie przy jej deklaracji. Zmiana wartości <code>ENV</code> w Dockerfile to zmiana samej instrukcji, więc miss zaczyna się od tej linii.</li>
+  </ul>
+  <figure class="fig wide" id="fig-cache">
+    <div class="ftitle">▶ Symulator cache <span>zmień plik i zobacz, co się przebuduje</span></div>
+    <div class="ctrl">
+      <span class="dk-sel"><b>Dockerfile</b><button class="btn on" data-act="good">dobra kolejność</button><button class="btn" data-act="bad">zła kolejność</button></span>
+    </div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="src">✏️ Zmień src/app.js</button>
+      <button class="btn" data-act="pkg">📦 Zmień package.json</button>
+      <button class="btn" data-act="touch">👆 touch (tylko mtime)</button>
+      <button class="btn bad" data-act="base">💥 Nowy obraz bazowy</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-rows" id="cache-rows"></div>
+    <div class="dk-bar"><span>Czas buildu</span><div class="meter"><i id="cache-m"></i></div><span id="cache-v">—</span></div>
+    <div class="status" id="cache-st">Wybierz zmianę.</div>
+    <figcaption>Czasy kroków ilustracyjne. Uproszczenie: pomijamy cache mounty (rozdział o BuildKit) i to, że nowy digest obrazu bazowego wymaga <code>--pull</code>, żeby builder go zauważył.</figcaption>
+  </figure>
+<pre class="reveal"><code># syntax=docker/dockerfile:1
+FROM node:22-slim
+WORKDIR /app
+COPY package.json package-lock.json ./   # zmienia się rzadko
+RUN npm ci                                # drogi krok — chroniony przez cache
+COPY . .                                  # zmienia się często
+CMD ["node", "src/app.js"]</code></pre>
+  <div class="box watch reveal"><span class="lbl">⚠️ Pułapka apt-get update</span>
+    <p><code>RUN apt-get update</code> w osobnej linii trafi do cache i zostanie tam na miesiące. Gdy potem dopiszesz pakiet do <code>RUN apt-get install …</code>, instalacja użyje starych list pakietów. Zawsze łącz: <code>RUN apt-get update &amp;&amp; apt-get install -y --no-install-recommends pkg &amp;&amp; rm -rf /var/lib/apt/lists/*</code>.</p>
+  </div>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Sterowanie cache</span>
+    <p><code>docker build --no-cache</code> ignoruje cache całkowicie. <code>--no-cache-filter stage</code> robi to tylko dla wybranych etapów. <code>--pull</code> wymusza sprawdzenie nowszej wersji obrazu bazowego. Podgląd zużycia: <code>docker buildx du</code>, sprzątanie: <code>docker builder prune</code>.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Od rzadko zmienianego do często zmienianego: zależności przed kodem.</li>
+    <li>Miss na kroku N = przebudowa N, N+1, … do końca etapu.</li>
+    <li>RUN cache’uje się po tekście polecenia, COPY po zawartości plików.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-run" data-level="1" data-title="RUN i rozmiar warstw">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>RUN, łączenie poleceń i rozmiar warstw</h2><span class="tag">rm w następnej linii niczego nie usuwa</span></div></div>
+  <p class="reveal">Każdy <code>RUN</code> to osobna warstwa. Warstwa przechowuje <em>różnicę</em> względem poprzedniej. Jeśli w jednym <code>RUN</code> pobierzesz 300 MB, a w kolejnym je usuniesz, obraz dalej zawiera 300 MB — usunięcie tylko zasłania pliki (whiteout). Sprzątaj w <b>tym samym</b> <code>RUN</code>, w którym śmiecisz.</p>
+  <figure class="fig wide" id="fig-run">
+    <div class="ftitle">▶ Śmieci w warstwach <span>porównaj trzy wersje tego samego Dockerfile</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="a">💥 Osobne RUN + rm na końcu</button>
+      <button class="btn primary" data-act="b">✅ Jeden RUN ze sprzątaniem</button>
+      <button class="btn" data-act="c">🏗️ Multi-stage</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-rows" id="run-rows"></div>
+    <div class="dk-bar"><span>Rozmiar obrazu</span><div class="meter"><i id="run-m"></i></div><span id="run-v">—</span></div>
+    <div class="status" id="run-st">Wybierz wariant.</div>
+    <figcaption>Rozmiary ilustracyjne. Uproszczenie: rozmiar to suma warstw bez kompresji.</figcaption>
+  </figure>
+  <h3 class="reveal">Shell form, exec form i heredoki</h3>
+  <p class="reveal"><b>Shell form</b> (<code>RUN npm ci</code>) uruchamia polecenie przez <code>/bin/sh -c</code>, więc działają zmienne, potoki i <code>&amp;&amp;</code>. <b>Exec form</b> (<code>RUN ["npm","ci"]</code>) to tablica JSON uruchamiana bez powłoki — bez podstawiania zmiennych typu <code>$HOME</code>. Tablica musi używać cudzysłowów podwójnych; z pojedynczymi Docker potraktuje ją jak shell form.</p>
+<pre class="reveal"><code># heredoc (Dockerfile 1.4+): wiele poleceń, jedna warstwa, czytelnie
+RUN &lt;&lt;EOF
+set -e
+apt-get update
+apt-get install -y --no-install-recommends curl ca-certificates
+rm -rf /var/lib/apt/lists/*
+EOF</code></pre>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 pipefail</span>
+    <p><code>RUN curl -fsSL url | tar xz</code> zakończy się sukcesem, nawet gdy <code>curl</code> zawiedzie — liczy się kod ostatniego polecenia w potoku. Dodaj <code>SHELL ["/bin/bash", "-o", "pipefail", "-c"]</code> (gdy obraz ma bash) albo <code>set -o pipefail</code> na początku polecenia.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Usuwanie w kolejnej warstwie nie zmniejsza obrazu. Sprzątaj w tym samym RUN.</li>
+    <li>Shell form = <code>/bin/sh -c</code>; exec form = bez powłoki, cudzysłowy podwójne.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-cmd" data-level="1" data-title="CMD vs ENTRYPOINT">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>CMD kontra ENTRYPOINT</h2><span class="tag">program i jego domyślne argumenty</span></div></div>
+  <p class="reveal"><code>ENTRYPOINT</code> określa <b>program</b>, który kontener zawsze uruchamia. <code>CMD</code> dostarcza <b>domyślne argumenty</b> — albo całe domyślne polecenie, gdy ENTRYPOINT nie istnieje. Argumenty podane w <code>docker run obraz arg1 arg2</code> zastępują CMD, ale nie ENTRYPOINT. Najczęstszy wzorzec: <code>ENTRYPOINT ["app"]</code> + <code>CMD ["--help"]</code>.</p>
+  <figure class="fig wide" id="fig-cmd">
+    <div class="ftitle">▶ Kalkulator: co faktycznie się uruchomi <span>wybierz kombinację</span></div>
+    <div class="dk-sel" id="cmd-e"><b>ENTRYPOINT</b></div>
+    <div class="dk-sel" id="cmd-c" style="margin-top:.35rem"><b>CMD</b></div>
+    <div class="dk-sel" id="cmd-r" style="margin-top:.35rem"><b>docker run</b></div>
+    <div class="dk-out" id="cmd-out"></div>
+    <div class="ctrl"><button class="btn bad" data-act="trap">💥 Shell-form ENTRYPOINT + argumenty</button><button class="btn" data-act="reset">↺ Reset</button></div>
+    <div class="status" id="cmd-st">Wybierz opcje.</div>
+    <figcaption>Wyniki odpowiadają tabeli interakcji CMD/ENTRYPOINT z dokumentacji Dockerfile. Uproszczenie: nie pokazujemy CMD dziedziczonego z obrazu bazowego.</figcaption>
+  </figure>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Mój obraz bazowy ma CMD. Dodałem własny ENTRYPOINT i CMD zniknęło. Bug?</div>
+      <div class="a">O:</div><div>Nie, tak to działa: ustawienie ENTRYPOINT czyści CMD odziedziczone z obrazu bazowego. Jeśli potrzebujesz CMD, zdefiniuj je ponownie w swoim Dockerfile.</div>
+    </div>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>ENTRYPOINT = program, CMD = domyślne argumenty. <code>docker run … args</code> zastępuje CMD.</li>
+    <li>Używaj exec form dla obu. Shell-form ENTRYPOINT ignoruje CMD i argumenty z <code>docker run</code>.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-pid1" data-level="2" data-title="PID 1 i sygnały">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>PID 1, sygnały i docker stop</h2><span class="tag">dlaczego stop trwa dokładnie 10 sekund</span></div></div>
+  <p class="reveal"><code>docker stop</code> wysyła do głównego procesu sygnał stopu (domyślnie <code>SIGTERM</code>, zmienisz go przez <code>STOPSIGNAL</code>) i czeka. Dla kontenerów Linux domyślny limit to 10 sekund; po nim leci <code>SIGKILL</code>. Jeśli stop zawsze trwa równo 10 sekund, twoja aplikacja nie dostaje SIGTERM albo go ignoruje.</p>
+  <p class="reveal">Dwie typowe przyczyny. Pierwsza: shell form (<code>CMD node app.js</code>). PID 1 to wtedy <code>/bin/sh -c</code>, który nie przekazuje sygnałów dziecku. Druga: proces z PID 1 jest w Linuksie traktowany specjalnie — jądro nie stosuje domyślnej akcji „zakończ” dla sygnałów, na które PID 1 nie ma handlera. Aplikacja bez handlera SIGTERM po prostu go nie zauważy.</p>
+  <figure class="fig wide" id="fig-pid1">
+    <div class="ftitle">▶ docker stop na osi czasu <span>porównaj warianty startu</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="shell">💥 CMD node app.js (shell)</button>
+      <button class="btn primary" data-act="exec">CMD ["node","app.js"] + handler</button>
+      <button class="btn" data-act="init">docker run --init</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="pid-g" style="--n:3"></div>
+    <div class="dk-tl" id="pid-tl"><i id="pid-bar" style="left:0;width:0"></i></div>
+    <div class="status" id="pid-st">Wybierz wariant.</div>
+    <figcaption>Oś czasu 0–10 s. Uproszczenie: niektóre powłoki dla pojedynczego polecenia robią <code>exec</code> i wtedy shell form działa przypadkiem — nie polegaj na tym. Czasy zamknięcia aplikacji ilustracyjne.</figcaption>
+  </figure>
+  <div class="box geek reveal"><span class="lbl">🤓 --init i skrypty startowe</span>
+    <p><code>docker run --init</code> wstawia jako PID 1 mały proces init (domyślnie oparty na <code>tini</code>), który przekazuje sygnały i sprząta procesy-zombie. Jeśli masz skrypt <code>entrypoint.sh</code>, kończ go linią <code>exec "$@"</code> — wtedy aplikacja zastępuje powłokę i sama staje się PID 1.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>stop = sygnał stopu → limit czasu (10 s dla Linux) → SIGKILL (kod 137).</li>
+    <li>Exec form + obsługa SIGTERM w aplikacji, albo <code>--init</code>, albo <code>exec "$@"</code> w skrypcie.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-arg" data-level="2" data-title="ARG, ENV i zakresy">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>ARG, ENV i zakresy zmiennych</h2><span class="tag">kto widzi zmienną i jak długo</span></div></div>
+  <p class="reveal"><code>ARG</code> istnieje tylko w czasie budowania, <code>ENV</code> — w czasie budowania <b>i</b> w każdym kontenerze z obrazu. Zakresy mają reguły, które łatwo przeoczyć:</p>
+  <ul class="reveal">
+    <li><code>ARG</code> przed pierwszym <code>FROM</code> jest w zakresie globalnym — działa tylko w liniach <code>FROM</code>. Żeby użyć go w etapie, napisz w nim ponownie <code>ARG NAZWA</code> (bez wartości).</li>
+    <li><code>ARG</code> w etapie żyje do końca tego etapu.</li>
+    <li><code>ENV</code> o tej samej nazwie co <code>ARG</code> wygrywa z nim.</li>
+    <li>BuildKit udostępnia automatyczne ARG platformy: <code>TARGETPLATFORM</code>, <code>TARGETOS</code>, <code>TARGETARCH</code>, <code>BUILDPLATFORM</code>… W etapie trzeba je zadeklarować (<code>ARG TARGETARCH</code>).</li>
+  </ul>
+  <figure class="fig wide" id="fig-arg">
+    <div class="ftitle">▶ Gdzie widać zmienną <span>kliknij zmienną</span></div>
+    <div class="ctrl" id="arg-btns">
+      <button class="btn" data-act="v0">ARG NODE_VER (globalny)</button>
+      <button class="btn" data-act="v1">ARG NODE_VER (powtórzony w etapie)</button>
+      <button class="btn" data-act="v2">ENV PORT</button>
+      <button class="btn bad" data-act="v3">💥 ARG NPM_TOKEN</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="arg-g" style="--n:4"></div>
+    <div class="status" id="arg-st">Kliknij zmienną.</div>
+    <figcaption>Uproszczenie: kolumny to miejsca, w których wartość może być widoczna. Obraz w przykładzie ma dwa etapy: <code>build</code> i <code>runtime</code>.</figcaption>
+  </figure>
+<pre class="reveal"><code>ARG NODE_VER=22
+FROM node:${NODE_VER}-slim AS build   # globalny ARG działa w FROM
+ARG NODE_VER                          # ...a w etapie trzeba go powtórzyć
+RUN echo "building on node $NODE_VER"
+FROM node:${NODE_VER}-slim AS runtime
+ENV PORT=8080                         # trafi do kontenera
+</code></pre>
+  <div class="box watch reveal"><span class="lbl">⚠️ Sekrety w ARG i ENV</span>
+    <p>Wartości build-argów i zmiennych środowiskowych mogą trwale zostać w metadanych obrazu, atestacjach provenance i historii obrazu. Token przekazany przez <code>--build-arg</code> to token opublikowany razem z obrazem. Do sekretów służą secret mounty — rozdział o sekretach.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>ARG = build, ENV = build + runtime. Globalny ARG trzeba powtórzyć w etapie.</li>
+    <li>Ani ARG, ani ENV nie nadają się na sekrety.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-ms" data-level="1" data-title="Multi-stage">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Multi-stage builds</h2><span class="tag">buduj w kuchni, podawaj na talerzu</span></div></div>
+  <p class="reveal">Kompilator, nagłówki, cache menedżera pakietów i testy są potrzebne do zbudowania aplikacji, ale nie do jej uruchomienia. Multi-stage build dzieli Dockerfile na etapy: każdy <code>FROM</code> zaczyna nowy etap, a <code>COPY --from=etap</code> przenosi tylko wybrane artefakty. Obraz wynikowy to <b>ostatni etap</b> (albo ten wskazany przez <code>--target</code>) — reszta nie trafia do obrazu.</p>
+  <figure class="fig wide" id="fig-ms">
+    <div class="ftitle">▶ Od 1 GB do kilkudziesięciu MB <span>zbuduj etapy, wybierz target</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="build">▶ docker build .</button>
+      <button class="btn" data-act="test">🎯 --target test</button>
+      <button class="btn bad" data-act="single">💥 Jeden etap</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="ms-g" style="--n:4"></div>
+    <div class="dk-bars" id="ms-bars"></div>
+    <div class="status" id="ms-st">Kliknij ▶.</div>
+    <figcaption>Rozmiary ilustracyjne (rząd wielkości dla aplikacji Go). Uproszczenie: BuildKit buduje tylko etapy, od których zależy target, i niezależne etapy wykonuje równolegle.</figcaption>
+  </figure>
+<pre class="reveal"><code># syntax=docker/dockerfile:1
+FROM golang:1.23 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o /out/app ./cmd/app
+
+FROM build AS test
+RUN go test ./...
+
+FROM gcr.io/distroless/static-debian12 AS runtime
+COPY --from=build /out/app /app
+USER nonroot:nonroot
+ENTRYPOINT ["/app"]</code></pre>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Czy <code>COPY --from</code> działa tylko z etapami?</div>
+      <div class="a">O:</div><div>Nie. Możesz kopiować z dowolnego obrazu: <code>COPY --from=nginx:latest /etc/nginx/nginx.conf /nginx.conf</code>. Możesz też wskazać etap numerem (<code>--from=0</code>), ale nazwy są odporne na zmianę kolejności.</div>
+    </div>
+  </div>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Wzorce</span>
+    <p><b>Etap deps</b> wspólny dla <code>dev</code> i <code>prod</code>. <b>Etap test</b> uruchamiany w CI przez <code>--target test</code>. <b>Etap export</b> z <code>FROM scratch</code> + <code>docker build --output type=local,dest=out .</code> — wtedy wynikiem buildu są pliki na dysku, a nie obraz.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Każdy FROM = nowy etap. Do obrazu trafia tylko ostatni (lub <code>--target</code>).</li>
+    <li><code>COPY --from</code> przenosi artefakty z etapu albo z dowolnego obrazu.</li></ul>
+  </div>
+</section>
+<section class="chapter" id="ch-bk" data-level="2" data-title="BuildKit i mounty">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>BuildKit: graf, równoległość i RUN --mount</h2><span class="tag">Dockerfile to nie skrypt, tylko graf</span></div></div>
+  <p class="reveal">Klasyczny builder wykonywał Dockerfile linia po linii. BuildKit zamienia go w <b>graf zależności</b>: wykrywa i pomija nieużywane etapy, buduje niezależne etapy równolegle i przesyła z kontekstu tylko pliki, których build używa. Do tego dochodzą <code>RUN --mount</code> — tymczasowe montowania widoczne tylko podczas jednego kroku i <b>nie</b> zapisywane w warstwie.</p>
+  <figure class="fig wide" id="fig-bk">
+    <div class="ftitle">▶ Cache mount kontra zwykły RUN <span>zmień jedną zależność</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="plain">💥 RUN npm ci</button>
+      <button class="btn primary" data-act="mount">RUN --mount=type=cache … npm ci</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="bk-g" style="--n:3"></div>
+    <div class="dk-bar"><span>Pobrane z sieci</span><div class="meter"><i id="bk-m"></i></div><span id="bk-v">—</span></div>
+    <div class="status" id="bk-st">Scenariusz: zmieniasz jedną zależność w package.json, więc cache warstwy <code>npm ci</code> przepada.</div>
+    <figcaption>Liczby ilustracyjne. Uproszczenie: cache mount żyje w builderze, a nie w obrazie — na świeżym runnerze CI jest pusty, dopóki go nie wyeksportujesz lub nie zachowasz innym sposobem.</figcaption>
+  </figure>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Typ mountu</th><th>Co daje</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>type=cache,target=…</code></td><td>trwały katalog cache między buildami; opcja <code>sharing</code>: <code>shared</code> (domyślnie), <code>private</code>, <code>locked</code></td><td>npm, pip, go build, apt, Maven</td></tr>
+      <tr><td><code>type=secret,id=…</code></td><td>plik z sekretem, domyślnie w <code>/run/secrets/&lt;id&gt;</code></td><td>tokeny, poświadczenia</td></tr>
+      <tr><td><code>type=ssh</code></td><td>dostęp do agenta SSH hosta</td><td><code>git clone</code> prywatnych repo</td></tr>
+      <tr><td><code>type=bind</code></td><td>montuje pliki z kontekstu lub etapu bez kopiowania do warstwy</td><td>kod źródłowy potrzebny tylko do kompilacji</td></tr>
+      <tr><td><code>type=tmpfs</code></td><td>katalog w pamięci na czas kroku</td><td>pliki tymczasowe</td></tr>
+    </tbody>
+  </table>
+  </div>
+<pre class="reveal"><code>RUN --mount=type=cache,target=/root/.npm \
+    npm ci
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update &amp;&amp; apt-get install -y --no-install-recommends gcc
+RUN --mount=type=bind,target=. \
+    go build -o /out/app ./cmd/app</code></pre>
+  <div class="box watch reveal"><span class="lbl">⚠️ Cache mount ≠ cache warstw</span>
+    <p>Cache warstw decyduje, <em>czy</em> krok się wykona. Cache mount przyspiesza krok, <em>który już się wykonuje</em>. Gdy krok trafia w cache warstw, mount nie jest w ogóle potrzebny.</p>
+  </div>
+  <details class="deeper" data-level="3">
+    <summary>🔬 Głębiej: LLB, frontend i COPY --link</summary>
+    <p>BuildKit nie rozumie Dockerfile bezpośrednio. <b>Frontend</b> (obraz <code>docker/dockerfile</code>, wskazany dyrektywą <code># syntax</code>) tłumaczy Dockerfile na <b>LLB</b> — niskopoziomowy graf operacji, który solver BuildKit wykonuje z cache adresowanym zawartością. Dlatego nowe funkcje Dockerfile nie wymagają aktualizacji demona.</p>
+    <p><code>COPY --link</code> (Dockerfile 1.4+) tworzy warstwę niezależną od warstw pod nią. Po zmianie obrazu bazowego taka warstwa nie musi być przebudowana, a przy eksporcie z <code>--cache-from</code> BuildKit może przenieść ją na nową bazę bez przebudowy kolejnych kroków.</p>
+  </details>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>BuildKit: graf etapów, równoległość, pomijanie nieużywanych etapów.</li>
+    <li><code>RUN --mount</code>: cache, secret, ssh, bind, tmpfs — nic z mountu nie trafia do warstwy.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-secret" data-level="2" data-title="Sekrety w buildzie">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Sekrety w buildzie</h2><span class="tag">token musi zniknąć, zanim powstanie warstwa</span></div></div>
+  <p class="reveal">Build często potrzebuje sekretu: tokenu do prywatnego rejestru npm, klucza SSH do prywatnego repo, poświadczeń chmurowych. Każdy sposób, który zapisuje sekret w warstwie lub metadanych, publikuje go razem z obrazem. Dobre sposoby są dwa: <b>secret mount</b> i <b>SSH mount</b>.</p>
+  <figure class="fig wide" id="fig-secret">
+    <div class="ftitle">▶ Gdzie zostaje ślad sekretu <span>porównaj metody</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="arg">💥 --build-arg TOKEN</button>
+      <button class="btn bad" data-act="copy">💥 COPY .npmrc + RUN rm</button>
+      <button class="btn primary" data-act="mount">--mount=type=secret</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="scr-g" style="--n:4"></div>
+    <div class="status" id="scr-st">Wybierz metodę.</div>
+    <figcaption>Uproszczenie: „historia” = <code>docker image history</code> i konfiguracja obrazu; „provenance” = atestacja buildu (w trybie <code>max</code> zawiera build-argi).</figcaption>
+  </figure>
+<pre class="reveal"><code># Dockerfile
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
+    npm ci
+RUN --mount=type=secret,id=API_TOKEN,env=API_TOKEN \
+    ./fetch-assets.sh
+RUN --mount=type=ssh \
+    git clone git@github.com:org/private.git
+
+# CLI
+docker build --secret id=npmrc,src=$HOME/.npmrc \
+             --secret id=API_TOKEN,env=API_TOKEN \
+             --ssh default .</code></pre>
+  <div class="box geek reveal"><span class="lbl">🤓 Szczegóły</span>
+    <p>Bez <code>target</code> sekret jest montowany jako plik <code>/run/secrets/&lt;id&gt;</code>. Opcja <code>env=</code> zamiast pliku wystawia go jako zmienną środowiskową na czas jednego <code>RUN</code>. Gdy w <code>--secret</code> podasz tylko <code>id</code>, Buildx szuka najpierw zmiennej środowiskowej o tej nazwie, potem pliku. Zmiana wartości sekretu <b>nie</b> unieważnia cache — jeśli krok ma się wykonać z nowym sekretem, wymuś to inaczej (np. build-argiem z niesekretną wersją).</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>ARG, ENV, COPY + rm — sekret zostaje w obrazie lub metadanych.</li>
+    <li><code>--mount=type=secret</code> / <code>type=ssh</code> — sekret istnieje tylko podczas jednego kroku.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-small" data-level="1" data-title="Mały i bezpieczny obraz">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Mały i bezpieczny obraz</h2><span class="tag">czego nie ma, tego nie da się zhakować</span></div></div>
+  <p class="reveal">Każdy pakiet w obrazie to megabajty do pobrania i potencjalne podatności do łatania. Wybór obrazu bazowego to największa pojedyncza decyzja o rozmiarze i powierzchni ataku.</p>
+  <figure class="fig wide" id="fig-small">
+    <div class="ftitle">▶ Wybierz bazę dla tej samej aplikacji <span>rozmiar i kompromisy</span></div>
+    <div class="ctrl" id="small-btns">
+      <button class="btn" data-act="full">node:22</button>
+      <button class="btn" data-act="slim">node:22-slim</button>
+      <button class="btn" data-act="alpine">node:22-alpine</button>
+      <button class="btn primary" data-act="distroless">distroless</button>
+      <button class="btn" data-act="scratch">scratch (Go)</button>
+      <button class="btn bad" data-act="root">💥 Dodaj: root + :latest</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-bars" id="small-bars"></div>
+    <div class="dk-kv" id="small-kv"></div>
+    <div class="status" id="small-st">Wybierz bazę.</div>
+    <figcaption>Rozmiary ilustracyjne, rząd wielkości. Liczby podatności zależą od dnia skanu — nie podajemy ich. „scratch” dotyczy statycznie skompilowanej binarki (Go, Rust), nie Node.js.</figcaption>
+  </figure>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Praktyka</th><th>Jak</th><th>Dlaczego</th></tr></thead>
+    <tbody>
+      <tr><td>Nie-root</td><td><code>RUN useradd -r app</code> + <code>USER app</code></td><td>ucieczka z procesu ≠ root w kontenerze</td></tr>
+      <tr><td>Pinowanie</td><td><code>FROM node:22.11-slim@sha256:…</code></td><td>powtarzalność; tag może się przesunąć</td></tr>
+      <tr><td>Bez rekomendowanych</td><td><code>apt-get install --no-install-recommends</code></td><td>mniej pakietów</td></tr>
+      <tr><td>Odświeżanie bazy</td><td><code>docker build --pull</code>, rebuild cykliczny</td><td>poprawki bezpieczeństwa w bazie</td></tr>
+      <tr><td>Skan</td><td><code>docker scout cves obraz</code></td><td>widoczność znanych CVE</td></tr>
+      <tr><td>Bez sekretów i śmieci</td><td><code>.dockerignore</code>, secret mounty, multi-stage</td><td>nic, czego nie potrzebuje runtime</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Alpine i musl</span>
+    <p>Alpine używa biblioteki <code>musl</code> zamiast <code>glibc</code>. Większość rzeczy działa, ale natywne rozszerzenia (np. kompilowane moduły Pythona czy Node.js) mogą wymagać kompilacji ze źródeł albo zachowywać się inaczej. Mniejszy obraz nie zawsze oznacza szybszy build.</p>
+  </div>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Obrazy bez powłoki</span>
+    <p>Distroless i <code>scratch</code> nie mają shella ani menedżera pakietów. Debugujesz je inaczej: etapem <code>debug</code> w multi-stage, obrazem z wariantem <code>:debug</code> albo poleceniem <code>docker debug</code>, które daje shell z narzędziami w dowolnym kontenerze lub obrazie. Docker oferuje też Docker Hardened Images — minimalne, utrzymywane obrazy bazowe z SBOM i provenance.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Mniejsza baza = mniej MB i mniej CVE. Multi-stage pozwala użyć najmniejszej bazy w runtime.</li>
+    <li>USER nie-root, pinowany digest, cykliczny rebuild z <code>--pull</code>.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-buildx" data-level="2" data-title="Buildx: platformy i cache">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Buildx: wiele platform i eksport cache</h2><span class="tag">jeden tag, wiele architektur</span></div></div>
+  <p class="reveal">Laptop z Apple Silicon to <code>linux/arm64</code>, typowy serwer w chmurze — <code>linux/amd64</code>. Obraz wieloplatformowy to <b>indeks obrazów</b> (manifest list): jeden tag wskazuje kilka manifestów, po jednym na platformę. <code>docker pull</code> sam wybiera manifest pasujący do hosta.</p>
+  <p class="reveal">Klasyczny storage obrazów (domyślny w starszych wersjach Docker Engine; nowsze wersje domyślnie używają containerd image store) nie przechowuje obrazów wieloplatformowych. Potrzebujesz <b>containerd image store</b> albo buildera z driverem <code>docker-container</code> (wtedy wynik trzeba jawnie wypchnąć lub załadować).</p>
+  <figure class="fig wide" id="fig-buildx">
+    <div class="ftitle">▶ Trzy strategie budowania dla arm64 + amd64 <span>na hoście amd64</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="qemu">🐢 Emulacja QEMU</button>
+      <button class="btn" data-act="nodes">🖥️ Natywne węzły</button>
+      <button class="btn primary" data-act="cross">⚡ Cross-kompilacja</button>
+      <button class="btn" data-act="pull">⬇️ docker pull na Macu M</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="bx-g" style="--n:2"></div>
+    <div class="status" id="bx-st">Wybierz strategię.</div>
+    <figcaption>Czasy ilustracyjne. Uproszczenie: emulacja jest zwykle wolniejsza zwłaszcza przy kompilacji; jej koszt zależy od obciążenia.</figcaption>
+  </figure>
+<pre class="reveal"><code># cross-kompilacja: etap build działa natywnie na platformie buildera
+FROM --platform=$BUILDPLATFORM golang:1.23 AS build
+ARG TARGETOS TARGETARCH
+WORKDIR /src
+COPY . .
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/app .
+
+FROM alpine:3.20
+COPY --from=build /out/app /app
+ENTRYPOINT ["/app"]
+
+# docker buildx build --platform linux/amd64,linux/arm64 -t reg/app:1.0 --push .</code></pre>
+  <h3 class="reveal">Eksport cache — szybki build w CI</h3>
+  <p class="reveal">Runner CI startuje zwykle z pustym builderem. Cache można wyeksportować i zaimportować przez <code>--cache-to</code> / <code>--cache-from</code>.</p>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Backend</th><th>Gdzie leży cache</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>inline</code></td><td>w samym obrazie; tylko tryb <code>min</code></td><td>najprostszy start</td></tr>
+      <tr><td><code>registry</code></td><td>osobny obraz cache w rejestrze; obsługuje <code>mode=max</code></td><td>uniwersalny wybór</td></tr>
+      <tr><td><code>local</code></td><td>katalog na dysku</td><td>runner z trwałym dyskiem</td></tr>
+      <tr><td><code>gha</code></td><td>cache GitHub Actions</td><td>GitHub Actions</td></tr>
+      <tr><td><code>s3</code>, <code>azblob</code></td><td>bucket / blob storage</td><td>własna infrastruktura</td></tr>
+    </tbody>
+  </table>
+  </div>
+<pre class="reveal"><code>docker buildx build \
+  --cache-from type=registry,ref=reg/app:buildcache \
+  --cache-to   type=registry,ref=reg/app:buildcache,mode=max \
+  -t reg/app:1.0 --push .</code></pre>
+  <div class="box geek reveal"><span class="lbl">🤓 mode=min a mode=max</span>
+    <p><code>min</code> (domyślny) eksportuje tylko warstwy, które trafiły do obrazu wynikowego. <code>max</code> eksportuje też warstwy etapów pośrednich, np. etapu <code>build</code> w multi-stage — dzięki temu CI trafia w cache nawet w krokach, których nie ma w obrazie. Domyślny driver <code>docker</code> obsługuje backendy <code>inline</code>, <code>local</code>, <code>registry</code> i <code>gha</code> tylko z włączonym containerd image store.</p>
+  </div>
+  <details class="deeper" data-level="3">
+    <summary>🔬 Głębiej: Bake</summary>
+    <p><code>docker buildx bake</code> czyta konfigurację buildów z pliku (HCL, JSON lub Compose — domyślnie m.in. <code>docker-bake.hcl</code>) i uruchamia wiele targetów równolegle. Zamiast długich skryptów z flagami opisujesz targety, platformy, tagi i cache deklaratywnie, z dziedziczeniem i zmiennymi.</p>
+<pre><code>group "default" { targets = ["api", "worker"] }
+target "api" {
+  context   = "."
+  target    = "runtime"
+  platforms = ["linux/amd64", "linux/arm64"]
+  tags      = ["reg/api:1.0"]
+}</code></pre>
+  </details>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Obraz wieloplatformowy = indeks obrazów; pull wybiera manifest hosta.</li>
+    <li>Cross-kompilacja z <code>--platform=$BUILDPLATFORM</code> jest zwykle szybsza niż emulacja.</li>
+    <li>W CI eksportuj cache (<code>registry</code> lub <code>gha</code>, <code>mode=max</code>).</li></ul>
+  </div>
+</section>
+<section class="part" id="part-3" data-level="1">
+  <span class="part-no">Część III</span><h2>Uruchamianie: dane, sieć, zasoby, Compose</h2><p>Obraz jest gotowy. Teraz: gdzie trzymać dane, jak kontenery się widzą, jak je ograniczać i jak zgrać kilka serwisów.</p>
+</section>
+
+<section class="chapter" id="ch-data" data-level="1" data-title="Dane: volumes i mounty">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Dane: volumes, bind mounts, tmpfs</h2><span class="tag">warstwa zapisu to nie miejsce na bazę danych</span></div></div>
+  <p class="reveal">Warstwa zapisu kontenera znika razem z nim. Dane, które mają przeżyć kontener, trzymasz poza nią. Docker ma trzy rodzaje montowań:</p>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Typ</th><th>Gdzie leżą dane</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>-v dane:/var/lib/postgresql/data</code><br>(volume)</td><td>obszar zarządzany przez Dockera</td><td>dane aplikacji, bazy — domyślny wybór</td></tr>
+      <tr><td><code>-v "$PWD":/app</code><br>(bind mount)</td><td>dowolna ścieżka hosta</td><td>kod źródłowy w dev, pliki konfiguracyjne</td></tr>
+      <tr><td><code>--tmpfs /tmp</code></td><td>pamięć RAM hosta</td><td>dane tymczasowe, które nie mają trafić na dysk</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <figure class="fig wide" id="fig-data">
+    <div class="ftitle">▶ Co przeżyje docker rm <span>zapisz dane i usuń kontener</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="write">✏️ Zapisz rekord w bazie</button>
+      <button class="btn bad" data-act="rm">💥 docker rm -f db</button>
+      <button class="btn" data-act="up">▶ Nowy kontener db</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="data-g" style="--n:4"></div>
+    <div class="status" id="data-st">Zapisz rekord, usuń kontener, uruchom nowy.</div>
+    <figcaption>Uproszczenie: cztery kontenery bazy z różnym przechowywaniem danych w tej samej ścieżce. Liczby rekordów przykładowe.</figcaption>
+  </figure>
+  <div class="box watch reveal"><span class="lbl">⚠️ Montowanie zasłania</span>
+    <p>Montowanie na niepustą ścieżkę zasłania pliki, które obraz miał w tej ścieżce. Wyjątek: <b>pusty wolumen</b> montowany w ścieżce z plikami — wtedy Docker kopiuje zawartość obrazu do wolumenu. Bind mount niczego nie kopiuje — pokazuje katalog hosta. Stąd klasyka: <code>-v "$PWD":/app</code> zasłania <code>/app/node_modules</code> zbudowane w obrazie.</p>
+  </div>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 --mount czy -v?</span>
+    <p><code>--mount type=bind,src=…,dst=…,readonly</code> jest bardziej jawne. Różnica w zachowaniu: <code>-v</code> z nieistniejącą ścieżką hosta tworzy katalog, a <code>--mount type=bind</code> zwraca błąd <code>bind source path does not exist</code>. Montowania tylko do odczytu oznaczasz <code>:ro</code> lub <code>readonly</code>.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Volume = trwałe dane zarządzane przez Dockera. Bind = katalog hosta. tmpfs = RAM.</li>
+    <li>Pusty volume dostaje kopię plików z obrazu; bind mount nie.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-net" data-level="1" data-title="Sieci i porty">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Sieci i publikowanie portów</h2><span class="tag">localhost w kontenerze to kontener</span></div></div>
+  <p class="reveal">Każdy kontener ma własny namespace sieciowy, więc <code>localhost</code> w kontenerze to sam kontener, nie host. Domyślnie kontener trafia do sieci <code>bridge</code>. Kluczowa różnica: <b>sieć zdefiniowana przez użytkownika</b> (<code>docker network create app</code>) daje automatyczny DNS — kontenery widzą się po nazwie. Domyślny <code>bridge</code> tego nie robi.</p>
+  <figure class="fig wide" id="fig-net">
+    <div class="ftitle">▶ api łączy się z db <span>wybierz konfigurację</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="def">💥 Domyślny bridge</button>
+      <button class="btn primary" data-act="user">Sieć użytkownika „app”</button>
+      <button class="btn bad" data-act="local">💥 api → localhost:5432</button>
+      <button class="btn" data-act="pub">🌐 -p 8080:80</button>
+      <button class="btn" data-act="pubL">🔒 -p 127.0.0.1:8080:80</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="net-g" style="--n:4"></div>
+    <div class="dk-out" id="net-out">$</div>
+    <div class="status" id="net-st">Wybierz scenariusz.</div>
+    <figcaption>Uproszczenie: pomijamy reguły iptables/nftables i IPv6. Adresy IP przykładowe.</figcaption>
+  </figure>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Driver / opcja</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>bridge</code> (użytkownika)</td><td>prywatna sieć na hoście + DNS po nazwach</td><td>domyślny wybór dla kilku kontenerów</td></tr>
+      <tr><td><code>host</code></td><td>kontener używa stosu sieciowego hosta, bez izolacji</td><td>wydajność, specjalne przypadki</td></tr>
+      <tr><td><code>none</code></td><td>brak sieci</td><td>zadania offline</td></tr>
+      <tr><td><code>overlay</code></td><td>sieć między wieloma hostami (Swarm)</td><td>klastry Swarm</td></tr>
+      <tr><td><code>-p 8080:80</code></td><td>port 8080 hosta → 80 kontenera, na wszystkich interfejsach</td><td>dostęp z zewnątrz</td></tr>
+      <tr><td><code>-p 127.0.0.1:8080:80</code></td><td>tylko z hosta</td><td>dev, panele admina</td></tr>
+      <tr><td><code>-P</code></td><td>publikuje wszystkie porty z EXPOSE na losowych portach hosta</td><td>szybkie testy</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Publikowanie jest publiczne</span>
+    <p>Dokumentacja ostrzega: opublikowany port jest domyślnie dostępny nie tylko z hosta, ale i ze świata. Reguły Dockera mogą też ominąć prosty firewall hosta (np. <code>ufw</code>). Bazy w dev publikuj z <code>127.0.0.1:</code> — albo wcale, jeśli łączy się z nimi tylko inny kontener.</p>
+  </div>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Jak z kontenera połączyć się z usługą na hoście?</div>
+      <div class="a">O:</div><div>W Docker Desktop użyj nazwy <code>host.docker.internal</code>. Na Linuksie dodaj <code>--add-host=host.docker.internal:host-gateway</code>. Kontenery między sobą łącz przez wspólną sieć i nazwy, nie przez porty hosta.</div>
+    </div>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Sieć użytkownika = DNS po nazwach kontenerów. Domyślny bridge — bez DNS.</li>
+    <li><code>EXPOSE</code> dokumentuje, <code>-p</code> publikuje. Kontener↔kontener nie potrzebuje <code>-p</code>.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-res" data-level="2" data-title="Zasoby, restart, healthcheck">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Limity zasobów, restart i healthcheck</h2><span class="tag">kontener bez limitu może zjeść cały host</span></div></div>
+  <p class="reveal">Bez limitów kontener może użyć tyle pamięci i CPU, ile da jądro hosta. Limity ustawiasz flagami <code>docker run</code>, które tłumaczą się na cgroups. Gdy proces przekroczy twardy limit pamięci, jądro zabija go (OOM kill) — zwykle zobaczysz kod 137 i <code>OOMKilled: true</code> w <code>docker inspect</code>. Polityka restartu decyduje, co dalej.</p>
+  <figure class="fig wide" id="fig-res">
+    <div class="ftitle">▶ Wyciek pamięci kontra limit i polityka restartu <span>wybierz politykę i uruchom</span></div>
+    <div class="ctrl" id="res-pol">
+      <span class="dk-sel"><b>--restart</b><button class="btn on" data-act="p-no">no</button><button class="btn" data-act="p-onf">on-failure:3</button><button class="btn" data-act="p-always">always</button><button class="btn" data-act="p-us">unless-stopped</button></span>
+    </div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="leak">💥 Wyciek pamięci (-m 256m)</button>
+      <button class="btn" data-act="exit0">✅ Proces kończy się kodem 0</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-bar"><span>Pamięć / limit</span><div class="meter"><i id="res-m"></i></div><span id="res-v">0 MB</span></div>
+    <div class="dk-out" id="res-out"></div>
+    <div class="status" id="res-st">Wybierz politykę i scenariusz.</div>
+    <figcaption>Uproszczenie: pomijamy rosnące opóźnienie między restartami i to, że restart liczy się dopiero po ≥10 s działania. Zużycie pamięci ilustracyjne.</figcaption>
+  </figure>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Flaga</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>-m 512m</code> / <code>--memory</code></td><td>twardy limit pamięci (minimum 6m)</td><td>zawsze na produkcji</td></tr>
+      <tr><td><code>--memory-swap</code></td><td>pamięć + swap łącznie</td><td>kontrola swapu</td></tr>
+      <tr><td><code>--cpus=1.5</code></td><td>ile CPU może użyć kontener</td><td>sąsiedzi na hoście</td></tr>
+      <tr><td><code>--pids-limit</code></td><td>maksymalna liczba procesów</td><td>ochrona przed fork bombą</td></tr>
+      <tr><td><code>--restart on-failure[:N]</code></td><td>restart przy kodzie ≠ 0, opcjonalnie max N razy</td><td>zadania, które mogą chwilowo zawieść</td></tr>
+      <tr><td><code>--restart always</code></td><td>restart zawsze; ręcznie zatrzymany wraca po restarcie demona</td><td>serwisy</td></tr>
+      <tr><td><code>--restart unless-stopped</code></td><td>jak always, ale zatrzymany nie wraca po restarcie demona</td><td>serwisy, które czasem wyłączasz</td></tr>
+    </tbody>
+  </table>
+  </div>
+<pre class="reveal"><code>HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+  CMD curl -fsS http://localhost:8080/health || exit 1</code></pre>
+  <div class="box geek reveal"><span class="lbl">🤓 Healthcheck</span>
+    <p>Stan zdrowia ma trzy wartości: <code>starting</code>, <code>healthy</code>, <code>unhealthy</code>. Kontener staje się <code>unhealthy</code> po <code>retries</code> kolejnych nieudanych próbach. Błędy w czasie <code>start-period</code> nie wliczają się do limitu. Sam Docker Engine <b>nie restartuje</b> niezdrowego kontenera — healthcheck czytają orkiestratory i Compose (<code>depends_on: condition: service_healthy</code>). Obraz musi mieć narzędzie, którego używasz (<code>curl</code> często go nie ma w slim/distroless).</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Ustaw <code>-m</code> i <code>--cpus</code>. OOM kill = kod 137.</li>
+    <li>Restart: <code>no</code> (domyślnie), <code>on-failure</code>, <code>always</code>, <code>unless-stopped</code>.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-compose" data-level="1" data-title="Docker Compose">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Docker Compose: wiele serwisów, jeden plik</h2><span class="tag">docker compose up i masz całe środowisko</span></div></div>
+  <p class="reveal">Compose opisuje aplikację wielokontenerową w pliku YAML (<code>compose.yaml</code>). Każdy serwis to kontener (lub kilka replik) z obrazem albo sekcją <code>build</code>. Compose automatycznie tworzy sieć dla projektu, więc serwisy widzą się po nazwach — <code>api</code> łączy się z <code>db:5432</code>.</p>
+<pre class="reveal"><code>services:
+  api:
+    build: { context: ., target: dev }
+    ports: ["127.0.0.1:8080:8080"]
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/app
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    develop:
+      watch:
+        - { action: sync, path: ./src, target: /app/src }
+        - { action: rebuild, path: package.json }
+  migrate:
+    build: .
+    command: ["npm", "run", "migrate"]
+    depends_on: { db: { condition: service_healthy } }
+  db:
+    image: postgres:17
+    environment: { POSTGRES_USER: app, POSTGRES_PASSWORD: app }
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+      retries: 10
+  adminer:
+    image: adminer
+    profiles: ["tools"]
+volumes:
+  pgdata:</code></pre>
+  <figure class="fig wide" id="fig-compose">
+    <div class="ftitle">▶ depends_on: kolejność startu <span>porównaj warunki</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="started">💥 bez warunku (service_started)</button>
+      <button class="btn primary" data-act="healthy">service_healthy + migracja</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-rows" id="cmp-rows"></div>
+    <div class="status" id="cmp-st">Wybierz wariant.</div>
+    <figcaption>Czasy ilustracyjne. Uproszczenie: „gotowa” baza oznacza, że healthcheck <code>pg_isready</code> przechodzi.</figcaption>
+  </figure>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Element</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>depends_on.condition</code></td><td><code>service_started</code> / <code>service_healthy</code> / <code>service_completed_successfully</code></td><td>kolejność startu i gotowość</td></tr>
+      <tr><td><code>profiles</code></td><td>serwis startuje tylko po włączeniu profilu (<code>--profile tools</code>, <code>COMPOSE_PROFILES</code>) lub gdy wskażesz go z nazwy</td><td>narzędzia opcjonalne</td></tr>
+      <tr><td><code>develop.watch</code></td><td><code>docker compose watch</code>: akcje <code>sync</code>, <code>rebuild</code>, <code>sync+restart</code></td><td>szybka pętla dev</td></tr>
+      <tr><td><code>compose.override.yaml</code></td><td>scalany automatycznie z <code>compose.yaml</code></td><td>lokalne różnice dev</td></tr>
+      <tr><td><code>-f a.yaml -f b.yaml</code></td><td>scalanie plików; późniejszy nadpisuje</td><td>środowiska (CI, prod)</td></tr>
+      <tr><td><code>.env</code></td><td>zmienne do interpolacji <code>${VAR}</code> w pliku Compose</td><td>konfiguracja bez edycji YAML</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Pierwszeństwo zmiennych środowiskowych</span>
+    <p>Od najwyższego: (1) <code>docker compose run -e</code>; (2) <code>environment</code> lub <code>env_file</code> z wartością interpolowaną z shella lub pliku <code>.env</code>; (3) samo <code>environment</code>; (4) <code>env_file</code>; (5) <code>ENV</code> w obrazie. Plik <code>.env</code> w katalogu projektu służy do interpolacji w <code>compose.yaml</code> — sam z siebie nie trafia do kontenerów.</p>
+  </div>
+  <div class="box pencil reveal"><span class="lbl">✏️ Zaostrz ołówek</span>
+    <p>Zmieniasz plik w <code>./src</code>, a w kontenerze nic się nie dzieje. Używasz <code>docker compose up</code>. Co sprawdzić?</p>
+    <details><summary>Odpowiedź</summary><p>Reguły <code>develop.watch</code> działają tylko z <code>docker compose watch</code> (lub <code>docker compose up --watch</code>). Zwykłe <code>up</code> ich nie uruchamia. Dodatkowo proces w kontenerze musi sam przeładować zmienione pliki — <code>sync</code> tylko je kopiuje.</p></details>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Compose = serwisy + sieć projektu + wolumeny w jednym pliku.</li>
+    <li><code>depends_on</code> bez warunku czeka tylko na start kontenera, nie na gotowość.</li></ul>
+  </div>
+</section>
+<section class="part" id="part-4" data-level="2">
+  <span class="part-no">Część IV</span><h2>Dystrybucja i codzienna praca</h2><p>Jak obraz trafia do rejestru, czym tag różni się od digestu i jak debugować kontenery.</p>
+</section>
+
+<section class="chapter" id="ch-reg" data-level="2" data-title="Rejestry, tagi, digesty">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Rejestry, tagi i digesty</h2><span class="tag">tag to karteczka, digest to odcisk palca</span></div></div>
+  <p class="reveal">Pełna nazwa obrazu to <code>[rejestr/][namespace/]repozytorium[:tag|@digest]</code>. Bez rejestru Docker używa Docker Hub (<code>docker.io</code>), a oficjalne obrazy żyją w namespace <code>library</code> — dlatego <code>debian</code> to w rzeczywistości <code>docker.io/library/debian:latest</code>. Bez tagu Docker przyjmuje <code>latest</code>.</p>
+  <p class="reveal"><b>Tag</b> jest zmiennym wskaźnikiem: właściciel może w każdej chwili przypiąć go do innego obrazu. <b>Digest</b> (<code>sha256:…</code>) to skrót zawartości manifestu — ta sama wartość zawsze oznacza ten sam obraz. <code>latest</code> to tylko domyślna nazwa tagu, nie „najnowsza wersja”.</p>
+  <figure class="fig wide" id="fig-reg">
+    <div class="ftitle">▶ Tag się przesuwa, digest nie <span>opublikuj nową wersję</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="push">⬆️ Push nowej wersji</button>
+      <button class="btn" data-act="pullT">⬇️ Pull app:1</button>
+      <button class="btn" data-act="pullD">⬇️ Pull app@sha256:a1…</button>
+      <button class="btn bad" data-act="latest">💥 Prod na :latest</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="reg-g" style="--n:3"></div>
+    <div class="status" id="reg-st">Rejestr ma jedną wersję obrazu.</div>
+    <figcaption>Digesty skrócone i przykładowe. Uproszczenie: pomijamy, że obraz wieloplatformowy ma digest indeksu i osobne digesty manifestów.</figcaption>
+  </figure>
+<pre class="reveal"><code>docker login ghcr.io
+docker tag app:dev ghcr.io/org/app:1.4.2
+docker push ghcr.io/org/app:1.4.2
+docker image inspect --format '{{index .RepoDigests 0}}' ghcr.io/org/app:1.4.2
+docker pull ghcr.io/org/app@sha256:&lt;digest&gt;</code></pre>
+  <div class="box geek reveal"><span class="lbl">🤓 Strategia tagowania</span>
+    <p>Taguj obraz kilkoma tagami naraz: niezmiennym (<code>1.4.2</code>, SHA commita) i ruchomymi (<code>1.4</code>, <code>1</code>). Wdrażaj po niezmiennym tagu albo po digeście. Standard OCI opisuje format obrazu i protokół rejestru, więc ten sam obraz działa w Docker Hub, GHCR, ECR, GCR/Artifact Registry czy Harbor.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Brak rejestru = <code>docker.io</code>; brak tagu = <code>latest</code>.</li>
+    <li>Tag jest zmienny, digest niezmienny. Na produkcji: wersja albo digest.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-debug" data-level="2" data-title="Debug i workflow">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Debugowanie i codzienny workflow</h2><span class="tag">objaw → komenda</span></div></div>
+  <p class="reveal">Większość problemów z kontenerami diagnozujesz kilkoma komendami. Kliknij objaw, a figura podpowie, od czego zacząć.</p>
+  <figure class="fig wide" id="fig-debug">
+    <div class="ftitle">▶ Mapa diagnostyczna <span>wybierz objaw</span></div>
+    <div class="ctrl" id="dbg-btns">
+      <button class="btn" data-act="exit">Kontener od razu się kończy</button>
+      <button class="btn" data-act="conn">Nie mogę się połączyć</button>
+      <button class="btn" data-act="slow">Build trwa wieki</button>
+      <button class="btn" data-act="disk">Brak miejsca na dysku</button>
+      <button class="btn" data-act="cfg">Zła konfiguracja / env</button>
+    </div>
+    <div class="dk-out" id="dbg-out">Wybierz objaw.</div>
+    <div class="status" id="dbg-st">—</div>
+    <figcaption>Kolejność komend to sugerowana ścieżka, nie jedyna. Komendy zgodne z dokumentacją CLI Dockera.</figcaption>
+  </figure>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Komenda</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>docker logs -f --tail 100 c</code></td><td>stdout/stderr głównego procesu</td><td>pierwszy krok zawsze</td></tr>
+      <tr><td><code>docker exec -it c sh</code></td><td>nowy proces w działającym kontenerze</td><td>zajrzeć do środka</td></tr>
+      <tr><td><code>docker inspect c</code></td><td>pełna konfiguracja i stan (JSON); <code>--format</code></td><td>env, mounty, sieci, exit code</td></tr>
+      <tr><td><code>docker cp c:/ścieżka .</code></td><td>kopiowanie plików z/do kontenera</td><td>wyciągnąć log, zrzut</td></tr>
+      <tr><td><code>docker stats</code> / <code>docker top c</code></td><td>zużycie zasobów na żywo / procesy</td><td>wolno, dużo pamięci</td></tr>
+      <tr><td><code>docker events</code></td><td>strumień zdarzeń demona</td><td>„kto restartuje mój kontener?”</td></tr>
+      <tr><td><code>docker system df</code></td><td>miejsce zajęte przez obrazy, kontenery, wolumeny, cache</td><td>pełny dysk</td></tr>
+      <tr><td><code>docker system prune</code></td><td>usuwa zatrzymane kontenery, nieużywane sieci, wiszące obrazy, nieużywany cache buildu</td><td>sprzątanie (<code>--volumes</code> usuwa też anonimowe wolumeny)</td></tr>
+      <tr><td><code>docker build --progress=plain</code></td><td>pełne logi kroków buildu</td><td>debug Dockerfile</td></tr>
+      <tr><td><code>docker init</code></td><td>generuje Dockerfile, compose.yaml i .dockerignore dla projektu</td><td>start nowego projektu</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Logi w plikach</span>
+    <p><code>docker logs</code> widzi tylko to, co główny proces pisze na stdout/stderr. Aplikacja, która loguje do pliku w kontenerze, jest „niema”. Loguj na stdout. Domyślny driver <code>json-file</code> nie rotuje logów — ustaw <code>max-size</code> i <code>max-file</code>, albo przejdź na driver <code>local</code>.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>logs → inspect → exec. W tej kolejności rozwiążesz większość zagadek.</li>
+    <li><code>docker system df</code> przed <code>prune</code>; uważaj z <code>--volumes</code>.</li></ul>
+  </div>
+</section>
+
+<section class="part" id="part-5" data-level="3">
+  <span class="part-no">Część V</span><h2>Pod maską i bezpieczeństwo</h2><p>Namespaces z bliska, hardening runtime’u i łańcuch dostaw obrazów.</p>
+</section>
+
+<section class="chapter" id="ch-ns" data-level="3" data-title="Namespaces z bliska">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Namespaces i cgroups z bliska</h2><span class="tag">każdą ścianę można zburzyć flagą</span></div></div>
+  <p class="reveal">Każdy namespace izoluje jeden aspekt systemu. Docker pozwala selektywnie z nich zrezygnować, np. <code>--network host</code> albo <code>--pid host</code>. To przydatne do diagnostyki i specjalnych przypadków, ale każda taka flaga burzy jedną ścianę izolacji.</p>
+  <figure class="fig wide" id="fig-ns">
+    <div class="ftitle">▶ Co widzi proces w kontenerze <span>przełączaj namespaces</span></div>
+    <div class="ctrl">
+      <button class="btn" data-act="pid">--pid host</button>
+      <button class="btn" data-act="net">--network host</button>
+      <button class="btn" data-act="uts">--uts host</button>
+      <button class="btn bad" data-act="priv">💥 --privileged</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-grid" id="ns-g" style="--n:4"></div>
+    <div class="status" id="ns-st">Wszystkie namespaces izolowane.</div>
+    <figcaption>Uproszczenie: <code>--privileged</code> nie wyłącza namespaces, ale daje wszystkie capabilities i dostęp do urządzeń hosta — efektywnie znosi większość izolacji. Wyniki komend przykładowe.</figcaption>
+  </figure>
+  <div class="box geek reveal"><span class="lbl">🤓 cgroups w praktyce</span>
+    <p>Limity z <code>docker run</code> trafiają do cgroup kontenera. <code>docker stats</code> czyta z niej zużycie. Aplikacje, które same dobierają liczbę wątków lub rozmiar sterty do zasobów maszyny, muszą czytać limity cgroup, a nie liczbę CPU i RAM hosta — inaczej przy <code>-m 512m</code> mogą zaplanować więcej pamięci niż limit.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Flagi <code>--pid/--network/--uts host</code> współdzielą dany namespace z hostem.</li>
+    <li><code>--privileged</code> ≈ brak izolacji. Nie na produkcji.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-sec" data-level="3" data-title="Hardening runtime">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Hardening runtime’u</h2><span class="tag">root w kontenerze to wciąż root (prawie)</span></div></div>
+  <p class="reveal">Domyślnie proces w kontenerze działa jako root, ale z <b>okrojonym zestawem capabilities</b> jądra i domyślnym profilem <b>seccomp</b>, który blokuje około 44 z ponad 300 wywołań systemowych. To rozsądna baza. Każda flaga poniżej przesuwa ją w stronę bezpieczniej albo groźniej.</p>
+  <figure class="fig wide" id="fig-sec">
+    <div class="ftitle">▶ Promień rażenia po przejęciu aplikacji <span>włączaj i wyłączaj flagi</span></div>
+    <div class="ctrl" id="sec-btns">
+      <button class="btn" data-act="user">--user 10001</button>
+      <button class="btn" data-act="caps">--cap-drop ALL</button>
+      <button class="btn" data-act="ro">--read-only</button>
+      <button class="btn" data-act="nnp">--security-opt no-new-privileges</button>
+      <button class="btn bad" data-act="sock">💥 -v /var/run/docker.sock</button>
+      <button class="btn bad" data-act="priv">💥 --privileged</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-bar"><span>Promień rażenia</span><div class="meter"><i id="sec-m"></i></div><span id="sec-v"></span></div>
+    <div class="dk-kv" id="sec-kv"></div>
+    <div class="status" id="sec-st">Konfiguracja domyślna.</div>
+    <figcaption>Skala ilustracyjna, nie metryka bezpieczeństwa. Pokazuje kierunek, nie wartość.</figcaption>
+  </figure>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Mechanizm</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>USER</code> / <code>--user</code></td><td>proces nie jest rootem w kontenerze</td><td>zawsze, gdy aplikacja nie potrzebuje roota</td></tr>
+      <tr><td><code>--cap-drop ALL --cap-add …</code></td><td>tylko potrzebne capabilities, np. <code>NET_BIND_SERVICE</code></td><td>usługi produkcyjne</td></tr>
+      <tr><td><code>--read-only</code> + <code>--tmpfs /tmp</code></td><td>system plików kontenera tylko do odczytu</td><td>bezstanowe aplikacje</td></tr>
+      <tr><td><code>no-new-privileges</code></td><td>blokuje eskalację przez setuid</td><td>ogólne utwardzenie</td></tr>
+      <tr><td>Rootless mode</td><td>demon i kontenery działają jako zwykły użytkownik hosta</td><td>hosty współdzielone, CI</td></tr>
+      <tr><td>userns-remap</td><td>root w kontenerze mapowany na nieuprzywilejowany UID hosta</td><td>izolacja przy klasycznym demonie</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Grupa docker</span>
+    <p>Dodanie użytkownika do grupy <code>docker</code> daje mu dostęp do API demona, a to efektywnie uprawnienia roota na hoście. Traktuj tę grupę jak <code>sudo</code>.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Baza: okrojone capabilities + seccomp. Dokładaj: nie-root, cap-drop, read-only.</li>
+    <li>Nigdy: <code>--privileged</code> i gniazdo dockera w aplikacjach produkcyjnych.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-supply" data-level="3" data-title="Łańcuch dostaw">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Łańcuch dostaw: SBOM, provenance, skanowanie</h2><span class="tag">wiedz, co jest w środku i skąd się wzięło</span></div></div>
+  <p class="reveal">BuildKit może dołączyć do obrazu <b>atestacje</b>: <b>SBOM</b> (lista pakietów w obrazie) i <b>provenance</b> (jak, z czego i czym obraz zbudowano). Atestacja provenance na poziomie <code>mode=min</code> jest dodawana do obrazów domyślnie; SBOM włączasz jawnie (<code>--sbom=true</code>).</p>
+  <figure class="fig wide" id="fig-supply">
+    <div class="ftitle">▶ Od commita do zaufanego obrazu <span>przejdź pipeline</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="run">▶ Uruchom pipeline</button>
+      <button class="btn bad" data-act="cve">💥 Nowe CVE w bazie</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dk-flow" id="sup-flow"></div>
+    <div class="status" id="sup-st">Kliknij ▶.</div>
+    <figcaption>Uproszczenie: kroki pipeline’u przykładowe; identyfikator CVE i wynik skanu zmyślone dla ilustracji.</figcaption>
+  </figure>
+<pre class="reveal"><code>docker buildx build --sbom=true --provenance=mode=max \
+  -t reg/app:1.4.2 --push .
+docker buildx imagetools inspect reg/app:1.4.2 --format '{{ json .SBOM }}'
+docker scout cves reg/app:1.4.2</code></pre>
+  <div class="box watch reveal"><span class="lbl">⚠️ provenance mode=max</span>
+    <p>Provenance w trybie <code>max</code> zapisuje m.in. wartości build-argów. To kolejny powód, by sekrety nigdy nie szły przez <code>--build-arg</code>.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>SBOM = co jest w środku. Provenance = jak powstało. Skan = znane podatności.</li>
+    <li>Nowe CVE w bazie naprawiasz rebuildem z <code>--pull</code>, nie zmianą kodu.</li></ul>
+  </div>
+</section>
+<section class="chapter" id="final" data-title="Egzamin + ściąga">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Egzamin + ściąga</h2><span class="tag">sprawdź, co zostało w głowie</span></div></div>
+  <div id="quiz"></div>
+  <div class="score" id="score">Wynik: 0 / 0</div>
+  <h3 class="reveal">Ściąga</h3>
+  <div class="scroll-x reveal">
+  <table class="mini cheat">
+    <thead><tr><th>Komenda / instrukcja</th><th>Co robi / domyślnie</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td># syntax=docker/dockerfile:1</td><td>najnowszy stabilny frontend 1.x</td><td>pierwsza linia każdego Dockerfile</td></tr>
+      <tr><td>COPY package*.json ./ → RUN npm ci → COPY . .</td><td>zależności przed kodem</td><td>stabilny cache</td></tr>
+      <tr><td>RUN a &amp;&amp; b &amp;&amp; rm -rf cache</td><td>sprzątanie w tej samej warstwie</td><td>mniejszy obraz</td></tr>
+      <tr><td>FROM … AS build / COPY --from=build</td><td>multi-stage</td><td>obraz runtime bez narzędzi buildu</td></tr>
+      <tr><td>docker build --target test</td><td>buduje do wskazanego etapu</td><td>testy w CI</td></tr>
+      <tr><td>RUN --mount=type=cache,target=…</td><td>trwały cache menedżera pakietów</td><td>npm, pip, go, apt</td></tr>
+      <tr><td>RUN --mount=type=secret,id=x</td><td>sekret w /run/secrets/x tylko na czas kroku</td><td>tokeny w buildzie</td></tr>
+      <tr><td>ENTRYPOINT ["app"] + CMD ["--flag"]</td><td>program + domyślne argumenty</td><td>obraz jako narzędzie</td></tr>
+      <tr><td>docker stop -t 30</td><td>sygnał stopu, potem SIGKILL; domyślnie 10 s (Linux)</td><td>dłuższe zamykanie</td></tr>
+      <tr><td>docker build --no-cache / --pull</td><td>bez cache / świeży obraz bazowy</td><td>podejrzany cache, łatki bazy</td></tr>
+      <tr><td>docker buildx build --platform linux/amd64,linux/arm64</td><td>obraz wieloplatformowy</td><td>Apple Silicon + serwery x86</td></tr>
+      <tr><td>--cache-to type=registry,ref=…,mode=max</td><td>eksport cache z etapami pośrednimi</td><td>CI</td></tr>
+      <tr><td>docker network create app</td><td>sieć z DNS po nazwach</td><td>kontenery się widzą</td></tr>
+      <tr><td>-p 127.0.0.1:8080:80</td><td>port tylko z hosta</td><td>dev, bazy</td></tr>
+      <tr><td>-v dane:/ścieżka</td><td>nazwany wolumen</td><td>trwałe dane</td></tr>
+      <tr><td>-m 512m --cpus 1</td><td>limity cgroups</td><td>produkcja</td></tr>
+      <tr><td>--restart unless-stopped</td><td>restart poza ręcznym zatrzymaniem</td><td>serwisy</td></tr>
+      <tr><td>depends_on: condition: service_healthy</td><td>czeka na healthcheck zależności</td><td>Compose: api + db</td></tr>
+      <tr><td>docker compose watch</td><td>sync / rebuild / sync+restart</td><td>pętla dev</td></tr>
+      <tr><td>image@sha256:…</td><td>niezmienna referencja</td><td>wdrożenia</td></tr>
+      <tr><td>docker logs / inspect / exec</td><td>diagnostyka</td><td>zwykle w tej kolejności</td></tr>
+      <tr><td>docker system df / prune</td><td>zajętość / sprzątanie</td><td>pełny dysk</td></tr>
+      <tr><td>--cap-drop ALL --read-only --user</td><td>hardening</td><td>produkcja</td></tr>
+      <tr><td>--sbom=true --provenance=mode=max</td><td>atestacje obrazu</td><td>łańcuch dostaw</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box relax reveal"><span class="lbl">🎓 Gratulacje — odpowiedź na zagadkę</span>
+    <p>Obraz 1,2 GB z 4-minutowym buildem miał zwykle trzy błędy. (1) <code>COPY . .</code> stało <b>przed</b> <code>npm install</code>, więc każda zmiana w <code>src/</code> unieważniała cache instalacji. (2) Brak <code>.dockerignore</code> — <code>node_modules</code> i <code>.git</code> lądowały w kontekście i w obrazie. (3) Pełny obraz bazowy z narzędziami buildu w obrazie końcowym. Poprawka to kilka linijek: kopiowanie <code>package*.json</code> przed instalacją, <code>.dockerignore</code>, multi-stage ze slim lub distroless w runtime i — w bonusie — <code>RUN --mount=type=cache,target=/root/.npm</code>. Zmiana w kodzie przebudowuje wtedy tylko kroki od <code>COPY . .</code> w dół (kopiowanie i ewentualny build).</p>
+    <p>Następny krok: weź swój najstarszy Dockerfile, uruchom <code>docker build --check .</code> i <code>docker image history</code> — i przejdź go z tą ściągą.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  Kompendium edukacyjne w jednym pliku HTML — bez frameworków, bez kroku budowania, bez zależności sieciowych. Fakty sprawdzone z dokumentacją Docker (docs.docker.com: Dockerfile reference, Build, Engine, Compose, CLI) w październiku 2026. Liczby oznaczone jako ilustracyjne służą wyłącznie wyjaśnieniu mechanizmu. Docker jest znakiem towarowym Docker, Inc.; ta strona nie jest z nią powiązana.
+</footer>
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sleep = ms => new Promise(r => setTimeout(r, REDUCE ? 0 : ms));
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, text, attrs = {}) {
+  const t = S('text', Object.assign({ x, y, 'text-anchor': 'middle' }, attrs), parent);
+  t.textContent = text;
+  return t;
+}
+function H(tag, cls, html, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const ease = k => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (REDUCE || ms <= 0) { fn(1); return res(); }
+    const t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / ms);
+      fn(ease(k));
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+function flyDot(parent, x0, y0, x1, y1, { ms = 600, color, r = 5 } = {}) {
+  const c = S('circle', { cx: x0, cy: y0, r, class: 'fly' }, parent);
+  c.style.fill = color || C.accent;
+  return tween(ms, k => { c.setAttribute('cx', x0 + (x1 - x0) * k); c.setAttribute('cy', y0 + (y1 - y0) * k); }).then(() => c.remove());
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function readColors() { for (const k of ['ink', 'paper', 'paper2', 'mut', 'line', 'accent', 'accent2', 'ok', 'bad', 'warn', 'dim', 'card']) C[k] = cssVar('--' + k); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function ringXY(cx, cy, r, f) { const a = f * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+
+/* ---------- structure: auto numbering, TOC, course map, level chips, depth switch ---------- */
+const LEVELS = ['Podstawy', 'Praktyk', 'Ekspert'];
+const lvlOf = el => +(el.dataset.level || 1);
+const levelled = (root = document) => $$('main [data-level]', root).filter(e => !e.closest('#map'));   // content, not the map's own links
+const DEPTH_KEY = 'akp-depth:' + location.pathname;
+const blocks = $$('main > section.part, main > section.chapter');
+const chapters = blocks.filter(b => b.classList.contains('chapter'));
+chapters.forEach((s, i) => { const n = $('.chap-num', s); if (n && !n.textContent.trim()) n.textContent = i; });
+const titleOf = s => s.dataset.title || $('h2', s).textContent.trim();
+(() => {
+  const toc = $('#toc'), map = $('#map');
+  if (toc) toc.innerHTML = '<b>Spis treści</b>';
+  let grp = null;
+  for (const b of blocks) {
+    const lv = lvlOf(b);
+    if (b.classList.contains('part')) {
+      const name = `${$('.part-no', b)?.textContent || ''} · ${$('h2', b).textContent}`;
+      if (toc) H('div', 'toc-part', null, toc).textContent = name;
+      if (map) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = name; grp.dataset.level = lv; }
+      continue;
+    }
+    const num = $('.chap-num', b)?.textContent || '';
+    if (toc) { const a = H('a', '', null, toc); a.href = '#' + b.id; a.textContent = `${num} · ${titleOf(b)}`; a.dataset.level = lv; }
+    if (map) {
+      if (!grp) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = 'Start'; }
+      const a = H('a', 'map-ch l' + lv, `<i>${num}</i><span></span>`, grp); a.href = '#' + b.id; a.dataset.level = lv;
+      $('span', a).textContent = titleOf(b);
+    }
+  }
+  const multi = levelled().some(e => lvlOf(e) > 1);
+  // level chips on chapter headings and "go deeper" summaries
+  chapters.forEach(s => { if (multi && s.dataset.level) { const h = $('.chap-head h2', s); if (h) H('span', 'lvl-chip l' + lvlOf(s), `L${lvlOf(s)} · ${LEVELS[lvlOf(s) - 1] || ''}`, h); } });
+  $$('details.deeper').forEach(d => { const sm = $('summary', d); if (sm) sm.insertAdjacentHTML('afterbegin', `<span class="lvl-chip l${lvlOf(d)}">L${lvlOf(d)}</span>`); });
+  // jumping to a chapter deeper than the current depth raises the depth first
+  $$('#toc a, #map a').forEach(a => a.addEventListener('click', () => { if (+a.dataset.level > depth) setDepth(+a.dataset.level); }));
+  const dEl = $('#depth');
+  if (!multi || !dEl) { if (dEl) dEl.remove(); return; }
+  dEl.innerHTML = '<span>Głębokość</span>';
+  LEVELS.forEach((n, i) => { const b = H('button', '', `${i + 1}<span class="nm"> ${n}</span>`, dEl); b.title = n; b.onclick = () => setDepth(i + 1); });
+})();
+let depth = LEVELS.length;
+try { const d = +localStorage.getItem(DEPTH_KEY); if (d >= 1 && d <= LEVELS.length) depth = d; } catch (e) { }
+function setDepth(d) {
+  depth = d;
+  try { localStorage.setItem(DEPTH_KEY, d); } catch (e) { }
+  levelled().forEach(el => el.classList.toggle('lvl-off', lvlOf(el) > depth));
+  $$('#toc a, #map a, .map-part').forEach(a => a.classList.toggle('dim', lvlOf(a) > depth));
+  $$('#depth button').forEach((b, i) => b.classList.toggle('on', i + 1 === depth));
+  $$('.lvl-hint').forEach(h => h.remove());
+  chapters.forEach(s => {
+    if (s.classList.contains('lvl-off')) return;
+    const hid = levelled(s).filter(e => e.classList.contains('lvl-off'));
+    if (!hid.length) return;
+    const need = Math.min(...hid.map(lvlOf));
+    const b = H('button', 'lvl-hint', `＋ ukryte głębsze bloki: ${hid.length} — pokaż poziom ${need} (${LEVELS[need - 1] || ''})`, s);
+    b.onclick = () => setDepth(need);
+  });
+}
+setDepth(depth);
+
+/* ---------- scroll machinery ---------- */
+const bar = $('#progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+    document.body.classList.toggle('past-cover', scrollY > innerHeight * .8);
+    ticking = false;
+  });
+}, { passive: true });
+
+const revealIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('shown'); revealIO.unobserve(e.target); }
+}), { threshold: 0.12 });
+$$('.reveal').forEach(el => revealIO.observe(el));
+
+const tocLinks = new Map($$('#toc a').map(a => [a.getAttribute('href').slice(1), a]));
+const tocIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove('active'));
+  const a = tocLinks.get(e.target.id); if (a) a.classList.add('active');
+  $$('#map a').forEach(m => { const on = m.getAttribute('href') === '#' + e.target.id; m.classList.toggle('here', on); if (on) m.classList.add('seen'); });
+}), { rootMargin: '-35% 0px -60% 0px' });
+$$('section.chapter').forEach(s => tocIO.observe(s));
+
+const figIO = new IntersectionObserver(es => es.forEach(e => {
+  const f = e.target._fig; if (!f) return;
+  if (e.isIntersecting) {
+    if (f.visible) return;
+    f.visible = true;
+    if (!f.seen) { f.seen = true; f.first && f.first(); }
+    f.enter && f.enter();
+  } else if (f.visible) {
+    f.visible = false; f.leave && f.leave();
+  }
+}), { threshold: 0.25 });
+function registerFig(el, api) { el._fig = api; figIO.observe(el); return api; }
+
+/* enqueue helper: serialize animation runs, drop excess clicks */
+function makeQueue() {
+  let queue = Promise.resolve(), pending = 0;
+  return fn => { if (pending >= 3) return; pending++; queue = queue.then(fn).catch(e => console.error(e)).finally(() => pending--); };
+}
+
+
+/* ---------- generic helpers ---------- */
+function paintBar(el, segs, cap) {           // stacked bar: segs = [{k, v, c, t}], widths as % of cap
+  for (const s of segs) {
+    let d = el.querySelector(`[data-k="${s.k}"]`);
+    if (!d) { d = H('div', 'seg', null, el); d.dataset.k = s.k; }
+    d.style.width = Math.min(100, 100 * s.v / cap) + '%';
+    d.style.background = s.c;
+    d.textContent = s.v >= cap * 0.07 ? s.t : '';
+  }
+}
+function logLine(box, text, cls = '') {      // append a fading-in line to a .log box (textContent: safe)
+  const d = H('div', cls, null, box); d.textContent = text;
+  requestAnimationFrame(() => d.classList.add('shown'));
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+function say(el, html, cls = '') { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = html; }
+const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase labels wrap between words, not mid-word
+
+/* ---------- cover ---------- */
+(() => {
+  const g = $('#cover-nodes');
+  const icons = ['🐳', '📦', '🧱', '⚡', '🔐', '🌐', '💾', '🧩'];
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = ringXY(200, 200, 150, i / 8);
+    const c = S('circle', { cx: x, cy: y, r: 17 }, g);
+    c.style.fill = C.paper2; c.style.stroke = C.ink; c.style.strokeWidth = 3;
+    T(g, x, y + 6, icons[i], { 'font-size': 16 });
+  }
+})();
+
+/* ---------- figure kit ---------- */
+const AUTO = { 'fig-vm': 'scale', 'fig-ufs': 'write', 'fig-life': 'start', 'fig-df': 'build', 'fig-ctx': 'send', 'fig-cmd': 'trap', 'fig-res': 'leak', 'fig-reg': 'push', 'fig-ns': 'pid', 'fig-sec': 'user' };   // auto-demo for figures without their own first()
+function mkFig(id, { reset, acts, first }) {
+  if (!first && AUTO[id]) first = g => acts[AUTO[id]](g);
+  const root = $('#' + id), q = makeQueue(), st = { run: 0 };
+  const R = () => { st.run++; reset(); };
+  $$('[data-act]', root).forEach(b => {
+    const a = b.dataset.act;
+    if (a === 'reset') b.onclick = R;
+    else if (acts[a]) b.onclick = () => q(async () => { const my = st.run; await acts[a](() => my !== st.run, b); });
+  });
+  R();
+  registerFig(root, { first: first ? () => q(() => { const my = st.run; return first(() => my !== st.run); }) : undefined });
+  return { root, R };
+}
+function cells(el, arr) {   // arr: [{t, s, c, w}] → .dk-cell
+  el.innerHTML = '';
+  return arr.map(o => { const d = H('div', 'dk-cell ' + (o.c || ''), `<b>${o.t}</b>${o.s != null ? `<small>${o.s}</small>` : ''}`, el); if (o.w) d.style.gridColumn = '1/-1'; return d; });
+}
+function rows(el, arr) {    // arr: [{t, b, c}] → .dk-row
+  el.innerHTML = '';
+  return arr.map(o => { const d = H('div', 'dk-row ' + (o.c || ''), `<code></code><span class="dk-b"></span>`, el); $('code', d).textContent = o.t; $('.dk-b', d).textContent = o.b || ''; return d; });
+}
+function setCell(d, t, s, c) { d.className = 'dk-cell ' + (c || ''); d.innerHTML = `<b>${t}</b>${s != null ? `<small>${s}</small>` : ''}`; }
+function setRow(d, b, c) { d.className = 'dk-row ' + (c || ''); $('.dk-b', d).textContent = b; }
+function meterTo(i, pct, color) { i.style.width = Math.max(0, Math.min(100, pct)) + '%'; if (color) i.style.background = color; }
+function setOn(btns, act) { btns.forEach(b => b.classList.toggle('on', b.dataset.act === act)); }
+
+/* ---------- 1. container vs VM ---------- */
+(() => {
+  const a = $('#vm-a'), b = $('#vm-b'), st = $('#vm-st');
+  const base = () => {
+    cells(a, [{ t: 'Hypervisor', s: 'emuluje sprzęt', c: 'k', w: 1 }, { t: 'Host OS + jądro', c: 'k', w: 1 }]);
+    cells(b, [{ t: 'Docker Engine', s: 'dockerd + containerd + runc', c: 'k', w: 1 }, { t: 'Host OS + jedno jądro Linux', c: 'k', w: 1 }]);
+  };
+  mkFig('fig-vm', {
+    reset() { base(); say(st, 'Kliknij ➕.'); },
+    acts: {
+      async scale(gone) {
+        base();
+        for (let i = 1; i <= 3; i++) {
+          const va = H('div', 'dk-cell on', `<b>App ${i}</b><small>+ biblioteki<br>+ <u>własne jądro</u> (guest OS)</small>`); a.prepend(va);
+          const vb = H('div', 'dk-cell on', `<b>App ${i}</b><small>+ biblioteki z obrazu<br>jądro: hosta</small>`); b.prepend(vb);
+          await sleep(450); if (gone()) return;
+          va.classList.remove('on'); vb.classList.remove('on');
+        }
+        say(st, '<b>3 VM = 3 jądra systemu</b>, każde z własną pamięcią i czasem bootowania (rząd: dziesiątki sekund). <b>3 kontenery = 3 procesy</b> na jednym jądrze hosta — start w rząd sekund lub szybciej, narzut minimalny.', 'ok');
+      },
+      async win(gone) {
+        base();
+        a.prepend(H('div', 'dk-cell ok', '<b>Windows VM</b><small>własne jądro Windows — działa</small>'));
+        const c = H('div', 'dk-cell on', '<b>obraz Windows</b><small>jądro: Linux hosta</small>'); b.prepend(c);
+        await sleep(600); if (gone()) return;
+        setCell(c, 'obraz Windows', 'nie uruchomi się: brak jądra Windows', 'bad');
+        say(st, '<b>Wspólne jądro to ograniczenie.</b> VM uruchomi dowolny system, bo ma własne jądro. Kontener używa jądra hosta, więc obraz Windows nie ruszy na hoście Linux (i odwrotnie bez VM pośredniczącej).', 'bad');
+      }
+    }
+  });
+})();
+
+/* ---------- 2. architecture ---------- */
+(() => {
+  const fl = $('#arch-flow'), st = $('#arch-st');
+  const N = [['docker', 'CLI (klient)'], ['REST API', '/var/run/<wbr>docker.sock'], ['dockerd', 'demon'], ['rejestr', 'Docker Hub'], ['containerd', 'cykl życia'], ['runc', 'namespaces + cgroups'], ['nginx', 'proces kontenera']];
+  let els = [], pulled = false;
+  const draw = () => { fl.innerHTML = ''; els = N.map(([t, s], i) => { if (i) H('span', 'dk-arr', '→', fl); const d = H('div', 'dk-cell', `<b>${t}</b><small>${s}</small>`, fl); return d; }); };
+  async function go(gone, again) {
+    draw();
+    const skipReg = pulled;
+    const msg = ['CLI zamienia komendę na wywołanie API.', 'Żądanie idzie przez gniazdo Unix do demona.', 'dockerd sprawdza, czy ma obraz lokalnie.', skipReg ? 'Obraz jest lokalnie — rejestr pominięty.' : 'Brak obrazu: dockerd pobiera warstwy z rejestru (pull).', 'containerd przygotowuje kontener i jego system plików.', 'runc tworzy namespaces i cgroups, uruchamia proces i kończy pracę.', 'nginx działa jako proces hosta w izolacji.'];
+    for (let i = 0; i < N.length; i++) {
+      if (i === 3 && skipReg) { els[i].classList.add('off'); say(st, `<b>${i + 1}/7</b> ${msg[i]}`); await sleep(500); if (gone()) return; continue; }
+      els[i].classList.add('on'); say(st, `<b>${i + 1}/7</b> ${msg[i]}`);
+      await sleep(650); if (gone()) return;
+      els[i].classList.remove('on'); els[i].classList.add('ok');
+    }
+    pulled = true;
+    say(st, skipReg ? '<b>Drugi start jest szybszy:</b> obraz leży lokalnie, więc nie ma pull. Warstwy obrazu współdzielą oba kontenery.' : '<b>Gotowe.</b> CLI tylko wysłał prośbę — całą pracę zrobili demon, containerd i runc.', 'ok');
+  }
+  mkFig('fig-arch', {
+    reset() { pulled = false; draw(); say(st, 'Kliknij ▶.'); },
+    acts: {
+      run: gone => go(gone),
+      again: gone => go(gone, true),
+      async down(gone) {
+        draw(); els[0].classList.add('on'); await sleep(500); if (gone()) return;
+        els[0].classList.remove('on'); setCell(els[1], 'REST API', 'brak odpowiedzi', 'bad'); els.slice(2).forEach(e => e.classList.add('off'));
+        say(st, '<b>Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?</b> — CLI bez demona nic nie zrobi. Sprawdź <code>systemctl status docker</code> albo czy Docker Desktop działa.', 'bad');
+      }
+    },
+    first: gone => go(gone)
+  });
+})();
+
+/* ---------- 3. union fs / copy-on-write ---------- */
+(() => {
+  const el = $('#ufs-rows'), st = $('#ufs-st');
+  let s;
+  const paint = (hi) => {
+    const R = [];
+    if (s.b != null) R.push({ t: 'Kontener B — warstwa zapisu: ' + (s.b.join(', ') || '(pusta)'), b: 'RW', c: 'miss' });
+    if (s.a) R.push({ t: 'Kontener A — warstwa zapisu: ' + (s.a.join(', ') || '(pusta)'), b: 'RW', c: 'miss' });
+    else R.push({ t: 'Kontener A — usunięty, jego warstwa zapisu też', b: 'brak', c: 'bad' });
+    R.push({ t: 'L3  COPY . /app      → /app/server.js', b: 'RO', c: 'hit' });
+    R.push({ t: 'L2  RUN apt-get install curl → /usr/bin/curl', b: 'RO', c: 'hit' });
+    R.push({ t: 'L1  debian (baza)    → /etc/app.conf, /bin/sh', b: 'RO', c: 'hit' });
+    const r = rows(el, R);
+    if (hi != null) r[r.length - 1 - hi].classList.add('cur');
+  };
+  mkFig('fig-ufs', {
+    reset() { s = { a: [], b: null }; paint(); say(st, 'Wybierz akcję.'); },
+    acts: {
+      async read() { paint(0); say(st, '<b>Odczyt:</b> overlay szuka pliku od góry. Ani warstwa zapisu, ani L3/L2 go nie mają — plik czytany jest prosto z L1. Zero kopiowania.'); },
+      async write() { if (!s.a) return say(st, 'Kontener A nie istnieje. Kliknij ↺.', 'warn'); if (!s.a.includes('/etc/app.conf (kopia, zmieniona)')) s.a.push('/etc/app.conf (kopia, zmieniona)'); paint(0); say(st, '<b>Copy-on-write:</b> pierwszy zapis kopiuje cały plik z L1 do warstwy zapisu (copy-up) i tam go zmienia. L1 zostaje nietknięta — inne kontenery dalej widzą oryginał.', 'ok'); },
+      async del() { if (!s.a) return say(st, 'Kontener A nie istnieje. Kliknij ↺.', 'warn'); if (!s.a.includes('whiteout: /usr/bin/curl')) s.a.push('whiteout: /usr/bin/curl'); paint(1); say(st, '<b>Usunięcie to zasłonięcie:</b> w warstwie zapisu powstaje znacznik whiteout. <code>curl</code> dalej fizycznie leży w L2 i zajmuje miejsce.', 'warn'); },
+      async two() { s.b = []; paint(); say(st, '<b>Drugi kontener</b> dostaje własną, pustą warstwę zapisu i <em>te same</em> warstwy L1–L3. Na dysku obraz jest raz.', 'ok'); },
+      async rm() { s.a = null; paint(); say(st, '<b>docker rm:</b> warstwa zapisu kontenera A przepadła razem ze wszystkimi zmianami. Warstwy obrazu zostały — dlatego trwałe dane trzymasz w wolumenach.', 'bad'); }
+    }
+  });
+})();
+
+/* ---------- 4. lifecycle ---------- */
+(() => {
+  const g = $('#life-g'), out = $('#life-out'), st = $('#life-st');
+  const S5 = ['created', 'running', 'paused', 'exited', 'removed'];
+  let cur;
+  const paint = () => { const c = cells(g, S5.map(t => ({ t }))); if (cur) c[S5.indexOf(cur)].classList.add(cur === 'removed' ? 'off' : 'on'); };
+  const T = {
+    create: [['none', 'removed'], 'created', '$ docker create --name web app', 'Kontener istnieje (konfiguracja + warstwa zapisu), ale proces nie działa.'],
+    start: [['none', 'removed', 'created', 'exited'], 'running', '$ docker start web', 'Proces główny wystartował. <code>docker run</code> = create + start w jednym.'],
+    pause: [['running'], 'paused', '$ docker pause web', 'Procesy zamrożone (cgroup freezer). Pamięć zajęta, CPU zero.'],
+    unpause: [['paused'], 'running', '$ docker unpause web', 'Procesy odmrożone, działają dalej od miejsca zatrzymania.'],
+    stop: [['running'], 'exited', '$ docker stop web\n→ SIGTERM … aplikacja kończy się czysto: Exited (0)', 'Sygnał stopu, potem czekanie (domyślnie 10 s), dopiero potem SIGKILL. Tu aplikacja obsłużyła SIGTERM.'],
+    kill: [['running', 'paused'], 'exited', '$ docker kill web\n→ SIGKILL: Exited (137)', 'SIGKILL od razu — bez szansy na sprzątanie. 137 = 128 + 9.'],
+    rm: [['created', 'exited'], 'removed', '$ docker rm web', 'Kontener usunięty razem z warstwą zapisu i logami.']
+  };
+  mkFig('fig-life', {
+    reset() { cur = null; paint(); out.textContent = '$'; say(st, 'Zacznij od <code>create</code> albo od razu <code>start</code> (to wtedy jak <code>docker run</code>).'); },
+    acts: Object.fromEntries(Object.keys(T).map(k => [k, async () => {
+      const [from, to, cmd, why] = T[k];
+      if (!from.includes(cur || 'none')) {
+        if (k === 'rm' && (cur === 'running' || cur === 'paused')) { out.textContent = '$ docker rm web\nError response from daemon: … container is running: stop the container before removing or force remove'; return say(st, '<b>Nie usuniesz działającego kontenera</b> bez <code>-f</code> (wtedy Docker najpierw go zabija). Treść błędu zależy od wersji.', 'bad'); }
+        out.textContent = `$ docker ${k} web\n(niedozwolone w stanie: ${cur || 'brak kontenera'})`; return say(st, `Przejście <code>${k}</code> nie ma sensu ze stanu <b>${cur || 'brak'}</b>.`, 'warn');
+      }
+      cur = to; paint(); out.textContent = cmd; say(st, why, to === 'removed' ? 'warn' : 'ok');
+    }]))
+  });
+})();
+
+/* ---------- 5. dockerfile anatomy ---------- */
+(() => {
+  const el = $('#df-rows'), out = $('#df-out'), st = $('#df-st');
+  const L = [
+    ['FROM node:22-slim', 'baza', 'Warstwy obrazu bazowego stają się dolnymi warstwami twojego obrazu.'],
+    ['WORKDIR /app', 'konfig', 'Ustawia katalog roboczy dla kolejnych instrukcji (i tworzy go, jeśli brak).'],
+    ['ENV NODE_ENV=production', 'konfig', 'Zapisane w konfiguracji obrazu: widoczne w buildzie i w każdym kontenerze.'],
+    ['COPY package*.json ./', 'warstwa', 'Nowa warstwa z dwoma plikami z kontekstu.'],
+    ['RUN npm ci --omit=dev', 'warstwa', 'Nowa warstwa z całym node_modules — zwykle największa.'],
+    ['COPY . .', 'warstwa', 'Nowa warstwa z kodem aplikacji.'],
+    ['EXPOSE 3000', 'konfig', 'Tylko metadana — port NIE jest publikowany.'],
+    ['USER node', 'konfig', 'Kolejne RUN i proces kontenera działają jako użytkownik node.'],
+    ['CMD ["node","server.js"]', 'konfig', 'Domyślne polecenie zapisane w konfiguracji.']
+  ];
+  let r;
+  const cls = k => k === 'konfig' ? 'meta' : 'hit';
+  const paint = () => { r = rows(el, L.map(([t]) => ({ t, b: '' }))); r.forEach((d, i) => d.onclick = () => { r.forEach(x => x.classList.remove('cur')); d.classList.add('cur'); setRow(d, L[i][1], cls(L[i][1])); d.classList.add('cur'); say(st, `<code>${L[i][0].split(' ')[0]}</code>: ${L[i][2]}`); }); };
+  mkFig('fig-df', {
+    reset() { paint(); out.textContent = '$'; say(st, 'Kliknij dowolną linię.'); },
+    acts: {
+      async build(gone) {
+        paint(); out.textContent = '$ docker build -t app .';
+        for (let i = 0; i < L.length; i++) { r[i].classList.add('cur'); await sleep(260); if (gone()) return; r[i].classList.remove('cur'); setRow(r[i], L[i][1], cls(L[i][1])); }
+        say(st, '<b>3 instrukcje zmieniły pliki</b> (COPY, RUN, COPY) — to warstwy z treścią. Reszta zapisała tylko konfigurację obrazu.', 'ok');
+      },
+      async hist() {
+        out.textContent = 'IMAGE     CREATED BY                         SIZE\n<id>      CMD ["node" "server.js"]           0B\n<id>      USER node                          0B\n<id>      EXPOSE map[3000/tcp:{}]            0B\n<id>      COPY . .                           2.1MB\n<id>      RUN npm ci --omit=dev              48MB\n<id>      COPY package*.json ./              0.3MB\n<id>      ENV NODE_ENV=production            0B\n<id>      WORKDIR /app                       …\n…         (warstwy node:22-slim)             …';
+        say(st, '<code>docker image history</code> pokazuje każdy krok i jego rozmiar. Wpisy 0B to zmiany samej konfiguracji. Rozmiary w tym wydruku są ilustracyjne.');
+      },
+      async noFrom() {
+        paint(); setRow(r[0], 'usunięte', 'bad'); r[0].classList.add('skip'); setRow(r[1], 'błąd', 'bad');
+        out.textContent = '$ docker build .\nERROR: …';
+        say(st, '<b>Build nie ruszy.</b> Dockerfile musi zaczynać się od <code>FROM</code>; przed nim mogą stać tylko parser directives, komentarze i globalne <code>ARG</code>.', 'bad');
+      }
+    }
+  });
+})();
+
+/* ---------- 6. build context ---------- */
+(() => {
+  const g = $('#ctx-g'), m = $('#ctx-m'), v = $('#ctx-v'), st = $('#ctx-st');
+  const F = [['src/', 2, 0], ['package.json', 0.1, 0], ['node_modules/', 350, 1], ['.git/', 120, 1], ['.env', 0.001, 2], ['dist/', 15, 1]];
+  let ign, c;
+  const paint = () => { c = cells(g, F.map(([t, mb, k]) => ({ t, s: mb >= 1 ? mb + ' MB' : (k === 2 ? 'sekrety!' : '<1 MB'), c: ign && k ? 'off' : '' }))); };
+  const total = () => F.reduce((s, [, mb, k]) => s + (ign && k ? 0 : mb), 0);
+  mkFig('fig-ctx', {
+    reset() { ign = false; paint(); meterTo(m, 0, C.ok); v.textContent = '0 MB'; say(st, '.dockerignore: <b>wyłączony</b>.'); },
+    acts: {
+      async send(gone) {
+        paint(); const t = total();
+        await tween(800, k => { meterTo(m, 100 * k * t / 490, t > 50 ? C.bad : C.ok); v.textContent = (k * t).toFixed(t < 10 ? 1 : 0) + ' MB'; });
+        if (gone()) return;
+        say(st, ign ? `<b>${t.toFixed(1)} MB.</b> Tylko kod i manifesty — szybki transfer i stabilny cache <code>COPY . .</code>.` : `<b>${t.toFixed(0)} MB.</b> node_modules i .git jadą do buildera przy każdym <code>COPY . .</code>, a każda zmiana w .git unieważnia cache tej warstwy.`, ign ? 'ok' : 'warn');
+      },
+      async ign() { ign = !ign; paint(); meterTo(m, 0); v.textContent = '0 MB'; say(st, `.dockerignore: <b>${ign ? 'włączony' : 'wyłączony'}</b> (<code>node_modules .git .env dist</code>). Kliknij ▶.`); },
+      async leak() {
+        ign = false; paint(); c[4].className = 'dk-cell bad'; c[3].className = 'dk-cell bad';
+        say(st, '<b>COPY . . bez .dockerignore</b> kopiuje <code>.env</code> i całe <code>.git</code> do warstwy obrazu. Każdy, kto pobierze obraz, wyciągnie hasła i historię repozytorium.', 'bad');
+      }
+    }
+  });
+})();
+
+/* ---------- 7. cache simulator ---------- */
+(() => {
+  const el = $('#cache-rows'), m = $('#cache-m'), v = $('#cache-v'), st = $('#cache-st'), root = $('#fig-cache');
+  const D = {   // [text, seconds, triggers]
+    good: [['FROM node:22-slim', 15, ['base']], ['WORKDIR /app', 0.1, []], ['COPY package*.json ./', 0.2, ['pkg']], ['RUN npm ci', 60, []], ['COPY . .', 1, ['src', 'pkg']], ['RUN npm run build', 20, []]],
+    bad: [['FROM node:22-slim', 15, ['base']], ['WORKDIR /app', 0.1, []], ['COPY . .', 1, ['src', 'pkg']], ['RUN npm ci', 60, []], ['RUN npm run build', 20, []]]
+  };
+  let mode = 'good', r;
+  const paint = () => { r = rows(el, D[mode].map(([t]) => ({ t, b: '' }))); };
+  async function change(kind, gone) {
+    paint(); let miss = false, tot = 0;
+    for (let i = 0; i < D[mode].length; i++) {
+      const [t, s, trig] = D[mode][i];
+      if (!miss && trig.includes(kind)) miss = true;
+      r[i].classList.add('cur'); await sleep(240); if (gone()) return; r[i].classList.remove('cur');
+      if (miss) { tot += s; setRow(r[i], `RUN ${s < 1 ? '<1' : s} s`, 'miss'); } else setRow(r[i], 'CACHED', 'hit');
+    }
+    meterTo(m, tot / 97 * 100, tot > 30 ? C.bad : C.ok); v.textContent = `${Math.max(1, Math.round(tot))} s`;
+    const M = {
+      src: mode === 'good' ? 'Zmiana w <code>src/</code> unieważnia tylko <code>COPY . .</code> i kroki pod nim. <b>npm ci z cache.</b>' : '<b>Zła kolejność:</b> <code>COPY . .</code> stoi przed <code>npm ci</code>, więc zmiana jednej linijki kodu przebudowuje zależności.',
+      pkg: 'Nowa zależność musi przebudować <code>npm ci</code> — to poprawne. Cache mount (rozdział o BuildKit) przyspieszy nawet ten przypadek.',
+      touch: 'Zmienił się tylko <code>mtime</code>. Suma kontrolna COPY nie bierze go pod uwagę — <b>wszystko z cache</b>.',
+      base: '<b>Nowa baza unieważnia wszystko.</b> Każda warstwa stoi na poprzedniej, więc zmiana fundamentu przebudowuje cały etap.'
+    };
+    say(st, M[kind], kind === 'base' || (kind === 'src' && mode === 'bad') ? 'bad' : 'ok');
+  }
+  const mb = $$('[data-act=good],[data-act=bad]', root);
+  mkFig('fig-cache', {
+    reset() { paint(); meterTo(m, 0); v.textContent = '—'; say(st, 'Wybierz zmianę.'); },
+    acts: {
+      async good() { mode = 'good'; setOn(mb, 'good'); paint(); say(st, 'Dobra kolejność: manifesty → <code>npm ci</code> → kod.'); },
+      async bad() { mode = 'bad'; setOn(mb, 'bad'); paint(); say(st, 'Zła kolejność: cały kod przed <code>npm ci</code>.', 'warn'); },
+      src: g => change('src', g), pkg: g => change('pkg', g), touch: g => change('touch', g), base: g => change('base', g)
+    },
+    first: g => change('src', g)
+  });
+})();
+
+/* ---------- 8. RUN layers size ---------- */
+(() => {
+  const el = $('#run-rows'), m = $('#run-m'), v = $('#run-v'), st = $('#run-st');
+  const V = {
+    a: [['FROM debian:bookworm-slim', 80], ['RUN apt-get update', 40], ['RUN apt-get install -y build-essential', 220], ['RUN make && make install', 30], ['RUN apt-get purge -y build-essential && rm -rf /var/lib/apt/lists/* /src', 0]],
+    b: [['FROM debian:bookworm-slim', 80], ['RUN apt-get update && apt-get install -y build-essential && make && make install && apt-get purge -y build-essential && rm -rf /var/lib/apt/lists/* /src', 8]],
+    c: [['FROM debian:bookworm-slim AS build … (cały toolchain, nie trafia do obrazu)', 0], ['FROM gcr.io/distroless/cc-debian12', 25], ['COPY --from=build /usr/local/bin/tool /usr/local/bin/', 5]]
+  };
+  const msg = { a: '<b>Ostatni RUN niczego nie zmniejszył.</b> Usunięte pliki dalej leżą w warstwach 2–4; nowa warstwa ma tylko znaczniki whiteout.', b: '<b>Jeden RUN:</b> śmieci powstały i zniknęły w tej samej warstwie, więc do obrazu trafia tylko wynik.', c: '<b>Multi-stage:</b> toolchain żyje w etapie build; obraz końcowy to minimalna baza + jedna binarka.' };
+  async function show(k, gone) {
+    const r = rows(el, V[k].map(([t]) => ({ t, b: '' }))); let tot = 0;
+    for (let i = 0; i < V[k].length; i++) { const s = V[k][i][1]; tot += s; setRow(r[i], s ? s + ' MB' : (k === 'c' && i === 0 ? 'pominięte' : '0 MB'), s > 100 ? 'bad' : s ? 'miss' : 'meta'); if (k === 'c' && i === 0) r[i].classList.add('skip'); await sleep(300); if (gone()) return; }
+    meterTo(m, tot / 370 * 100, tot > 100 ? C.bad : C.ok); v.textContent = tot + ' MB';
+    say(st, msg[k], k === 'a' ? 'bad' : 'ok');
+  }
+  mkFig('fig-run', {
+    reset() { el.innerHTML = ''; meterTo(m, 0); v.textContent = '—'; say(st, 'Wybierz wariant.'); },
+    acts: { a: g => show('a', g), b: g => show('b', g), c: g => show('c', g) },
+    first: g => show('a', g)
+  });
+})();
+
+/* ---------- 9. CMD vs ENTRYPOINT ---------- */
+(() => {
+  const out = $('#cmd-out'), st = $('#cmd-st');
+  const OPT = { e: [['brak', 'none'], ['["app","--log"]', 'exec'], ['app --log', 'shell']], c: [['brak', 'none'], ['["serve"]', 'exec'], ['serve', 'shell']], r: [['bez argumentów', 'none'], ['… migrate', 'arg']] };
+  const sel = { e: 'exec', c: 'exec', r: 'none' }, btns = {};
+  for (const k of ['e', 'c', 'r']) {
+    const box = $('#cmd-' + k); btns[k] = OPT[k].map(([t, v]) => { const b = H('button', 'btn', null, box); b.textContent = t; b.dataset.v = v; b.onclick = () => { sel[k] = v; calc(); }; return b; });
+  }
+  function calc() {
+    for (const k in btns) btns[k].forEach(b => b.classList.toggle('on', b.dataset.v === sel[k]));
+    const { e, c, r } = sel; let res, cls = 'ok', note;
+    const cmd = r === 'arg' ? 'migrate' : c === 'exec' ? 'serve' : c === 'shell' ? '/bin/sh -c serve' : null;
+    if (e === 'shell') { res = '/bin/sh -c "app --log"'; cls = c !== 'none' || r === 'arg' ? 'bad' : 'warn'; note = 'Shell-form ENTRYPOINT <b>ignoruje CMD i argumenty</b> z <code>docker run</code>. Do tego PID 1 to <code>sh</code>, nie <code>app</code>.'; }
+    else if (e === 'exec') { res = 'app --log' + (cmd ? ' ' + cmd : ''); note = r === 'arg' ? 'Argumenty z <code>docker run</code> zastąpiły CMD i zostały doklejone do ENTRYPOINT.' : c === 'shell' ? 'Działa, ale dziwnie: shell-form CMD dokleja <code>/bin/sh -c serve</code> jako argumenty. Używaj exec form.' : 'Wzorzec książkowy: ENTRYPOINT = program, CMD = domyślne argumenty.'; if (c === 'shell' && r !== 'arg') cls = 'warn'; }
+    else { if (cmd) { res = cmd; note = r === 'arg' ? 'Bez ENTRYPOINT argumenty z <code>docker run</code> są całym poleceniem.' : 'Bez ENTRYPOINT CMD jest całym poleceniem.'; } else { res = 'błąd: brak polecenia do uruchomienia'; cls = 'bad'; note = 'Ani ENTRYPOINT, ani CMD, ani argumentów — nie ma czego uruchomić.'; } }
+    out.textContent = '→ ' + res; say(st, note, cls);
+  }
+  mkFig('fig-cmd', {
+    reset() { Object.assign(sel, { e: 'exec', c: 'exec', r: 'none' }); calc(); },
+    acts: { async trap() { Object.assign(sel, { e: 'shell', c: 'exec', r: 'arg' }); calc(); } }
+  });
+})();
+
+/* ---------- 10. PID 1 & signals ---------- */
+(() => {
+  const g = $('#pid-g'), bar = $('#pid-bar'), st = $('#pid-st');
+  const V = {
+    shell: { c: [['PID 1', '/bin/sh -c "node app.js"'], ['PID 7', 'node app.js'], ['sygnał', 'SIGTERM → sh']], end: 100, code: 137, msg: '<b>10 s ciszy, potem SIGKILL.</b> sh jako PID 1 nie przekazał SIGTERM do node. Aplikacja nie zamknęła połączeń, kod wyjścia 137.', cls: 'bad' },
+    exec: { c: [['PID 1', 'node app.js'], ['—', 'brak powłoki'], ['sygnał', 'SIGTERM → node']], end: 12, code: 0, msg: '<b>Czyste zamknięcie w ~1,2 s.</b> node jest PID 1, ma handler <code>process.on("SIGTERM")</code>, zamyka serwer i kończy z kodem 0.', cls: 'ok' },
+    init: { c: [['PID 1', 'docker-init (tini)'], ['PID 7', 'node app.js'], ['sygnał', 'SIGTERM → init → node']], end: 6, code: 143, msg: '<b>Init przekazał SIGTERM.</b> node nie jest PID 1, więc nawet bez handlera dostaje domyślną akcję „zakończ”: kod 143 (128+15). Z handlerem zamknąłby się czysto.', cls: 'ok' }
+  };
+  async function go(k, gone) {
+    const o = V[k]; cells(g, o.c.map(([t, s]) => ({ t, s }))); bar.style.width = '0'; bar.textContent = '';
+    await sleep(200);
+    bar.style.background = o.cls === 'bad' ? C.bad : C.ok;
+    await tween(o.end * 25, x => { bar.style.width = o.end * x + '%'; });
+    if (gone()) return;
+    const lbl = (o.end / 10).toFixed(o.end === 100 ? 0 : 1).replace('.', ',') + ' s → exit ' + o.code;
+    if (o.end === 100) bar.textContent = lbl;
+    say(st, `<b>${lbl}.</b> ` + o.msg, o.cls);
+  }
+  mkFig('fig-pid1', {
+    reset() { g.innerHTML = ''; bar.style.width = '0'; bar.textContent = ''; say(st, 'Wybierz wariant.'); },
+    acts: { shell: gn => go('shell', gn), exec: gn => go('exec', gn), init: gn => go('init', gn) },
+    first: gn => go('shell', gn)
+  });
+})();
+
+/* ---------- 11. ARG / ENV scope ---------- */
+(() => {
+  const g = $('#arg-g'), st = $('#arg-st'), root = $('#fig-arg');
+  const COLS = ['linia FROM', 'RUN w etapie build', 'etap runtime', 'kontener / metadane'];
+  const V = {
+    v0: [['✓ node:22-slim', 'ok'], ['✗ pusta', 'bad'], ['✗', 'off'], ['✗', 'off'], 'Globalny ARG działa tylko w liniach <code>FROM</code>. W <code>RUN</code> etapu jest pusty, dopóki go nie powtórzysz.', 'warn'],
+    v1: [['✓ node:22-slim', 'ok'], ['✓ 22', 'ok'], ['✗ (niezadeklarowany)', 'off'], ['✗', 'off'], '<code>ARG NODE_VER</code> w etapie build „wciąga” wartość globalną. Zasięg kończy się wraz z etapem.', 'ok'],
+    v2: [['—', 'off'], ['—', 'off'], ['✓ 8080', 'ok'], ['✓ PORT=8080', 'ok'], '<code>ENV</code> trafia do konfiguracji obrazu i do każdego kontenera. Nadpiszesz go przez <code>docker run -e PORT=9090</code>.', 'ok'],
+    v3: [['—', 'off'], ['✓ token', 'ok'], ['—', 'off'], ['⚠ może zostać w historii i provenance', 'bad'], '<b>Wyciek:</b> wartości build-argów mogą trwale zostać w metadanych obrazu, provenance i historii. Używaj <code>--mount=type=secret</code>.', 'bad']
+  };
+  const btn = $$('#arg-btns [data-act^=v]');
+  const show = k => { const o = V[k]; cells(g, COLS.map((t, i) => ({ t: o[i][0], s: t, c: o[i][1] }))); setOn(btn, k); say(st, o[4], o[5]); };
+  mkFig('fig-arg', {
+    reset() { cells(g, COLS.map(t => ({ t: '…', s: t }))); setOn(btn, ''); say(st, 'Kliknij zmienną.'); },
+    acts: Object.fromEntries(Object.keys(V).map(k => [k, async () => show(k)])),
+    first: async () => show('v0')
+  });
+})();
+
+/* ---------- 12. multi-stage ---------- */
+(() => {
+  const g = $('#ms-g'), bars = $('#ms-bars'), st = $('#ms-st');
+  const ST = [['build', 'golang:1.23 + kod'], ['test', 'go test ./...'], ['runtime', 'distroless + /app'], ['obraz', 'wynik']];
+  let c;
+  const paint = () => { c = cells(g, ST.map(([t, s]) => ({ t, s }))); };
+  const bar = (rowsData) => { bars.innerHTML = ''; rowsData.forEach(([t, mb, col]) => { const d = H('div', 'dk-bar', `<span>${t}</span><div class="meter"><i></i></div><span>${mb} MB</span>`, bars); requestAnimationFrame(() => meterTo($('i', d), mb / 950 * 100, col)); }); };
+  async function step(i, cls, gone) { c[i].classList.add('on'); await sleep(450); if (gone()) return true; c[i].className = 'dk-cell ' + cls; return false; }
+  const A = {
+      async build(gone) {
+        paint(); if (await step(0, 'ok', gone)) return; c[1].classList.add('off');
+        if (await step(2, 'ok', gone)) return; setCell(c[3], 'obraz = runtime', 'binarka + minimalna baza', 'ok');
+        bar([['jeden etap', 900, C.bad], ['multi-stage', 25, C.ok]]);
+        say(st, '<b>Etap test pominięty</b> — runtime od niego nie zależy, więc BuildKit go nie buduje. Do obrazu trafia tylko ostatni etap.', 'ok');
+      },
+      async test(gone) {
+        paint(); if (await step(0, 'ok', gone)) return; if (await step(1, 'ok', gone)) return; c[2].classList.add('off');
+        setCell(c[3], 'obraz = test', 'wynik testów; target dla CI', 'on');
+        say(st, '<code>--target test</code> zatrzymuje build na etapie test. Runtime pominięty. W CI: test → jeśli zielono, build runtime z cache.', 'ok');
+      },
+      async single(gone) {
+        paint(); c.forEach((x, i) => { if (i) x.classList.add('off'); }); if (await step(0, 'bad', gone)) return;
+        setCell(c[3], 'obraz = build', 'kompilator, cache, kod źródłowy', 'bad');
+        bar([['jeden etap', 900, C.bad]]);
+        say(st, '<b>Jeden etap:</b> w obrazie produkcyjnym ląduje cały toolchain Go, cache modułów i kod źródłowy. Setki MB i dużo więcej CVE do łatania.', 'bad');
+      }
+  };
+  mkFig('fig-ms', { reset() { paint(); bars.innerHTML = ''; say(st, 'Kliknij ▶.'); }, acts: A, first: g => A.build(g) });
+})();
+/* ---------- 13. buildkit cache mount ---------- */
+(() => {
+  const g = $('#bk-g'), m = $('#bk-m'), v = $('#bk-v'), st = $('#bk-st');
+  async function go(mount, gone) {
+    const c = cells(g, [{ t: 'cache warstwy', s: '…' }, { t: 'cache mount', s: '…' }, { t: 'npm ci', s: '…' }]);
+    await sleep(300); if (gone()) return;
+    setCell(c[0], 'cache warstwy', 'MISS — zmienił się package.json', 'bad');
+    await sleep(400); if (gone()) return;
+    setCell(c[1], 'cache mount', mount ? '/root/.npm pełny z poprzednich buildów' : 'brak', mount ? 'ok' : 'off');
+    const mb = mount ? 2 : 180;
+    await tween(900, k => { meterTo(m, mb / 180 * 100 * k, mount ? C.ok : C.bad); v.textContent = Math.round(mb * k) + ' MB'; });
+    if (gone()) return;
+    setCell(c[2], 'npm ci', mount ? '~12 s: pobiera tylko nową paczkę' : '~60 s: pobiera wszystko od zera', mount ? 'ok' : 'bad');
+    say(st, mount ? '<b>Krok i tak się wykonał</b> (cache warstwy przepadł), ale npm znalazł paczki w cache mouncie. Z sieci poszła tylko nowa zależność. Mount nie trafia do obrazu.' : '<b>Miss = wszystko od zera.</b> Bez cache mountu każda zmiana zależności to pełne pobieranie z rejestru npm.', mount ? 'ok' : 'bad');
+  }
+  mkFig('fig-bk', {
+    reset() { g.innerHTML = ''; meterTo(m, 0); v.textContent = '—'; say(st, 'Scenariusz: zmieniasz jedną zależność w package.json, więc cache warstwy <code>npm ci</code> przepada.'); },
+    acts: { plain: gn => go(false, gn), mount: gn => go(true, gn) },
+    first: gn => go(false, gn)
+  });
+})();
+
+/* ---------- 14. build secrets ---------- */
+(() => {
+  const g = $('#scr-g'), st = $('#scr-st');
+  const COLS = ['warstwy obrazu', 'historia / konfig', 'provenance', 'kontener'];
+  const V = {
+    arg: [['czysto*', 'ok'], ['⚠ wartość może zostać', 'bad'], ['⚠ build-argi (mode=max)', 'bad'], ['czysto', 'ok'], '<b>Build-arg to nie sekret.</b> Wartość może zostać w historii obrazu i atestacji provenance. *O ile RUN nie zapisze jej do pliku.', 'bad'],
+    copy: [['✗ .npmrc w warstwie COPY', 'bad'], ['czysto', 'ok'], ['czysto', 'ok'], ['czysto (zasłonięty)', 'ok'], '<b>rm w kolejnym kroku nie pomaga.</b> Plik żyje w warstwie COPY; wystarczy rozpakować obraz, żeby go odczytać.', 'bad'],
+    mount: [['czysto', 'ok'], ['czysto', 'ok'], ['tylko id sekretu', 'ok'], ['czysto', 'ok'], '<b>Secret mount:</b> plik istnieje w <code>/run/secrets/&lt;id&gt;</code> wyłącznie podczas tego jednego RUN. Nie trafia do warstwy ani do cache.', 'ok']
+  };
+  const show = k => { const o = V[k]; cells(g, COLS.map((t, i) => ({ t: o[i][0], s: t, c: o[i][1] }))); say(st, o[4], o[5]); };
+  mkFig('fig-secret', {
+    reset() { cells(g, COLS.map(t => ({ t: '…', s: t }))); say(st, 'Wybierz metodę.'); },
+    acts: { arg: async () => show('arg'), copy: async () => show('copy'), mount: async () => show('mount') },
+    first: async () => show('copy')
+  });
+})();
+
+/* ---------- 15. small images ---------- */
+(() => {
+  const bars = $('#small-bars'), kv = $('#small-kv'), st = $('#small-st');
+  const B = { full: ['node:22', 1100, 'bash', 'apt', 'glibc', 'tak'], slim: ['node:22-slim', 230, 'bash', 'apt', 'glibc', 'nie'], alpine: ['node:22-alpine', 160, 'sh (BusyBox)', 'apk', 'musl', 'nie'], distroless: ['distroless/nodejs', 150, 'brak', 'brak', 'glibc', 'nie'], scratch: ['scratch + binarka Go', 10, 'brak', 'brak', 'brak (statyczna binarka)', 'nie'] };
+  let pick = null, risky = false;
+  const btn = $$('#small-btns [data-act]').filter(b => B[b.dataset.act]);
+  function paint() {
+    bars.innerHTML = '';
+    for (const k in B) { const [t, mb] = B[k]; const d = H('div', 'dk-bar', `<span>${t}</span><div class="meter"><i></i></div><span>≈${mb} MB</span>`, bars); if (pick && k !== pick) d.style.opacity = .45; requestAnimationFrame(() => meterTo($('i', d), mb / 1100 * 100, mb > 500 ? C.bad : mb > 100 ? C.warn : C.ok)); }
+    setOn(btn, pick || '');
+    if (!pick) { kv.innerHTML = ''; return; }
+    const [, , sh, pm, libc, cc] = B[pick];
+    kv.innerHTML = `<span>Powłoka</span><b></b><span>Menedżer pakietów</span><b></b><span>libc</span><b></b><span>Kompilatory</span><b></b><span>Użytkownik / tag</span><b></b>`;
+    [sh, pm, libc, cc, risky ? 'root, :latest ⚠' : 'nie-root, pinowany digest'].forEach((t, i) => $$('b', kv)[i].textContent = t);
+  }
+  const N = { full: 'Pełny obraz: wygodny do buildu, za duży i za bogaty na runtime.', slim: 'Slim: glibc i apt, bez kompilatorów i dokumentacji. Rozsądny kompromis.', alpine: 'Alpine: mały, ale <b>musl</b> — sprawdź natywne moduły.', distroless: 'Distroless: tylko runtime i zależności. Bez shella — mniej narzędzi dla atakującego, trudniejszy debug.', scratch: 'scratch: pusty obraz. Tylko dla statycznych binarek (Go z CGO_ENABLED=0, Rust z musl).' };
+  mkFig('fig-small', {
+    reset() { pick = null; risky = false; paint(); say(st, 'Wybierz bazę.'); },
+    acts: Object.assign(Object.fromEntries(Object.keys(B).map(k => [k, async () => { pick = k; paint(); say(st, N[k] + (risky ? ' <b>Ale:</b> root + :latest psują resztę.' : ''), risky ? 'warn' : 'ok'); }])),
+      { async root() { risky = true; if (!pick) pick = 'distroless'; paint(); say(st, '<b>Mała baza nie ratuje złej konfiguracji.</b> Proces jako root to łatwiejsza eskalacja po włamaniu, a <code>:latest</code> zmienia się pod spodem — dwa buildy tego samego commita dają różne obrazy.', 'bad'); } }),
+    first: async () => { pick = 'slim'; paint(); say(st, N.slim, 'ok'); }
+  });
+})();
+
+/* ---------- 16. buildx multi-platform ---------- */
+(() => {
+  const g = $('#bx-g'), st = $('#bx-st');
+  async function go(k, gone) {
+    const c = cells(g, [{ t: 'linux/amd64', s: '…' }, { t: 'linux/arm64', s: '…' }]);
+    await sleep(400); if (gone()) return;
+    const V = {
+      qemu: [['natywnie', '~2 min', 'ok'], ['emulacja QEMU', '~10+ min', 'bad'], '<b>Emulacja działa bez zmian w Dockerfile</b>, ale każda instrukcja arm64 wykonuje się w emulatorze. Przy kompilacji bywa wielokrotnie wolniej.', 'warn'],
+      nodes: [['węzeł amd64', '~2 min', 'ok'], ['węzeł arm64', '~2 min', 'ok'], '<b>Natywne węzły</b> (builder z kilkoma węzłami albo Docker Build Cloud): pełna szybkość, ale potrzebujesz maszyn obu architektur.', 'ok'],
+      cross: [['build na amd64 → amd64', '~2 min', 'ok'], ['build na amd64 → arm64', '~2 min', 'ok'], '<b>Cross-kompilacja:</b> etap build działa na <code>$BUILDPLATFORM</code> i kompiluje dla <code>$TARGETARCH</code>. Wymaga kompilatora, który to umie (Go, Rust, .NET, Zig).', 'ok']
+    }[k];
+    setCell(c[0], 'linux/amd64', V[0][0] + ' · ' + V[0][1], V[0][2]);
+    await sleep(k === 'qemu' ? 900 : 300); if (gone()) return;
+    setCell(c[1], 'linux/arm64', V[1][0] + ' · ' + V[1][1], V[1][2]);
+    say(st, V[2] + ' Czasy ilustracyjne.', V[3]);
+  }
+  mkFig('fig-buildx', {
+    reset() { cells(g, [{ t: 'linux/amd64', s: '—' }, { t: 'linux/arm64', s: '—' }]); say(st, 'Wybierz strategię.'); },
+    acts: {
+      qemu: gn => go('qemu', gn), nodes: gn => go('nodes', gn), cross: gn => go('cross', gn),
+      async pull(gone) {
+        const c = cells(g, [{ t: 'reg/app:1.0', s: 'indeks obrazów', c: 'on', w: 1 }, { t: 'manifest amd64', s: 'sha256:7e…' }, { t: 'manifest arm64', s: 'sha256:c4…' }]);
+        await sleep(600); if (gone()) return;
+        c[1].classList.add('off'); setCell(c[2], 'manifest arm64', 'wybrany dla hosta arm64', 'ok');
+        say(st, '<b>Pull wybiera manifest automatycznie.</b> Ten sam tag na Macu M i na serwerze x86 daje obraz dla właściwej architektury. Inną platformę wymusisz przez <code>--platform</code>.', 'ok');
+      }
+    },
+    first: gn => go('qemu', gn)
+  });
+})();
+
+/* ---------- 17. data: volumes / bind / tmpfs ---------- */
+(() => {
+  const g = $('#data-g'), st = $('#data-st');
+  const K = [['warstwa zapisu', 'bez mountu'], ['volume', 'pgdata'], ['bind mount', './data'], ['tmpfs', 'RAM']];
+  let n, alive;
+  const paint = () => cells(g, K.map(([t, s], i) => ({ t: `${t}: ${n[i]} rek.`, s: s + (alive ? '' : ' · kontener usunięty'), c: !alive && (i === 0 || i === 3) ? 'bad' : alive ? '' : 'ok' })));
+  mkFig('fig-data', {
+    reset() { n = [0, 0, 0, 0]; alive = true; paint(); say(st, 'Zapisz rekord, usuń kontener, uruchom nowy.'); },
+    acts: {
+      async write() { if (!alive) return say(st, 'Brak działającego kontenera. Kliknij ▶ Nowy kontener.', 'warn'); n = n.map(x => x + 1); paint(); say(st, 'Każda baza zapisała rekord. Na razie wszystkie wyglądają tak samo.', 'ok'); },
+      async rm() { alive = false; n[0] = 0; n[3] = 0; paint(); say(st, '<b>docker rm -f:</b> dane z warstwy zapisu i tmpfs przepadły. Wolumen i katalog hosta zostały.', 'bad'); },
+      async up() { alive = true; paint(); say(st, '<b>Nowy kontener</b> podłączony do tego samego wolumenu i katalogu widzi stare rekordy. Warstwa zapisu i tmpfs startują puste.', 'ok'); }
+    },
+    first: async () => { n = [3, 3, 3, 3]; paint(); say(st, 'Każda baza ma 3 rekordy. Usuń kontenery i zobacz, co przetrwa.'); }
+  });
+})();
+
+/* ---------- 18. networking ---------- */
+(() => {
+  const g = $('#net-g'), out = $('#net-out'), st = $('#net-st');
+  const base = () => cells(g, [{ t: 'api', s: 'kontener' }, { t: 'db', s: 'kontener :5432' }, { t: 'host', s: 'przeglądarka dev' }, { t: 'internet', s: 'inna maszyna' }]);
+  const V = {
+    def: [['api', 'bridge (domyślny)', 'on'], ['db', 'bridge (domyślny)', ''], null, null, '$ docker exec api ping db\nping: bad address \'db\'', '<b>Domyślny bridge nie ma DNS po nazwach.</b> api musiałby znać IP db, które może się zmienić po restarcie. Rozwiązanie: własna sieć.', 'bad'],
+    user: [['api', 'sieć app', 'ok'], ['db', 'sieć app · 172.18.0.3', 'ok'], null, null, '$ docker network create app\n$ docker run -d --network app --name db postgres:17\n$ docker run -d --network app --name api app\n$ docker exec api getent hosts db\n172.18.0.3   db', '<b>Sieć użytkownika ma wbudowany DNS:</b> nazwa kontenera rozwiązuje się na jego IP. Porty hosta nie są potrzebne.', 'ok'],
+    local: [['api', 'localhost = api', 'bad'], ['db', 'nieosiągalna przez localhost', 'off'], null, null, '$ docker exec api nc -z localhost 5432\n(connection refused)', '<b>localhost w kontenerze to sam kontener.</b> Na porcie 5432 w api nic nie słucha. Łącz się po nazwie <code>db:5432</code>.', 'bad'],
+    pub: [['api', '0.0.0.0:8080 → :80', 'on'], null, ['host', 'localhost:8080 ✓', 'ok'], ['internet', 'IP-hosta:8080 ✓', 'bad'], '$ docker run -d -p 8080:80 api', '<b>Port opublikowany na wszystkich interfejsach</b> — dostępny także z innych maszyn. Dla bazy w dev to zwykle niechciane.', 'warn'],
+    pubL: [['api', '127.0.0.1:8080 → :80', 'on'], null, ['host', 'localhost:8080 ✓', 'ok'], ['internet', 'odrzucone', 'off'], '$ docker run -d -p 127.0.0.1:8080:80 api', '<b>Bind na 127.0.0.1:</b> port widzi tylko host.', 'ok']
+  };
+  const show = k => { const c = base(); const o = V[k]; for (let i = 0; i < 4; i++) if (o[i]) setCell(c[i], o[i][0], o[i][1], o[i][2]); out.textContent = o[4]; say(st, o[5], o[6]); };
+  mkFig('fig-net', {
+    reset() { base(); out.textContent = '$'; say(st, 'Wybierz scenariusz.'); },
+    acts: Object.fromEntries(Object.keys(V).map(k => [k, async () => show(k)])),
+    first: async () => show('def')
+  });
+})();
+
+/* ---------- 19. resources & restart ---------- */
+(() => {
+  const m = $('#res-m'), v = $('#res-v'), out = $('#res-out'), st = $('#res-st'), root = $('#fig-res');
+  let pol = 'no';
+  const pb = $$('#res-pol [data-act]');
+  const restarts = (code, n) => pol === 'always' || pol === 'unless-stopped' || (pol === 'on-failure' && code !== 0 && n < 3);
+  async function life(code, gone) {
+    out.textContent = ''; let n = 0;
+    for (;;) {
+      if (code) { await tween(700, k => { meterTo(m, 100 * k, k > .85 ? C.bad : C.warn); v.textContent = Math.round(256 * k) + ' MB'; }); }
+      else { meterTo(m, 30, C.ok); v.textContent = '77 MB'; await sleep(400); }
+      if (gone()) return;
+      out.textContent += code ? `OOM kill → Exited (137), OOMKilled=true\n` : 'Proces zakończył pracę → Exited (0)\n';
+      if (!restarts(code, n) || n >= 3) break;
+      n++; out.textContent += `  restart #${n} (polityka ${pol})\n`; await sleep(350); if (gone()) return;
+    }
+    const looping = restarts(code, n);
+    say(st, looping && !code ? `<b>Kod 0, a mimo to restart.</b> Polityka <code>${pol}</code> restartuje kontener po każdym zakończeniu, także udanym. Dla jednorazowych zadań użyj <code>no</code> lub <code>on-failure</code>.` : looping ? `<b>Pętla restartów.</b> Polityka <code>${pol}</code> restartuje kontener bez końca (z rosnącym opóźnieniem). Restart nie naprawi wycieku — <code>docker inspect</code> i logi powiedzą, co się dzieje.` : code && pol === 'on-failure' ? '<b>on-failure:3:</b> trzy próby i koniec. Kontener zostaje w stanie exited z kodem 137.' : code ? '<b>--restart no:</b> kontener po OOM kill zostaje w stanie exited. Nikt go nie podniesie.' : `<b>Kod 0 i polityka ${pol}:</b> brak restartu — to nie był błąd.`, looping || code ? 'bad' : 'ok');
+  }
+  const setPol = p => async () => { pol = p; setOn(pb, 'p-' + ({ no: 'no', 'on-failure': 'onf', always: 'always', 'unless-stopped': 'us' })[p]); say(st, `Polityka: <code>${p}${p === 'on-failure' ? ':3' : ''}</code>.`); };
+  mkFig('fig-res', {
+    reset() { pol = 'no'; setOn(pb, 'p-no'); meterTo(m, 0, C.ok); v.textContent = '0 MB'; out.textContent = ''; say(st, 'Wybierz politykę i scenariusz.'); },
+    acts: { 'p-no': setPol('no'), 'p-onf': setPol('on-failure'), 'p-always': setPol('always'), 'p-us': setPol('unless-stopped'), leak: gn => life(137, gn), exit0: gn => life(0, gn) }
+  });
+})();
+
+/* ---------- 20. compose depends_on ---------- */
+(() => {
+  const el = $('#cmp-rows'), st = $('#cmp-st');
+  async function go(healthy, gone) {
+    const R = healthy ? [['t=0 s   db: start kontenera', 'start'], ['t=6 s   db: healthcheck pg_isready ✓', 'healthy'], ['t=6 s   migrate: start → migracje', 'start'], ['t=9 s   migrate: Exited (0)', 'completed'], ['t=9 s   api: start → połączenie z db:5432', 'OK']]
+      : [['t=0 s   db: start kontenera', 'start'], ['t=0,5 s api: start → połączenie z db:5432', 'ECONNREFUSED'], ['t=0,6 s api: Exited (1)', 'crash'], ['t=6 s   db: gotowa… ale api już leży', 'za późno']];
+    const r = rows(el, R.map(([t]) => ({ t, b: '' })));
+    for (let i = 0; i < R.length; i++) { await sleep(500); if (gone()) return; const bad = /ECONN|crash|późno/.test(R[i][1]); setRow(r[i], R[i][1], bad ? 'bad' : 'hit'); }
+    say(st, healthy ? '<b>service_healthy</b> czeka na zielony healthcheck db, a <b>service_completed_successfully</b> — aż migracja zakończy się kodem 0. Dopiero wtedy startuje api.' : '<b>Domyślny warunek service_started</b> czeka tylko na start kontenera db, nie na gotowość Postgresa. api łączy się za wcześnie.', healthy ? 'ok' : 'bad');
+  }
+  mkFig('fig-compose', {
+    reset() { el.innerHTML = ''; say(st, 'Wybierz wariant.'); },
+    acts: { started: gn => go(false, gn), healthy: gn => go(true, gn) },
+    first: gn => go(false, gn)
+  });
+})();
+
+/* ---------- 21. registry tags vs digests ---------- */
+(() => {
+  const g = $('#reg-g'), st = $('#reg-st');
+  let ver, a, b;
+  const D = ['a1', 'b2', 'c3'];
+  const paint = () => cells(g, [{ t: 'rejestr', s: `app:1 → sha256:${D[ver]}…<br>app:latest → sha256:${D[ver]}…` }, { t: 'serwer A (po tagu)', s: a ? 'działa ' + a : '—', c: a && a !== D[ver] ? 'bad' : a ? 'ok' : '' }, { t: 'serwer B (po digeście)', s: b ? 'działa ' + b : '—', c: b ? 'ok' : '' }]);
+  mkFig('fig-reg', {
+    reset() { ver = 0; a = b = null; paint(); say(st, 'Rejestr ma jedną wersję obrazu.'); },
+    acts: {
+      async push() { if (ver < 2) ver++; paint(); say(st, `<b>Push:</b> tagi <code>app:1</code> i <code>latest</code> przesunęły się na <code>${D[ver]}</code>. Stary obraz ma ten sam digest co wcześniej, ale żaden z tych tagów już na niego nie wskazuje.`, 'warn'); },
+      async pullT() { a = D[ver]; paint(); say(st, `Serwer A pobrał to, na co <em>teraz</em> wskazuje <code>app:1</code>: <code>${a}</code>.`); },
+      async pullD() { b = 'a1'; paint(); say(st, 'Serwer B pobrał po digeście: zawsze <code>a1</code>, niezależnie od przesunięć tagów. Powtarzalne wdrożenie.', 'ok'); },
+      async latest() { a = D[ver]; if (ver < 2) ver++; b = D[ver]; paint(); setCell($$('.dk-cell', g)[2], 'replika 2 (:latest)', 'działa ' + b, 'bad'); setCell($$('.dk-cell', g)[1], 'replika 1 (:latest)', 'działa ' + a, 'bad'); say(st, `<b>Dwie repliki, dwie wersje.</b> Replika 1 pobrała <code>${a}</code>, a po pushu replika 2 pobrała <code>${b}</code>. Ten sam „tag” — inny kod.`, 'bad'); }
+    }
+  });
+})();
+
+/* ---------- 22. debug map ---------- */
+(() => {
+  const out = $('#dbg-out'), st = $('#dbg-st');
+  const V = {
+    exit: ['docker ps -a                       # status i kod wyjścia\ndocker logs <c>                    # ostatnie słowa procesu\ndocker inspect -f \'{{.State.ExitCode}} {{.State.OOMKilled}}\' <c>\ndocker run -it --entrypoint sh <obraz>   # zajrzyj do obrazu', 'Kod 137 + OOMKilled=true → limit pamięci. Kod 0 → proces po prostu skończył (np. brak <code>-it</code> dla shella). Kod 1/127 → błąd aplikacji lub brak pliku wykonywalnego.'],
+    conn: ['docker ps                          # czy port jest opublikowany?\ndocker port <c>\ndocker inspect -f \'{{json .NetworkSettings.Networks}}\' <c>\ndocker exec <c> sh -c "netstat -tlnp || ss -tlnp"', 'Najczęściej: aplikacja słucha na <code>127.0.0.1</code> w kontenerze zamiast na <code>0.0.0.0</code>, brak <code>-p</code>, albo kontenery w różnych sieciach.'],
+    slow: ['docker build --progress=plain .    # który krok trwa?\ndocker buildx du                   # ile jest cache\ncat .dockerignore                  # czy kontekst nie jest gigantyczny?', 'Szukaj kroku, który przebudowuje się bez powodu — zwykle <code>COPY . .</code> przed instalacją zależności albo brak .dockerignore.'],
+    disk: ['docker system df                   # co zajmuje miejsce\ndocker image prune                 # wiszące obrazy\ndocker builder prune               # cache buildu\ndocker system prune                # zatrzymane kontenery, sieci, wiszące obrazy, cache', 'Najwięcej miejsca zajmują zwykle cache buildu i stare obrazy. <code>--volumes</code> usuwa też anonimowe wolumeny — upewnij się, że nie ma tam danych.'],
+    cfg: ['docker inspect -f \'{{json .Config.Env}}\' <c>\ndocker exec <c> env\ndocker compose config              # wynikowy, scalony plik Compose', '<code>docker compose config</code> pokazuje konfigurację po interpolacji i scaleniu plików — idealne, gdy zmienna „nie działa”.']
+  };
+  const btn = $$('#dbg-btns [data-act]');
+  const show = k => { setOn(btn, k); out.textContent = V[k][0]; say(st, V[k][1]); };
+  mkFig('fig-debug', { reset() { setOn(btn, ''); out.textContent = 'Wybierz objaw.'; say(st, '—'); }, acts: Object.fromEntries(Object.keys(V).map(k => [k, async () => show(k)])), first: async () => show('exit') });
+})();
+
+/* ---------- 23. namespaces ---------- */
+(() => {
+  const g = $('#ns-g'), st = $('#ns-st');
+  const I = { pid: ['pid', 'ps aux: 2 procesy kontenera', 'ps aux: wszystkie procesy hosta'], net: ['net', 'eth0 172.17.0.2, własny localhost', 'interfejsy hosta, localhost = host'], uts: ['uts', 'hostname: 3f2a1c…', 'hostname: hosta'], mnt: ['mnt', 'system plików obrazu', 'system plików obrazu'] };
+  let on;
+  const paint = () => cells(g, Object.keys(I).map(k => ({ t: I[k][0] + (on[k] ? ' (host)' : ''), s: on[k] ? I[k][2] : I[k][1], c: on[k] ? 'bad' : 'ok' })));
+  const tog = k => async () => { on[k] = !on[k]; paint(); say(st, on[k] ? `<b>--${k === 'net' ? 'network' : k} host:</b> kontener współdzieli namespace ${k} z hostem. Jedna ściana izolacji mniej.` : `Namespace ${k} znowu izolowany.`, on[k] ? 'warn' : 'ok'); };
+  mkFig('fig-ns', {
+    reset() { on = {}; paint(); say(st, 'Wszystkie namespaces izolowane.'); },
+    acts: { pid: tog('pid'), net: tog('net'), uts: tog('uts'), async priv() { on = {}; paint(); $$('.dk-cell', g)[3].className = 'dk-cell bad'; $$('.dk-cell', g)[3].innerHTML = '<b>mnt + urządzenia</b><small>dostęp do /dev hosta, wszystkie capabilities</small>'; say(st, '<b>--privileged</b> zostawia namespaces, ale daje wszystkie capabilities i dostęp do urządzeń hosta. Proces może np. zamontować dysk hosta — izolacja jest mocno osłabiona.', 'bad'); } }
+  });
+})();
+
+/* ---------- 24. runtime hardening ---------- */
+(() => {
+  const m = $('#sec-m'), v = $('#sec-v'), kv = $('#sec-kv'), st = $('#sec-st');
+  const F = { user: [-12, 'proces nie jest rootem'], caps: [-12, 'brak capabilities jądra'], ro: [-8, 'nie zapisze binarek ani skryptów'], nnp: [-6, 'setuid nie podniesie uprawnień'], sock: [100, 'pełne API demona = root na hoście'], priv: [100, 'wszystkie capabilities + urządzenia hosta'] };
+  let on;
+  const btn = $$('#sec-btns [data-act]');
+  function paint() {
+    const keys = Object.keys(on).filter(k => on[k]);
+    const bad = keys.some(k => F[k][0] > 0);
+    const score = bad ? 100 : Math.max(8, 50 + keys.reduce((s, k) => s + F[k][0], 0));
+    meterTo(m, score, score > 70 ? C.bad : score > 30 ? C.warn : C.ok); v.textContent = score + '/100';
+    btn.forEach(b => b.classList.toggle('on', !!on[b.dataset.act]));
+    kv.innerHTML = ''; keys.forEach(k => { H('b', '', null, kv).textContent = $(`[data-act=${k}]`, $('#fig-sec')).textContent.replace('💥 ', ''); H('span', '', null, kv).textContent = F[k][1]; });
+    return { bad, score };
+  }
+  const tog = k => async () => { on[k] = !on[k]; const r = paint(); say(st, r.bad ? '<b>Każde utwardzenie traci sens</b>, gdy aplikacja ma dostęp do gniazda Dockera lub tryb privileged.' : `Promień rażenia: ${r.score}/100 (skala ilustracyjna).`, r.bad ? 'bad' : r.score <= 30 ? 'ok' : 'warn'); };
+  mkFig('fig-sec', {
+    reset() { on = {}; paint(); say(st, 'Konfiguracja domyślna.'); },
+    acts: Object.fromEntries(Object.keys(F).map(k => [k, tog(k)]))
+  });
+})();
+
+/* ---------- 25. supply chain ---------- */
+(() => {
+  const fl = $('#sup-flow'), st = $('#sup-st');
+  const N = [['commit', 'git push'], ['build', 'BuildKit'], ['atestacje', 'SBOM + provenance'], ['skan', 'docker scout'], ['push', 'rejestr'], ['deploy', 'po digeście']];
+  let els;
+  const draw = () => { fl.innerHTML = ''; els = N.map(([t, s], i) => { if (i) H('span', 'dk-arr', '→', fl); return H('div', 'dk-cell', `<b>${t}</b><small>${s}</small>`, fl); }); };
+  async function run(gone, cve) {
+    draw();
+    for (let i = 0; i < N.length; i++) {
+      els[i].classList.add('on'); await sleep(420); if (gone()) return;
+      if (cve && i === 3) { setCell(els[3], 'skan', 'CVE-XXXX w bazie: krytyczna', 'bad'); els.slice(4).forEach(e => e.classList.add('off')); return say(st, '<b>Skan zatrzymał pipeline.</b> Podatność jest w obrazie bazowym, nie w twoim kodzie. Naprawa: rebuild z <code>--pull</code> (nowsza baza) i ponowny skan.', 'bad'); }
+      els[i].className = 'dk-cell ok';
+    }
+    say(st, '<b>Obraz ma SBOM i provenance</b>, przeszedł skan i jest wdrażany po digeście. Wiesz, co jest w środku, skąd się wzięło i że na produkcji działa dokładnie to.', 'ok');
+  }
+  mkFig('fig-supply', { reset() { draw(); say(st, 'Kliknij ▶.'); }, acts: { run: gn => run(gn), cve: gn => run(gn, true) }, first: gn => run(gn) });
+})();
+
+/* ---------- quiz ---------- */
+const QUIZ = [
+  ['Czym jest kontener z punktu widzenia jądra Linux?', ['Lekką maszyną wirtualną z własnym jądrem', 'Procesem hosta izolowanym przez namespaces i ograniczanym przez cgroups', 'Emulatorem sprzętu jak QEMU'], 1, 'Kontener nie ma własnego jądra — to proces hosta z namespaces (co widzi) i cgroups (ile zużyje).'],
+  ['Kto faktycznie tworzy namespaces i uruchamia proces kontenera?', ['CLI docker', 'runc (wywołany przez containerd)', 'Docker Hub'], 1, 'CLI wysyła żądanie do dockerd, ten deleguje do containerd, a runc tworzy izolację i odpala proces.'],
+  ['Kontener zmienia plik, który pochodzi z warstwy obrazu. Co się dzieje?', ['Warstwa obrazu jest modyfikowana', 'Plik jest kopiowany do warstwy zapisu kontenera i tam zmieniany', 'Zapis kończy się błędem — obraz jest tylko do odczytu'], 1, 'Copy-on-write: copy-up do warstwy zapisu. Warstwy obrazu pozostają nietknięte.'],
+  ['Co się stanie z danymi w warstwie zapisu po docker rm?', ['Zostaną zachowane w obrazie', 'Przepadną razem z kontenerem', 'Trafią do wolumenu anonimowego'], 1, 'Warstwa zapisu żyje tyle, co kontener. Trwałe dane trzymasz w wolumenach.'],
+  ['Które instrukcje tworzą warstwy z zawartością plików?', ['ENV, CMD, EXPOSE', 'RUN, COPY, ADD', 'Każda instrukcja tworzy warstwę o podobnym rozmiarze'], 1, 'RUN, COPY i ADD zmieniają system plików. Pozostałe zmieniają konfigurację obrazu (0 B w history).'],
+  ['Co robi EXPOSE 8080?', ['Publikuje port 8080 na hoście', 'Dokumentuje port w metadanych obrazu', 'Otwiera port w firewallu hosta'], 1, 'Publikujesz przez -p lub -P. EXPOSE to dokumentacja (i wskazówka dla -P).'],
+  ['Twój Dockerfile ma COPY . . przed RUN npm ci. Zmieniasz jedną linię w src/. Co się przebuduje?', ['Tylko COPY . .', 'COPY . ., npm ci i wszystko pod nimi', 'Nic — zmiana w src nie dotyczy zależności'], 1, 'Miss na COPY . . unieważnia wszystkie kolejne kroki, w tym kosztowne npm ci.'],
+  ['Zmieniasz tylko mtime pliku (touch). Czy COPY trafi w cache?', ['Nie, każda zmiana metadanych unieważnia cache', 'Tak — mtime nie jest brany pod uwagę w sumie kontrolnej', 'Tylko z flagą --no-cache'], 1, 'Dokumentacja: mtime nie wchodzi do checksumy cache dla COPY/ADD.'],
+  ['RUN apt-get install … w jednej warstwie, RUN rm -rf … w następnej. Obraz:', ['Zmniejsza się o usunięte pliki', 'Nie zmniejsza się — pliki dalej są w niższej warstwie', 'Zmniejsza się tylko z BuildKit'], 1, 'Usunięcie w późniejszej warstwie to whiteout. Sprzątaj w tym samym RUN albo użyj multi-stage.'],
+  ['ENTRYPOINT ["app"], CMD ["--help"], uruchamiasz: docker run img --version. Co się wykona?', ['app --help --version', 'app --version', '--version'], 1, 'Argumenty docker run zastępują CMD i są doklejane do ENTRYPOINT.'],
+  ['Masz ENTRYPOINT w shell form. Co z CMD i argumentami docker run?', ['Są doklejane na końcu', 'Są ignorowane', 'Zastępują ENTRYPOINT'], 1, 'Shell-form ENTRYPOINT uruchamia /bin/sh -c i ignoruje CMD oraz argumenty z linii poleceń.'],
+  ['docker stop zawsze trwa równe 10 s, kod 137. Najbardziej prawdopodobna przyczyna? (L2)', ['Za mało pamięci', 'Aplikacja nie dostaje lub nie obsługuje SIGTERM (np. shell form, brak handlera jako PID 1)', 'Wolny dysk'], 1, 'Po 10 s (domyślnie dla Linux) Docker wysyła SIGKILL. Exec form + handler, --init lub exec "$@".'],
+  ['ARG VER zadeklarowany przed FROM. W RUN w etapie $VER jest pusty. Dlaczego? (L2)', ['BuildKit nie wspiera ARG', 'Globalny ARG działa tylko w FROM — trzeba go powtórzyć w etapie (ARG VER)', 'ARG działa tylko z --build-arg'], 1, 'Globalny zakres ARG obejmuje linie FROM. W etapie deklarujesz go ponownie bez wartości.'],
+  ['Co trafia do obrazu w multi-stage buildzie bez --target?', ['Wszystkie etapy', 'Ostatni etap', 'Pierwszy etap'], 1, 'Obraz wynikowy to ostatni etap; poprzednie służą jako źródło dla COPY --from.'],
+  ['Jak przekazać token npm do buildu bez wycieku? (L2)', ['--build-arg NPM_TOKEN=…', 'COPY .npmrc, a potem RUN rm .npmrc', 'RUN --mount=type=secret,id=npmrc,target=/root/.npmrc'], 2, 'Secret mount istnieje tylko podczas jednego RUN. ARG i COPY+rm zostawiają ślady.'],
+  ['Zmieniasz wartość sekretu przekazanego przez --secret. Czy krok RUN przebuduje się automatycznie? (L2)', ['Tak, sekret jest częścią klucza cache', 'Nie — zawartość sekretów nie jest częścią cache', 'Tylko z mode=max'], 1, 'Dokumentacja: zmiana wartości sekretu nie unieważnia cache.'],
+  ['Cache mount (RUN --mount=type=cache) przyspiesza build, gdy:', ['Krok trafia w cache warstw', 'Krok musi się wykonać, a menedżer pakietów znajdzie paczki w zamontowanym katalogu', 'Zawsze, bo zapisuje paczki w obrazie'], 1, 'Cache mount działa wewnątrz wykonywanego kroku i nie trafia do obrazu.'],
+  ['Najszybsza zwykle strategia budowania obrazu arm64 + amd64 dla Go na hoście amd64? (L2)', ['Emulacja QEMU dla arm64', 'Cross-kompilacja: FROM --platform=$BUILDPLATFORM + GOARCH=$TARGETARCH', 'Osobne Dockerfile dla każdej architektury'], 1, 'Cross-kompilacja działa natywnie; emulacja bywa wielokrotnie wolniejsza.'],
+  ['Pusty nazwany wolumen montujesz w ścieżce, w której obraz ma pliki. Co zobaczy kontener?', ['Pusty katalog', 'Pliki z obrazu skopiowane do wolumenu', 'Błąd montowania'], 1, 'Pusty wolumen jest wypełniany zawartością obrazu. Bind mount tego nie robi.'],
+  ['Kontenery api i db w domyślnej sieci bridge. api łączy się z „db:5432”. Wynik?', ['Działa', 'Nazwa db się nie rozwiąże — domyślny bridge nie ma DNS po nazwach', 'Działa tylko z -p 5432:5432'], 1, 'DNS po nazwach daje sieć zdefiniowana przez użytkownika (lub Compose).'],
+  ['Co oznacza --restart unless-stopped w porównaniu z always? (L2)', ['Nic, to aliasy', 'Ręcznie zatrzymany kontener nie wróci po restarcie demona', 'Restartuje tylko przy błędzie'], 1, 'always przywróci ręcznie zatrzymany kontener po restarcie demona; unless-stopped nie.'],
+  ['depends_on bez warunku w Compose czeka na:', ['Gotowość bazy (healthcheck)', 'Start kontenera zależności', 'Zakończenie zależności kodem 0'], 1, 'Domyślny warunek to service_started. Gotowość daje service_healthy.'],
+  ['Dlaczego wdrażać po digeście, a nie po tagu? (L2)', ['Digest jest krótszy', 'Tag jest zmienny, digest zawsze wskazuje tę samą zawartość', 'Tagi nie działają w prywatnych rejestrach'], 1, 'Tag można przesunąć. Digest to skrót zawartości manifestu.'],
+  ['docker logs nic nie pokazuje, a aplikacja działa. Najczęstsza przyczyna? (L2)', ['Brak limitu pamięci', 'Aplikacja loguje do pliku zamiast na stdout/stderr', 'Kontener jest w sieci host'], 1, 'docker logs czyta tylko stdout/stderr głównego procesu.'],
+  ['Co robi --privileged? (L3)', ['Wyłącza wszystkie namespaces', 'Daje wszystkie capabilities i dostęp do urządzeń hosta', 'Uruchamia kontener jako zwykły użytkownik'], 1, 'Namespaces zostają, ale izolacja jest mocno osłabiona.'],
+  ['Dostęp do /var/run/docker.sock w kontenerze to: (L3)', ['Bezpieczny odczyt statusu', 'Efektywnie root na hoście', 'Dostęp tylko do własnego kontenera'], 1, 'Kto woła API demona, może uruchomić kontener z zamontowanym systemem plików hosta.'],
+  ['Skan wykazał krytyczne CVE w obrazie bazowym. Co zrobić najpierw? (L3)', ['Zmienić kod aplikacji', 'Przebudować obraz z --pull (nowsza baza) i przeskanować ponownie', 'Wyłączyć provenance'], 1, 'Łatki bazy przychodzą z nowszą wersją obrazu bazowego.']
+];
+
+/* ---------- quiz ---------- */
+(() => {
+  const Q = QUIZ;
+  const box = $('#quiz'); let answered = 0, good = 0; const scoreEl = $('#score');
+  function upd() { scoreEl.textContent = `Wynik: ${good} / ${answered}`; }
+  Q.forEach(([q, opts, ok, why], n) => {
+    const d = H('div', 'quiz-q reveal', `<h4>${n + 1}. ${q}</h4><div class="opts"></div><div class="why">💡 ${why}</div>`, box);
+    opts.forEach((t, i) => {
+      const b = H('button', '', null, $('.opts', d)); b.textContent = t;
+      b.onclick = () => {
+        if (d.classList.contains('done')) return;
+        d.classList.add('done'); answered++;
+        if (i === ok) good++; else b.classList.add('wrong');
+        $('.opts', d).children[ok].classList.add('right');
+        $$('button', d).forEach(x => x.disabled = true);
+        upd();
+      };
+    });
+    revealIO.observe(d);                 // dynamically created .reveal must be observed explicitly
+  });
+})();
+</script>
+</body>
+</html>
