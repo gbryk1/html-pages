@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terraform od środka — animowane kompendium</title>
+<meta name="description" content="Animowane kompendium Terraform: abstrakcje, state, plan i apply, graf, mapowanie na AWS, Azure i Google Cloud oraz porównanie z CloudFormation, Bicep i Infrastructure Manager.">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper:#fbf8f1; --paper2:#ffffff; --ink:#1c1c22; --mut:#5d5f6b; --line:#d9d3c4; --shadow:#1c1c22;
+  --accent:#1b6fa8; --accent2:#e39b2d; --ok:#2f9e63; --bad:#d64545; --warn:#c98a00;
+  --pen:#b8431f; --note:#fff4c2; --card:#f1ece0; --code:#f3efe6; --dim:#9aa0ab;
+  --hand:"Segoe Print","Bradley Hand","Comic Neue","Comic Sans MS","Chalkboard SE","Marker Felt",cursive;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,"Palatino Linotype",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#15171c; --paper2:#1d2027; --ink:#e7e5df; --mut:#a3a6b1; --line:#383c49; --shadow:#000;
+          --accent:#5aa9e6; --accent2:#f0b34f; --ok:#4cc38a; --bad:#f06b6b; --warn:#f0c040;
+          --pen:#ff9a6b; --note:#3a3420; --card:#232730; --code:#22262e; --dim:#5d6270; }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.68 var(--serif); }
+a { color:var(--accent); }
+code, kbd { font:.86em var(--mono); background:var(--code); padding:.08em .35em; border-radius:4px; }
+pre { font:14px/1.5 var(--mono); background:var(--code); border-left:4px solid var(--accent); padding:.9rem 1rem; overflow:auto; border-radius:4px; }
+pre code { background:none; padding:0; font-size:inherit; }
+h1,h2,h3,h4 { font-family:var(--sans); line-height:1.2; }
+h3 { font-size:1.28rem; margin:2.2rem 0 .6rem; }
+strong, b { font-weight:700; }
+.hand { font-family:var(--hand); color:var(--pen); }
+.mut { color:var(--mut); }
+
+/* progress + toc */
+#progress { position:fixed; inset:0 0 auto 0; height:5px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform-origin:0 50%; transform:scaleX(0); z-index:50; }
+#toc { position:fixed; top:1.4rem; left:1rem; width:205px; font:13.5px/1.35 var(--sans); z-index:40; display:none; opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #toc { opacity:1; pointer-events:auto; }
+#toc b { display:block; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.5rem; }
+#toc a { display:block; padding:.28rem .55rem; border-left:3px solid var(--line); color:var(--mut); text-decoration:none; }
+#toc a:hover { color:var(--ink); }
+#toc a.active { border-color:var(--accent2); color:var(--ink); font-weight:700; background:var(--card); }
+@media (min-width:1440px) { #toc { display:block; } }
+
+/* cover */
+.cover { min-height:96vh; display:grid; place-items:center; padding:3rem 1.2rem; position:relative; overflow:hidden;
+         background:radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 55%), var(--paper); }
+.cover-inner { max-width:1040px; width:100%; display:grid; gap:2rem; grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px) { .cover-inner { grid-template-columns:1.1fr .9fr; } }
+.cover .kicker { font:700 .85rem var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); }
+.cover h1 { font-size:clamp(2.4rem,5.6vw,4.2rem); margin:.3rem 0 .6rem; letter-spacing:-.02em; }
+.cover h1 span { display:inline-block; background:var(--ink); color:var(--paper); padding:0 .25em; transform:rotate(-1.5deg); }
+.cover .sub { font-size:1.2rem; color:var(--mut); max-width:34em; }
+.cover .stamp { display:inline-block; margin-top:1.2rem; font:700 1rem var(--hand); color:var(--pen); border:3px solid var(--pen); padding:.3rem .8rem; border-radius:8px; transform:rotate(-4deg); }
+.cover svg { width:100%; max-width:400px; justify-self:center; overflow:visible; }
+.spin { animation:spin 50s linear infinite; transform-origin:200px 200px; }
+.spin-rev { animation:spin 34s linear infinite reverse; transform-origin:200px 200px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.cover .scroll-hint { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); font:1rem var(--hand); color:var(--mut); animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob { 50% { transform:translate(-50%,8px); } }
+
+/* layout */
+main { max-width:800px; margin:0 auto; padding:0 1.2rem 6rem; }
+.chapter { padding-top:4.5rem; }
+.chap-head { display:flex; gap:1.1rem; align-items:center; margin-bottom:1rem; }
+.chap-num { flex:none; width:4.2rem; height:4.2rem; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font:800 1.7rem var(--sans); transform:rotate(-6deg); box-shadow:4px 4px 0 var(--accent2); }
+.chap-head h2 { font-size:clamp(1.6rem,3.8vw,2.2rem); margin:0; }
+.chap-head .tag { font:1.02rem var(--hand); color:var(--pen); display:block; margin-top:.3rem; }
+
+/* reveal */
+.js .reveal { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.js .reveal.shown { opacity:1; transform:none; }
+
+/* head-first boxes */
+.box { position:relative; margin:2rem 0; padding:1.1rem 1.25rem 1rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper2); box-shadow:5px 5px 0 var(--shadow); }
+.box > .lbl { position:absolute; top:-1rem; left:1rem; font:800 .82rem var(--sans); letter-spacing:.06em; text-transform:uppercase; background:var(--ink); color:var(--paper); padding:.25rem .65rem; border-radius:4px; transform:rotate(-2deg); }
+.box.brain { border-style:dashed; background:color-mix(in srgb, var(--accent) 8%, var(--paper2)); }
+.box.brain > .lbl { background:var(--accent); color:#fff; }
+.box.pencil { background:color-mix(in srgb, var(--accent2) 10%, var(--paper2)); }
+.box.pencil > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.watch { border-color:var(--bad); box-shadow:5px 5px 0 var(--bad); }
+.box.watch > .lbl { background:var(--bad); color:#fff; }
+.box.geek { background:var(--card); font-size:.95em; }
+.box.geek > .lbl { background:var(--mut); }
+.box.relax { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); }
+.box.relax > .lbl { background:var(--ok); color:#fff; }
+.box.bullets { background:var(--note); transform:rotate(-.4deg); }
+.box.bullets ul { margin:.3rem 0 0; padding-left:1.2rem; }
+.box.bullets li { margin:.35rem 0; }
+.box.bullets li::marker { content:"▸ "; color:var(--pen); }
+.box.usecase { border-color:var(--accent); box-shadow:5px 5px 0 var(--accent); }
+.box.usecase > .lbl { background:var(--accent); color:#fff; }
+.box.usecase ol { margin:.5rem 0 .3rem; padding-left:1.3rem; }
+.box.usecase li { margin:.4rem 0; }
+.box p:first-of-type { margin-top:.4rem; }
+.box p:last-child { margin-bottom:0; }
+.qa { display:grid; grid-template-columns:auto 1fr; gap:.4rem .8rem; margin:.8rem 0 1rem; }
+.qa .q, .qa .a { font:800 1.15rem var(--sans); }
+.qa .q { color:var(--accent); } .qa .a { color:var(--pen); }
+.qa div { margin:0; }
+details { margin-top:.8rem; }
+summary { cursor:pointer; font:700 .95rem var(--sans); color:var(--pen); }
+.fire { display:grid; gap:.7rem; margin-top:.5rem; }
+.fire .who { font:800 .85rem var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.fire .line { display:grid; grid-template-columns:7.5rem 1fr; gap:.8rem; }
+.fire .line.l2 .who { color:var(--accent); } .fire .line.l1 .who { color:var(--pen); }
+@media (max-width:560px) { .fire .line { grid-template-columns:1fr; gap:.1rem; } }
+.anno { font:1.05rem/1.35 var(--hand); color:var(--pen); display:block; margin:.4rem 0 .4rem 1.2rem; transform:rotate(-1.2deg); }
+.anno::before { content:"↖ "; }
+.pull { font:italic 1.35rem/1.45 var(--serif); border-left:6px solid var(--accent2); padding:.2rem 0 .2rem 1rem; margin:1.6rem 0; }
+.prompt-ex { font:13.5px/1.5 var(--mono); background:var(--code); border:1.5px dashed var(--line); border-radius:6px; padding:.7rem .85rem; margin-top:.7rem; white-space:pre-wrap; }
+.prompt-ex b { font-family:var(--sans); color:var(--pen); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+
+/* figures (generic) */
+.fig { margin:2.2rem -1rem; padding:1rem 1rem .9rem; background:var(--paper2); border:2px solid var(--ink); border-radius:8px; box-shadow:6px 6px 0 var(--shadow); position:relative; }
+@media (min-width:1000px) { .fig.wide { margin-left:-6rem; margin-right:-6rem; } }
+.fig .ftitle { font:800 .95rem var(--sans); margin:0 0 .6rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.fig .ftitle span { font:400 .85rem var(--sans); color:var(--mut); }
+.fig figcaption, .fig .cap { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.6rem; }
+.fig svg { display:block; width:100%; height:auto; }
+.fig svg text { fill:var(--ink); font-family:var(--sans); }
+.ctrl { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.4rem 0 .6rem; font:14px var(--sans); }
+.btn { font:700 13.5px var(--sans); color:var(--ink); background:var(--paper2); border:2px solid var(--ink); border-radius:999px; padding:.33rem .85rem; box-shadow:2px 2px 0 var(--shadow); cursor:pointer; transition:transform .08s; }
+.btn:hover { background:var(--card); }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.on { background:var(--ink); color:var(--paper); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.ctrl input[type=text], .ctrl select, .calc input { font:14px var(--mono); padding:.3rem .5rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); }
+.ctrl input[type=text] { width:9rem; }
+.ctrl label { display:inline-flex; gap:.35rem; align-items:center; }
+.scroll-x { overflow-x:auto; }
+.scroll-x > svg { min-width:620px; }
+.two { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:720px) { .two { grid-template-columns:1.2fr 1fr; align-items:start; } }
+table.mini { width:100%; border-collapse:collapse; font:13.5px var(--sans); }
+table.mini th, table.mini td { text-align:left; padding:.28rem .4rem; border-bottom:1px solid var(--line); }
+table.mini th { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+table.mini tr.flash td { animation:flashbg 1.2s ease; }
+@keyframes flashbg { 0%{ background:color-mix(in srgb, var(--accent2) 45%, transparent);} 100%{ background:transparent;} }
+.chip { display:inline-block; min-width:1.6em; text-align:center; font:800 12px var(--sans); color:#fff; padding:.1rem .4rem; border-radius:999px; }
+.status { font:14px/1.45 var(--sans); padding:.55rem .75rem; border-radius:6px; background:var(--card); margin-top:.5rem; min-height:2.2rem; }
+.status.ok { background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.status.bad { background:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.status.warn { background:color-mix(in srgb, var(--warn) 20%, var(--paper2)); }
+.fly { pointer-events:none; }
+.small { font-size:11px; }
+.tiny { font-size:9.5px; }
+.edge { stroke:var(--line); stroke-width:2; }
+.nd circle, .nd rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2.2; transition:fill .3s, opacity .3s; }
+.nd text { font-weight:800; font-size:12px; pointer-events:none; }
+.nd.off circle, .nd.off rect { fill:var(--dim); opacity:.5; stroke-dasharray:4 3; }
+.nd.hot circle, .nd.hot rect { fill:var(--accent2); }
+.nd.pulse circle, .nd.pulse rect, .pop { animation:pulse .6s ease; transform-box:fill-box; transform-origin:center; }
+@keyframes pulse { 40% { transform:scale(1.3); } }
+
+
+/* ---- generic extras: meters, legends, logs, stacked token bars ---- */
+main, footer { overflow-wrap:break-word; }   /* long URLs / identifiers in prose must not widen the page */
+.two > * { min-width:0; }
+.ctrl label { flex-wrap:wrap; max-width:100%; }
+.ctrl select { max-width:100%; min-width:0; }
+.meter { height:12px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.meter > i { display:block; height:100%; width:0; background:var(--ok); transition:width .6s ease, background .4s; }
+.legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.3rem; background:var(--c); vertical-align:-1px; }
+.log { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; height:190px; overflow-y:auto; }
+.log div { opacity:0; transform:translateX(-6px); transition:opacity .3s, transform .3s; white-space:pre-wrap; }
+.log div.shown { opacity:1; transform:none; }
+.log .u { color:var(--accent); font-weight:700; } .log .e { color:var(--bad); } .log .g { color:var(--ok); }
+.stack { position:relative; height:34px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:var(--paper); display:flex; }
+.stack .seg { height:100%; transition:width .7s ease; overflow:hidden; white-space:nowrap; font:700 10.5px/34px var(--sans); color:#fff; text-indent:4px; }
+
+/* ---- multi-level structure: parts, level chips, depth switch, "go deeper", course map ---- */
+.part { margin:5rem 0 0; padding:1.4rem 1.3rem 1.2rem; border-radius:10px; background:var(--ink); color:var(--paper); box-shadow:6px 6px 0 var(--accent2); }
+.part .part-no { font:800 .8rem var(--sans); letter-spacing:.18em; text-transform:uppercase; color:var(--accent2); }
+.part h2 { margin:.2rem 0 .35rem; font-size:clamp(1.7rem,4vw,2.4rem); }
+.part p { margin:0; font-size:1rem; opacity:.85; }
+.lvl-chip { display:inline-block; vertical-align:middle; margin-left:.5rem; font:800 10.5px/1.5 var(--sans); letter-spacing:.06em; text-transform:uppercase; padding:.08rem .5rem; border-radius:999px; color:#fff; background:var(--ok); }
+.lvl-chip.l2 { background:var(--accent); } .lvl-chip.l3 { background:#8e44ad; } .lvl-chip.l4 { background:var(--bad); }
+.lvl-off { display:none !important; }
+details.deeper { border:2px dashed #8e44ad; border-radius:8px; padding:.6rem .9rem; margin:1.8rem 0; background:color-mix(in srgb, #8e44ad 6%, var(--paper2)); }
+details.deeper > summary { font:700 1rem var(--sans); color:var(--ink); }
+details.deeper > summary .lvl-chip { margin:0 .4rem 0 0; }
+details.deeper[open] > summary { margin-bottom:.5rem; }
+.lvl-hint { display:block; width:100%; text-align:left; margin:1.4rem 0 0; font:700 13px var(--sans); color:var(--accent); background:none; border:2px dashed var(--accent); border-radius:8px; padding:.45rem .8rem; cursor:pointer; }
+#depth { position:fixed; left:1rem; bottom:1rem; z-index:45; display:flex; gap:.2rem; align-items:center; font:700 12px var(--sans); background:var(--paper2); color:var(--ink); border:2px solid var(--ink); border-radius:999px; padding:.22rem .3rem .22rem .75rem; box-shadow:3px 3px 0 var(--shadow); opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #depth { opacity:1; pointer-events:auto; }
+#depth button { font:700 12px var(--sans); border:0; border-radius:999px; padding:.25rem .6rem; background:transparent; color:var(--ink); cursor:pointer; }
+#depth button.on { background:var(--ink); color:var(--paper); }
+@media (max-width:640px) { #depth .nm { display:none; } }
+#toc { max-height:calc(100vh - 5.5rem); overflow-y:auto; }
+.toc-part { font:800 .7rem var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:.8rem 0 .2rem .2rem; }
+#map { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.7rem; margin:1.5rem 0; }
+.map-part { border:2px solid var(--line); border-radius:10px; padding:.55rem .6rem; background:var(--paper2); }
+.map-part > b { display:block; font:800 11.5px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin-bottom:.35rem; }
+.map-ch { display:flex; gap:.45rem; align-items:baseline; font:13px/1.3 var(--sans); color:var(--ink); text-decoration:none; padding:.22rem .4rem; border-radius:6px; border-left:4px solid var(--ok); margin:.15rem 0; transition:background .3s; }
+.map-ch.l2 { border-left-color:var(--accent); } .map-ch.l3 { border-left-color:#8e44ad; } .map-ch.l4 { border-left-color:var(--bad); }
+.map-ch i { font:800 11px var(--mono); font-style:normal; color:var(--mut); min-width:1.4em; }
+.map-ch:hover { background:var(--card); }
+.map-ch.here { background:var(--accent2); color:#1c1c22; font-weight:700; }
+.map-ch.seen::after { content:"✓"; margin-left:auto; color:var(--ok); font-weight:800; }
+.map-ch.dim, #toc a.dim { opacity:.4; }
+
+.box.fireside { background:var(--paper2); }
+/* decl */
+.dc-grid { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+.dc-grid > * { min-width:0; }
+.dc-lane { border:2px dashed var(--line); border-radius:8px; padding:.5rem; font:13px var(--sans); }
+.dc-vms { display:flex; flex-wrap:wrap; gap:.35rem; min-height:3.2rem; margin-top:.4rem; }
+.dc-vm { width:2.6rem; height:2.6rem; border:2px solid var(--ink); border-radius:6px; display:grid; place-items:center; font:700 11px var(--sans); background:var(--paper); animation:pulse .5s ease; }
+.dc-vm.extra { background:color-mix(in srgb, var(--bad) 25%, var(--paper2)); }
+.dc-vm.gone { opacity:.3; border-style:dashed; }
+/* hcl */
+.hcl-pre span[data-b] { display:inline-block; border-radius:4px; transition:background .3s, opacity .3s; }
+.hcl-pre.sel span[data-b] { opacity:.35; }
+.hcl-pre.sel span[data-b].on { opacity:1; background:color-mix(in srgb, var(--accent2) 30%, transparent); }
+/* provider */
+.pv-row { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:.3rem; align-items:center; }
+.pv-row > * { min-width:0; }
+.pv-box { border:2px solid var(--ink); border-radius:8px; padding:.45rem; text-align:center; font:12.5px/1.3 var(--sans); background:var(--paper); transition:background .3s; }
+.pv-box b, .pv-box small { display:block; overflow-wrap:anywhere; }
+.pv-box.hot { background:color-mix(in srgb, var(--accent2) 35%, var(--paper2)); }
+.pv-box.err { background:color-mix(in srgb, var(--bad) 25%, var(--paper2)); }
+.pv-link { font:700 10.5px var(--mono); color:var(--mut); border-bottom:3px dotted var(--line); padding:0 .15rem; transition:border-color .3s; }
+.pv-link.hot { border-color:var(--accent); color:var(--accent); }
+.pv-lock { font:12px var(--mono); margin-top:.6rem; padding:.35rem .5rem; background:var(--code); border-radius:6px; overflow-wrap:anywhere; }
+@media (max-width:560px) { .pv-row { grid-template-columns:1fr; } .pv-link { text-align:center; border-bottom:0; border-left:3px dotted var(--line); margin-left:50%; padding:.2rem .3rem; } }
+/* addr */
+.ad-parts { display:flex; flex-wrap:wrap; gap:.3rem; margin:.4rem 0; }
+.ad-part { border:2px solid var(--ink); border-radius:6px; padding:.25rem .45rem; font:12px/1.3 var(--sans); background:var(--paper); animation:pulse .5s ease; }
+.ad-part code { display:block; font-size:13px; background:none; padding:0; }
+.ad-part small { color:var(--mut); }
+/* tri columns (state, drift, ops) */
+.tri { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; }
+.tri > * { min-width:0; }
+.tri-col { border:2px solid var(--line); border-radius:8px; padding:.4rem; min-height:6.5rem; font:12px var(--sans); }
+.tri-col > b { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); margin-bottom:.3rem; }
+.tri-it { border:1.5px solid var(--ink); border-radius:5px; padding:.2rem .35rem; margin:.25rem 0; font:11.5px var(--mono); background:var(--paper); overflow-wrap:anywhere; animation:pulse .5s ease; }
+.tri-it.new { background:color-mix(in srgb, var(--ok) 22%, var(--paper2)); }
+.tri-it.bad { background:color-mix(in srgb, var(--bad) 22%, var(--paper2)); }
+.tri-it.warn { background:color-mix(in srgb, var(--warn) 25%, var(--paper2)); }
+.tri-it.dim { opacity:.4; border-style:dashed; }
+.tri-plan { font:12.5px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.4rem .6rem; margin-top:.5rem; min-height:2rem; white-space:pre-wrap; overflow-wrap:anywhere; }
+.tri-plan .p { color:var(--ok); } .tri-plan .m { color:var(--bad); } .tri-plan .u { color:var(--warn); }
+@media (max-width:560px) { .tri { grid-template-columns:1fr; } .tri-col { min-height:0; } }
+/* lock */
+.lk-grid { display:grid; grid-template-columns:1fr 1.2fr 1fr; gap:.5rem; align-items:center; }
+.lk-grid > * { min-width:0; }
+.lk-who, .lk-state { border:2px solid var(--ink); border-radius:8px; padding:.5rem; text-align:center; font:13px/1.3 var(--sans); background:var(--paper); transition:background .3s, transform .3s; }
+.lk-who small, .lk-state small { display:block; color:var(--mut); }
+.lk-who.hot { background:color-mix(in srgb, var(--accent2) 35%, var(--paper2)); }
+.lk-who.wait { background:color-mix(in srgb, var(--warn) 25%, var(--paper2)); }
+.lk-state.bad { background:color-mix(in srgb, var(--bad) 22%, var(--paper2)); }
+.lk-pad { display:block; font-size:1.4rem; min-height:1.8rem; }
+/* secrets */
+.sc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; }
+.sc-grid > * { min-width:0; }
+.sc-cell { border:2px solid var(--ink); border-radius:8px; padding:.45rem; font:12px/1.35 var(--sans); background:var(--paper); }
+.sc-cell b { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+.sc-cell code { display:block; margin-top:.3rem; overflow-wrap:anywhere; }
+.sc-cell.leak { background:color-mix(in srgb, var(--bad) 20%, var(--paper2)); }
+.sc-cell.safe { background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+@media (max-width:560px) { .sc-grid { grid-template-columns:1fr; } }
+/* cycle */
+.cy-row { display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:.5rem; }
+.cy-step { font:700 12px var(--sans); border:2px solid var(--ink); border-radius:999px; padding:.2rem .65rem; background:var(--paper); transition:background .3s; }
+.cy-step.hot { background:var(--accent2); color:#1c1c22; } .cy-step.ok { background:var(--ok); color:#fff; } .cy-step.bad { background:var(--bad); color:#fff; }
+/* graph */
+#gr-svg .gr-n rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2; transition:fill .3s; }
+#gr-svg .gr-n.run rect { fill:var(--accent2); } #gr-svg .gr-n.done rect { fill:var(--ok); }
+#gr-svg .gr-n.done text { fill:#fff; }
+#gr-svg .gr-n.cyc rect { fill:var(--bad); }
+#gr-svg .gr-e { stroke:var(--line); stroke-width:2; fill:none; marker-end:url(#gr-arr); }
+#gr-svg .gr-e.cyc { stroke:var(--bad); stroke-dasharray:5 4; }
+/* actions */
+.ac-out { min-height:7.5rem; white-space:pre-wrap; overflow-wrap:anywhere; }
+.ac-out .p { color:var(--ok); } .ac-out .m { color:var(--bad); } .ac-out .u { color:var(--warn); font-weight:700; }
+/* cbd timeline */
+.cb-tl { display:grid; gap:.35rem; }
+.cb-row { display:grid; grid-template-columns:5.5rem 1fr; gap:.4rem; align-items:center; font:12px var(--sans); }
+.cb-track { position:relative; height:24px; background:var(--card); border-radius:5px; overflow:hidden; }
+.cb-seg { position:absolute; top:0; height:100%; border-radius:4px; font:700 10.5px/24px var(--sans); color:#fff; text-indent:4px; white-space:nowrap; overflow:hidden; transition:width .6s ease; }
+/* count */
+.ct-rows { display:grid; gap:.3rem; }
+.ct-row { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.2fr); gap:.4rem; font:12.5px var(--mono); align-items:center; }
+.ct-row > span { border:1.5px solid var(--line); border-radius:5px; padding:.2rem .4rem; overflow-wrap:anywhere; }
+.ct-row.h > span { border:0; font:700 11px var(--sans); color:var(--mut); text-transform:uppercase; }
+.ct-row .u { background:color-mix(in srgb, var(--warn) 25%, var(--paper2)); }
+.ct-row .m { background:color-mix(in srgb, var(--bad) 22%, var(--paper2)); }
+.ct-row .k { background:color-mix(in srgb, var(--ok) 15%, var(--paper2)); }
+/* modules */
+.md-tree { font:12.5px/1.5 var(--mono); }
+.md-node { border:2px solid var(--ink); border-radius:8px; padding:.35rem .5rem; margin:.3rem 0; background:var(--paper); }
+.md-node .md-node { margin-left:1rem; }
+.md-node.hot { background:color-mix(in srgb, var(--accent2) 25%, var(--paper2)); }
+.md-node.bad { background:color-mix(in srgb, var(--bad) 20%, var(--paper2)); }
+.md-res { display:block; padding-left:.6rem; color:var(--mut); overflow-wrap:anywhere; }
+.md-res.on { color:var(--ink); font-weight:700; }
+/* crud */
+.cr-flow { display:grid; grid-template-columns:repeat(3,1fr); gap:.4rem; }
+.cr-flow > * { min-width:0; }
+.cr-box { border:2px solid var(--ink); border-radius:8px; padding:.45rem; font:12px/1.4 var(--sans); background:var(--paper); min-height:5.5rem; }
+.cr-box b { display:block; font-size:11px; text-transform:uppercase; color:var(--mut); }
+.cr-box code { display:block; font-size:11.5px; margin-top:.25rem; overflow-wrap:anywhere; background:none; padding:0; }
+.cr-box.hot { background:color-mix(in srgb, var(--accent2) 25%, var(--paper2)); }
+@media (max-width:560px) { .cr-flow { grid-template-columns:1fr; } .cr-box { min-height:0; } }
+/* map3 */
+.m3-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; }
+.m3-grid > * { min-width:0; }
+.m3-card { border:2px solid var(--ink); border-radius:8px; padding:.45rem; font:12px/1.4 var(--sans); background:var(--paper); animation:pulse .5s ease; }
+.m3-card b { display:block; font-size:11px; text-transform:uppercase; color:var(--mut); }
+.m3-card code { display:block; font-size:12px; margin:.25rem 0; overflow-wrap:anywhere; }
+@media (max-width:560px) { .m3-grid { grid-template-columns:1fr; } }
+/* alias */
+.al-row { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+.al-row > * { min-width:0; }
+.al-reg { border:2px solid var(--ink); border-radius:8px; padding:.45rem; font:12px var(--sans); background:var(--paper); min-height:5rem; }
+.al-reg small { display:block; color:var(--mut); font-family:var(--mono); }
+.al-items div { font:11.5px var(--mono); border:1.5px solid var(--ink); border-radius:5px; padding:.15rem .35rem; margin-top:.3rem; overflow-wrap:anywhere; animation:pulse .5s ease; }
+.al-items div.bad { background:color-mix(in srgb, var(--bad) 22%, var(--paper2)); }
+/* partial apply */
+.pa-steps { display:grid; grid-template-columns:repeat(4,1fr); gap:.4rem; }
+.pa-steps > * { min-width:0; }
+.pa-s { border:2px solid var(--ink); border-radius:8px; padding:.4rem; text-align:center; font:12px/1.3 var(--sans); background:var(--paper); transition:background .3s; overflow-wrap:anywhere; }
+.pa-s small { display:block; color:var(--mut); }
+.pa-s.ok { background:color-mix(in srgb, var(--ok) 25%, var(--paper2)); }
+.pa-s.bad { background:color-mix(in srgb, var(--bad) 25%, var(--paper2)); }
+.pa-s.run { background:var(--accent2); }
+.pa-s.rb { background:var(--card); border-style:dashed; }
+@media (max-width:560px) { .pa-steps { grid-template-columns:1fr 1fr; } }
+/* compare */
+.cm-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.4rem; }
+.cm-grid > * { min-width:0; }
+.cm-c { border:2px solid var(--ink); border-radius:8px; padding:.45rem; font:12px/1.4 var(--sans); background:var(--paper); animation:pulse .5s ease; }
+.cm-c b { display:block; font-size:11px; text-transform:uppercase; color:var(--mut); margin-bottom:.2rem; }
+@media (max-width:720px) { .cm-grid { grid-template-columns:1fr 1fr; } }
+@media (max-width:420px) { .cm-grid { grid-template-columns:1fr; } }
+/* quiz */
+.quiz-q { margin:1.2rem 0; padding:.9rem 1rem; border:2px solid var(--ink); border-radius:8px; background:var(--paper2); }
+.quiz-q h4 { margin:0 0 .6rem; font-size:1rem; }
+.quiz-q .opts { display:grid; gap:.4rem; }
+.quiz-q button { text-align:left; font:14px/1.4 var(--sans); color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:6px; padding:.45rem .7rem; cursor:pointer; }
+.quiz-q button:hover:not(:disabled) { border-color:var(--ink); }
+.quiz-q button.right { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+.quiz-q button.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); }
+.quiz-q .why { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.5rem; display:none; }
+.quiz-q.done .why { display:block; }
+.score { position:sticky; bottom:1rem; margin-left:auto; width:max-content; font:800 1rem var(--sans); background:var(--ink); color:var(--paper); padding:.45rem .9rem; border-radius:999px; box-shadow:3px 3px 0 var(--accent2); }
+.cheat td:first-child { font-family:var(--mono); font-size:12.5px; white-space:nowrap; }
+footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var(--sans); color:var(--mut); border-top:2px solid var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+  html { scroll-behavior:auto; }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Rozdziały"></nav>   <!-- built from parts/chapters by JS -->
+<div id="depth" role="group" aria-label="Głębokość czytania"></div>   <!-- built by JS when any data-level > 1 exists -->
+<header class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="kicker">Animowany przewodnik · Terraform</div>
+      <h1>Terraform <span>od środka</span></h1>
+      <p class="sub">Bloki HCL, providery, state, graf zależności, plan i apply — i to, jak jedna składnia zamienia się w wywołania API AWS, Azure i Google Cloud. Plus uczciwa lista tego, czego Terraform nie zrobi, i porównanie z CloudFormation, Bicep i Infrastructure Manager. Przewijaj — diagramy ruszą same.</p>
+      <div class="stamp">plan, zanim apply 🧠</div>
+    </div>
+    <svg viewBox="0 0 400 400" aria-hidden="true">
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <g id="cover-nodes"></g>
+      </g>
+      <g class="spin-rev">
+        <circle cx="200" cy="200" r="95" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 10"/>
+      </g>
+      <circle cx="200" cy="200" r="46" fill="var(--accent)" stroke="var(--ink)" stroke-width="4"/>
+      <text x="200" y="212" text-anchor="middle" font-size="34" font-weight="800" fill="#fff" font-family="system-ui,sans-serif">TF</text>
+    </svg>
+  </div>
+  <div class="scroll-hint">przewiń ↓</div>
+</header>
+
+<main>
+
+<section class="chapter" id="intro" data-title="Jak czytać">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Jak czytać ten przewodnik</h2><span class="tag">mechanizmy, nie lista komend</span></div></div>
+  <p class="reveal">Terraform wygląda na prosty: piszesz pliki <code>.tf</code>, wpisujesz <code>terraform apply</code> i chmura się buduje. Kłopoty zaczynają się w dniu, w którym ktoś zmieni coś ręcznie w konsoli, zmienisz nazwę zasobu albo apply wywróci się w połowie. Wtedy liczy się nie to, <em>jakie</em> są komendy, tylko <em>jak</em> Terraform myśli: co porównuje z czym, gdzie to zapisuje i w jakiej kolejności woła API.</p>
+  <p class="reveal">Przewodnik ma poziomy. Rozdziały i bloki mają oznaczenia —
+    <span class="lvl-chip">L1</span> podstawy, <span class="lvl-chip l2">L2</span> praktyk,
+    <span class="lvl-chip l3">L3</span> ekspert. Głębokość wybierasz przełącznikiem w lewym dolnym rogu; głębszy
+    materiał chowa się, dopóki go nie zechcesz. Mapa poniżej skacze w dowolne miejsce i odhacza przeczytane rozdziały.</p>
+  <div id="map" class="reveal"></div>
+  <div class="box brain reveal"><span class="lbl">🧠 Pomyśl</span>
+    <p>Usuwasz z kodu blok <code>resource "aws_instance" "web"</code>. Kod niczego już nie opisuje. Skąd Terraform wie, że w chmurze jest maszyna do usunięcia — i której dokładnie? Odpowiedź wróci w finale.</p>
+  </div>
+</section>
+
+<!-- ======================= PART I ======================= -->
+<section class="part" id="part-1" data-level="1">
+  <span class="part-no">Część I</span><h2>Fundamenty i abstrakcje</h2><p>Deklaratywny model, bloki HCL, providery i adresy — słownik, którym mówi cała reszta.</p>
+</section>
+
+<section class="chapter" id="ch-decl" data-level="1" data-title="Deklaratywnie, nie skryptem">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Opisujesz cel, nie kroki</h2><span class="tag">skrypt pamięta „zrób”, Terraform pamięta „ma być”</span></div></div>
+  <p class="reveal">Skrypt w bashu z <code>aws ec2 run-instances</code> jest <b>imperatywny</b>: mówi „utwórz maszynę”. Uruchom go dwa razy — masz dwie maszyny. Terraform jest <b>deklaratywny</b>: mówisz „mają istnieć dwie maszyny o takich parametrach”, a narzędzie liczy różnicę między tym celem a tym, co już istnieje, i wykonuje tylko tę różnicę.</p>
+  <p class="reveal">Ta różnica to serce wszystkiego, co dalej. Żeby ją policzyć, Terraform musi znać trzy rzeczy: <b>konfigurację</b> (twoje pliki), <b>state</b> (swoją pamięć o tym, co już zbudował) i <b>rzeczywistość</b> (odpowiedzi API). Plan to wynik porównania tych trzech.</p>
+
+  <figure class="fig wide" id="f-decl">
+    <div class="ftitle">▶ Skrypt kontra Terraform <span>uruchom dwa razy, potem coś zepsuj ręcznie</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="run">▶ Uruchom oba</button>
+      <button class="btn bad" data-act="manual">✋ Ktoś usuwa VM w konsoli</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="dc-grid">
+      <div class="dc-lane"><b>Skrypt: „utwórz 2 VM”</b><div class="dc-vms" id="dc-s"></div></div>
+      <div class="dc-lane"><b>Terraform: „mają być 2 VM”</b><div class="dc-vms" id="dc-t"></div></div>
+    </div>
+    <div class="status" id="dc-st">Naciśnij ▶.</div>
+    <figcaption>Uproszczenie: skrypt nie sprawdza, co istnieje; Terraform porównuje cel z tym, co zna. Liczby maszyn ilustracyjne.</figcaption>
+  </figure>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Czyli Terraform sam sprawdza całe konto AWS i usuwa, czego nie ma w kodzie?</div>
+      <div class="a">O:</div><div>Nie. Terraform zarządza tylko obiektami, które sam zapisał w state (albo zaimportowałeś). Ręcznie utworzona maszyna, o której state nic nie wie, jest dla niego niewidzialna — nie usunie jej i nie zauważy.</div>
+    </div>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Konfiguracja opisuje stan docelowy; plan to różnica między celem a tym, co istnieje.</li>
+    <li>Ponowne uruchomienie bez zmian w kodzie i chmurze daje pusty plan: „No changes”.</li>
+    <li>Terraform zarządza tylko tym, co zna ze state.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-hcl" data-level="1" data-title="HCL: bloki">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>HCL: siedem bloków, które musisz znać</h2><span class="tag">resource tworzy, data czyta, reszta łączy</span></div></div>
+  <p class="reveal">Konfiguracja to katalog plików <code>.tf</code> — tak zwany <b>moduł główny</b> (root module). Terraform czyta wszystkie pliki z katalogu naraz; kolejność plików i bloków nie ma znaczenia, bo zależności wynikają z referencji, nie z pozycji w tekście. Kliknij typ bloku:</p>
+
+  <figure class="fig wide" id="f-hcl">
+    <div class="ftitle">▶ Anatomia konfiguracji <span>kliknij typ bloku</span></div>
+    <div class="ctrl" id="hcl-btns"></div>
+<pre class="hcl-pre"><code><span data-b="terraform">terraform {
+  required_providers {
+    aws = { source = "hashicorp/aws", version = "~> 6.0" }
+  }
+  backend "s3" { bucket = "tf-state", key = "app.tfstate", region = "eu-central-1" }
+}</span>
+<span data-b="provider">provider "aws" { region = "eu-central-1" }</span>
+<span data-b="variable">variable "env" { type = string, default = "dev" }</span>
+<span data-b="locals">locals { name = "app-${var.env}" }</span>
+<span data-b="data">data "aws_ami" "ubuntu" { most_recent = true, owners = ["099720109477"] }</span>
+<span data-b="resource">resource "aws_instance" "web" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = "t3.micro"
+  tags          = { Name = local.name }
+}</span>
+<span data-b="output">output "ip" { value = aws_instance.web.public_ip }</span></code></pre>
+    <div class="status" id="hcl-st">Wybierz blok.</div>
+    <figcaption>Uproszczenie: składnia skrócona do jednej linii tam, gdzie HCL wymaga nowych linii między argumentami w bloku; wersja providera i filtr AMI ilustracyjne.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Blok</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>terraform</code></td><td>wymagane providery i wersje, backend state</td><td>raz na moduł główny</td></tr>
+      <tr><td><code>provider</code></td><td>konfiguracja wtyczki: region, uwierzytelnienie</td><td>raz na konto/region (aliasy: rozdz. o multi-region)</td></tr>
+      <tr><td><code>resource</code></td><td>obiekt, którym Terraform <b>zarządza</b>: tworzy, zmienia, usuwa</td><td>wszystko, co ma żyć i umierać z kodem</td></tr>
+      <tr><td><code>data</code></td><td>obiekt tylko do <b>odczytu</b></td><td>istniejące AMI, VPC innego zespołu, aktualne konto</td></tr>
+      <tr><td><code>variable</code></td><td>wejście modułu</td><td>to, co różni środowiska</td></tr>
+      <tr><td><code>locals</code></td><td>nazwane wyrażenie pomocnicze</td><td>żeby nie powtarzać wyrażeń</td></tr>
+      <tr><td><code>output</code></td><td>wyjście modułu</td><td>przekazanie wartości dalej lub do CLI</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga</span>
+    <p>Blok <code>data</code> nigdy niczego nie tworzy ani nie usuwa — Terraform wykonuje na data source tylko operacje odczytu. Jeśli obiekt nie istnieje, zwykle dostaniesz błąd (zależy od data source), a nie nowy obiekt.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Katalog <code>.tf</code> = moduł; kolejność tekstu nie ma znaczenia.</li>
+    <li><code>resource</code> = zarządzam, <code>data</code> = tylko czytam.</li>
+    <li><code>variable</code>/<code>output</code> to interfejs modułu, <code>locals</code> to jego zmienne wewnętrzne.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-prov" data-level="1" data-title="Provider = wtyczka">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Provider: Terraform sam nie zna żadnej chmury</h2><span class="tag">rdzeń liczy graf, wtyczka mówi z API</span></div></div>
+  <p class="reveal">Terraform dzieli się na dwie części: <b>Terraform Core</b> i <b>pluginy</b> (providery). Core czyta konfigurację, trzyma state, buduje graf i plan. Nie wie nic o EC2 ani o sieciach Azure. Tę wiedzę ma provider — osobny program, z którym Core rozmawia przez RPC. Protokół wtyczek jest wersjonowany i zaimplementowany w Protocol Buffers i gRPC.</p>
+  <p class="reveal"><code>terraform init</code> czyta <code>required_providers</code>, pobiera pasujące wersje (zwykle z Terraform Registry) do podkatalogu <code>.terraform</code> i zapisuje wybór w pliku <code>.terraform.lock.hcl</code>. Kolejne <code>init</code> wybiorą tę samą wersję, nawet jeśli wyszła nowsza — chyba że dodasz <code>-upgrade</code>.</p>
+
+  <figure class="fig wide" id="f-prov">
+    <div class="ftitle">▶ Core ↔ provider ↔ API <span>init, plan, potem podbij wersję</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="init">terraform init</button>
+      <button class="btn" data-act="plan">terraform plan</button>
+      <button class="btn bad" data-act="bump">💥 nowsza wersja w Registry</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="pv-row">
+      <div class="pv-box" id="pv-core"><b>Terraform Core</b><small>graf · state · plan</small></div>
+      <div class="pv-link" id="pv-l1">gRPC</div>
+      <div class="pv-box" id="pv-plug"><b>provider aws</b><small id="pv-ver">nie pobrany</small></div>
+      <div class="pv-link" id="pv-l2">HTTPS</div>
+      <div class="pv-box" id="pv-api"><b>API AWS</b><small>EC2, IAM, S3…</small></div>
+    </div>
+    <div class="pv-lock" id="pv-lock">.terraform.lock.hcl: —</div>
+    <div class="status" id="pv-st">Naciśnij <code>terraform init</code>.</div>
+    <figcaption>Uproszczenie: numery wersji ilustracyjne; pominięto sumy kontrolne dla wielu platform i lokalne mirrory providerów.</figcaption>
+  </figure>
+
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Głębiej</span>
+    <p>Lock file zapisuje dla każdego providera wybraną wersję, ograniczenie wersji i sumy kontrolne paczek. Commituj go do repozytorium — dzięki temu CI i koledzy dostaną dokładnie te same binaria. Lock file obejmuje <em>providery</em>, a nie moduły: wersji modułów pilnuje argument <code>version</code> w bloku <code>module</code>.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Core jest niezależny od chmury; całą wiedzę o API wnosi provider.</li>
+    <li><code>init</code> pobiera providery i zapisuje wybór w <code>.terraform.lock.hcl</code> — commituj go.</li>
+    <li>Nowa wersja już wybranego providera zwykle tylko przez <code>terraform init -upgrade</code>.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-addr" data-level="1" data-title="Adresy i referencje">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Adresy i referencje: jak Terraform nazywa rzeczy</h2><span class="tag">typ.nazwa[klucz] — to jest tożsamość</span></div></div>
+  <p class="reveal">Każdy zasób ma <b>adres</b>: <code>aws_instance.web</code>. Pierwsza część to typ zasobu (prefiks <code>aws_</code> wskazuje providera), druga to nazwa lokalna, którą nadajesz ty. Z <code>count</code> albo <code>for_each</code> dochodzi indeks lub klucz instancji, a w module — prefiks <code>module.nazwa</code>. Adres to tożsamość w świecie Terraform: <b>zmienisz adres — zmienisz tożsamość</b> (rozdział o state pokaże, czym to grozi).</p>
+  <p class="reveal">Gdy w argumencie piszesz <code>data.aws_ami.ubuntu.id</code>, tworzysz <b>referencję</b>. Referencje robią dwie rzeczy: podstawiają wartość i rysują krawędź w grafie zależności.</p>
+
+  <figure class="fig" id="f-addr">
+    <div class="ftitle">▶ Dekoder adresów <span>wybierz adres</span></div>
+    <div class="ctrl"><label>Adres: <select id="ad-sel"></select></label></div>
+    <div class="ad-parts" id="ad-parts"></div>
+    <div class="status" id="ad-st"></div>
+    <figcaption>Przykładowe adresy; nazwy lokalne (web, net, ubuntu) wymyślone.</figcaption>
+  </figure>
+
+  <div class="box pencil reveal"><span class="lbl">✏️ Zaostrz ołówek</span>
+    <p>Jaki jest adres drugiej instancji zasobu <code>resource "aws_subnet" "this"</code> z <code>count = 3</code> w module wywołanym jako <code>module "net"</code>?</p>
+    <details><summary>Odpowiedź</summary><p><code>module.net.aws_subnet.this[1]</code> — indeksy <code>count</code> liczą się od zera.</p></details>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Adres = <code>[module.X.]typ.nazwa[indeks|"klucz"]</code>; <code>data.</code> dla data source.</li>
+    <li>Referencja podstawia wartość i tworzy zależność.</li>
+    <li>Zmiana adresu = zmiana tożsamości obiektu.</li></ul>
+  </div>
+</section>
+
+<!-- ======================= PART II ======================= -->
+<section class="part" id="part-2" data-level="1">
+  <span class="part-no">Część II</span><h2>State: jak Terraform śledzi zmiany</h2><p>Pamięć Terraform: co mapuje, jak wykrywa drift, gdzie leży, jak ją bezpiecznie przerabiać i dlaczego jest wrażliwa.</p>
+</section>
+
+<section class="chapter" id="ch-state" data-level="1" data-title="State: adres → ID">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>State: mapa z adresów na prawdziwe obiekty</h2><span class="tag">bez state Terraform jest ślepy</span></div></div>
+  <p class="reveal">Po <code>apply</code> Terraform zapisuje plik state (lokalnie <code>terraform.tfstate</code>, w JSON). Jego główne zadanie to <b>mapowanie</b>: zasób <code>aws_instance.web</code> z konfiguracji to obiekt o ID <code>i-abcd1234</code> w chmurze. Dodatkowo state przechowuje metadane (np. zależności, żeby wiedzieć, w jakiej kolejności usuwać zasób, którego nie ma już w kodzie) i cache wartości atrybutów.</p>
+  <p class="reveal">Teraz widać odpowiedź na pytanie z początku: gdy usuniesz blok z kodu, adres dalej jest w state. Adres w state bez odpowiednika w konfiguracji = <b>do usunięcia</b>.</p>
+
+  <figure class="fig wide" id="f-map">
+    <div class="ftitle">▶ Konfiguracja · state · chmura <span>apply, zmień nazwę, potem zgub state</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="apply">apply</button>
+      <button class="btn" data-act="rename">✏️ web → app w kodzie</button>
+      <button class="btn" data-act="moved">➡️ to samo z blokiem moved</button>
+      <button class="btn bad" data-act="lose">💥 usuń plik state</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="tri" id="mp-tri"></div>
+    <div class="tri-plan" id="mp-plan"></div>
+    <div class="status" id="mp-st">Naciśnij apply.</div>
+    <figcaption>Uproszczenie: jeden zasób, pominięto atrybuty i odświeżanie. ID instancji ilustracyjne.</figcaption>
+  </figure>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga</span>
+    <p>Utrata state nie usuwa infrastruktury — usuwa <em>wiedzę</em> o niej. Następny plan chce wszystko utworzyć od nowa, co kończy się duplikatami albo błędami „już istnieje”. Dlatego state trzymaj w zdalnym backendzie z wersjonowaniem (dokumentacja backendu S3 wprost zaleca włączenie Bucket Versioning).</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>State mapuje adres zasobu na ID obiektu w chmurze.</li>
+    <li>Adres w state, którego nie ma w kodzie = plan usunięcia.</li>
+    <li>Zmiana nazwy bez <code>moved</code> = zniszcz i utwórz.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-drift" data-level="1" data-title="Refresh i drift">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Refresh i drift: gdy chmura zmieni się bez ciebie</h2><span class="tag">plan zaczyna od pytania „jak jest naprawdę?”</span></div></div>
+  <p class="reveal">Ktoś zmienił tag w konsoli. To <b>drift</b>: rzeczywistość rozjechała się z tym, co mówi kod. Domyślnie <code>terraform plan</code> najpierw <b>odświeża</b> state — czyta aktualne ustawienia obiektów z API — a potem porównuje je z konfiguracją. Wynik: plan, który przywraca wartość z kodu.</p>
+  <p class="reveal">Jeśli zmiana ręczna jest właściwa, masz dwie drogi: przepisać ją do kodu albo — gdy chcesz tylko zaktualizować state bez dotykania chmury — użyć trybu <code>terraform plan -refresh-only</code> / <code>apply -refresh-only</code>. Stara komenda <code>terraform refresh</code> robi to samo, ale jest przestarzała (deprecated).</p>
+
+  <figure class="fig wide" id="f-drift">
+    <div class="ftitle">▶ Drift w trzech kolumnach <span>zmień ręcznie, potem wybierz reakcję</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="manual">✋ konsola: env = test</button>
+      <button class="btn primary" data-act="plan">plan</button>
+      <button class="btn" data-act="ro">apply -refresh-only</button>
+      <button class="btn" data-act="ign">lifecycle ignore_changes</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="tri" id="dr-tri"></div>
+    <div class="tri-plan" id="dr-plan"></div>
+    <div class="status" id="dr-st">Zacznij od ręcznej zmiany.</div>
+    <figcaption>Uproszczenie: jeden atrybut tags.env; prawdziwy plan pokazuje też inne atrybuty. Wartości ilustracyjne.</figcaption>
+  </figure>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Po <code>apply -refresh-only</code> drift zniknął na zawsze?</div>
+      <div class="a">O:</div><div>Zniknął ze state. Konfiguracja dalej mówi <code>prod</code>, więc następny zwykły plan znowu zaproponuje zmianę na <code>prod</code>. Refresh-only aktualizuje pamięć, nie kod.</div>
+    </div>
+  </div>
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Głębiej</span>
+    <p><code>ignore_changes</code> to argument bloku <code>lifecycle</code>: Terraform przestaje planować aktualizacje wskazanych atrybutów. Przydaje się, gdy inny system legalnie zmienia atrybut (np. autoskaler zmienia liczbę instancji). <code>-refresh=false</code> pomija odświeżanie — plan jest szybszy, ale nie widzi driftu.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Plan domyślnie odświeża state z API, potem porównuje z kodem.</li>
+    <li>Drift + zwykły apply = przywrócenie wartości z kodu.</li>
+    <li><code>-refresh-only</code> akceptuje rzeczywistość w state; kod musisz poprawić sam.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-backend" data-level="1" data-title="Backend i locking">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Backend i blokada: state dla zespołu</h2><span class="tag">jeden plik, dwie osoby, jeden lock</span></div></div>
+  <p class="reveal"><b>Backend</b> decyduje, gdzie leży state: lokalny plik, bucket S3, kontener Azure Storage (<code>azurerm</code>), bucket GCS (<code>gcs</code>) i inne. Konfigurujesz go w bloku <code>terraform { backend "…" {} }</code>, a <code>terraform init</code> go inicjalizuje. HCP Terraform konfiguruje się osobnym blokiem <code>cloud</code>, zamiast <code>backend</code>.</p>
+  <p class="reveal">Jeśli backend obsługuje blokady, Terraform <b>blokuje state</b> przy każdej operacji, która może go zapisać — automatycznie. Gdy blokada się nie uda, Terraform nie kontynuuje. W backendzie S3 blokadę włączasz argumentem <code>use_lockfile = true</code> (domyślnie <code>false</code>); starsza blokada przez tabelę DynamoDB (<code>dynamodb_table</code>) jest oznaczona jako przestarzała.</p>
+
+  <figure class="fig wide" id="f-lock">
+    <div class="ftitle">▶ Dwa apply naraz <span>bez blokady i z blokadą</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="nolock">💥 bez blokady</button>
+      <button class="btn primary" data-act="lock">🔒 z blokadą</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="lk-grid">
+      <div class="lk-who" id="lk-a"><b>Ala</b><small>dodaje bucket</small></div>
+      <div class="lk-state" id="lk-s"><b>state</b><small id="lk-sv">serial 5</small><span class="lk-pad" id="lk-pad"></span></div>
+      <div class="lk-who" id="lk-b"><b>Bartek</b><small>dodaje kolejkę</small></div>
+    </div>
+    <div class="status" id="lk-st">Wybierz scenariusz.</div>
+    <figcaption>Uproszczenie: pokazano tylko odczyt i zapis state; numery serial ilustracyjne. Bez blokady wynik zależy od kolejności zapisów.</figcaption>
+  </figure>
+
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Głębiej: state między projektami</span>
+    <p>Data source <code>terraform_remote_state</code> czyta outputy modułu głównego z najnowszego snapshotu state innej konfiguracji. Wygodne, ale daje czytającemu dostęp do całego snapshotu state. Często lepiej publikować wartości gdzie indziej (np. w parameter store) i czytać je zwykłym data source.</p>
+  </div>
+  <div class="box watch reveal" data-level="2"><span class="lbl">⚠️ Uwaga</span>
+    <p><code>terraform force-unlock</code> zdejmuje cudzą blokadę. Używaj tylko wtedy, gdy wiesz, że proces, który ją trzymał, naprawdę nie żyje — inaczej wracasz do scenariusza „bez blokady”.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Backend = miejsce state; zespół potrzebuje zdalnego backendu.</li>
+    <li>Blokada działa automatycznie, jeśli backend ją wspiera; w S3 włącz <code>use_lockfile</code>.</li>
+    <li>Wersjonuj bucket ze state.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-refactor" data-level="2" data-title="import, moved, removed">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Operacje na state: import, moved, removed</h2><span class="tag">zmieniasz mapę, nie terytorium</span></div></div>
+  <p class="reveal">Trzy bloki w kodzie pozwalają przerabiać state przez zwykły plan i apply — z podglądem i code review — zamiast ręcznych komend:</p>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Narzędzie</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>import { to = …, id = "…" }</code></td><td>dopisuje istniejący obiekt do state pod adresem</td><td>przejmujesz ręcznie stworzone zasoby</td></tr>
+      <tr><td><code>plan -generate-config-out=…</code></td><td>generuje bloki resource dla bloków import</td><td>nie chcesz pisać konfiguracji ręcznie</td></tr>
+      <tr><td><code>moved { from = …, to = … }</code></td><td>zmienia adres w state, bez niszczenia</td><td>zmiana nazwy, przeniesienie do modułu</td></tr>
+      <tr><td><code>removed { from = …, lifecycle { destroy = false } }</code></td><td>usuwa z state, obiekt zostaje w chmurze</td><td>oddajesz zasób innemu zespołowi/narzędziu</td></tr>
+      <tr><td><code>terraform state mv / rm</code></td><td>to samo komendą CLI, bez planu</td><td>naprawy awaryjne</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <figure class="fig wide" id="f-ops">
+    <div class="ftitle">▶ Trzy bloki, trzy skutki <span>kliknij operację</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="import">import</button>
+      <button class="btn" data-act="removed">removed (destroy = false)</button>
+      <button class="btn bad" data-act="delete">💥 po prostu skasuj blok</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="tri" id="op-tri"></div>
+    <div class="tri-plan" id="op-plan"></div>
+    <div class="status" id="op-st">Bucket logs istnieje w chmurze, ale Terraform go nie zna.</div>
+    <figcaption>Uproszczenie: pominięto refresh i atrybuty; nazwy bucketów ilustracyjne.</figcaption>
+  </figure>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga</span>
+    <p><code>prevent_destroy</code> nie chroni przed skasowaniem bloku. Terraform nie zapisuje tej reguły w state, więc gdy usuniesz konfigurację zasobu, apply zniszczy obiekt mimo <code>prevent_destroy</code>. Chcesz zachować obiekt — użyj <code>removed</code> z <code>destroy = false</code>.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li><code>import</code> dopisuje, <code>moved</code> przenazywa, <code>removed</code> zapomina — wszystko przez plan.</li>
+    <li>Skasowanie bloku bez <code>removed</code> = zniszczenie obiektu.</li>
+    <li><code>state mv/rm</code> — tylko na awarie, bo omija plan i review.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-secrets" data-level="2" data-title="Sekrety w state">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Sekrety w state: <code>sensitive</code> to nie szyfrowanie</h2><span class="tag">ukryte w konsoli ≠ ukryte w pliku</span></div></div>
+  <p class="reveal">State zawiera wartości atrybutów — także hasła do baz i tokeny. Lokalnie to zwykły plik tekstowy. <code>sensitive = true</code> na zmiennej lub outputcie tylko <b>redaguje</b> wartość w wyjściu plan/apply; w state wartość dalej jest. Co więcej, <code>terraform output -json</code> i <code>-raw</code> pokazują wartości wrażliwe otwartym tekstem.</p>
+  <p class="reveal">Żeby sekret w ogóle nie trafił do state ani do pliku planu, są dwa nowsze narzędzia: <b>argumenty write-only</b> (np. <code>password_wo</code> w <code>aws_db_instance</code>) i <b>zasoby ephemeral</b> (blok <code>ephemeral</code>), których wartości żyją tylko w trakcie operacji.</p>
+
+  <figure class="fig wide" id="f-sec">
+    <div class="ftitle">▶ Gdzie wycieka hasło? <span>wybierz mechanizm</span></div>
+    <div class="ctrl" id="sc-btns"></div>
+    <div class="sc-grid" id="sc-grid"></div>
+    <div class="status" id="sc-st"></div>
+    <figcaption>Uproszczenie: „widoczne” = zapisane jawnym tekstem w danym miejscu. Hasło ilustracyjne.</figcaption>
+  </figure>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Przepis: state z sekretami</span>
+    <ol><li>Trzymaj state w zdalnym backendzie z szyfrowaniem i kontrolą dostępu; nigdy nie commituj <code>*.tfstate</code>.</li>
+    <li>Hasła przekazuj przez argumenty write-only albo zasoby ephemeral, gdy provider je wspiera.</li>
+    <li>Jeszcze lepiej: pozwól usłudze wygenerować i przechowywać sekret (np. menedżer sekretów), a Terraform niech zna tylko jego ID.</li></ol>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>State = dane wrażliwe, zawsze.</li>
+    <li><code>sensitive</code> redaguje wyjście CLI, nie state.</li>
+    <li>Write-only i ephemeral omijają state i plan.</li></ul>
+  </div>
+</section>
+
+<!-- ======================= PART III ======================= -->
+<section class="part" id="part-3" data-level="1">
+  <span class="part-no">Część III</span><h2>Wykonanie: od kodu do wywołań API</h2><p>Cykl init → plan → apply, graf zależności, rodzaje akcji, lifecycle, wiele instancji i moduły.</p>
+</section>
+
+<section class="chapter" id="ch-cycle" data-level="1" data-title="init → plan → apply">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>init → plan → apply</h2><span class="tag">plan to umowa, apply ją wykonuje</span></div></div>
+  <p class="reveal"><code>terraform init</code> przygotowuje katalog: backend, providery, moduły. <code>terraform plan</code> buduje <b>plan wykonania</b>: odświeża state, porównuje z konfiguracją i wypisuje akcje. <code>terraform apply</code> bez argumentu sam tworzy nowy plan, pyta o zgodę i go wykonuje. W CI lepszy jest tryb dwuetapowy: <code>plan -out=tfplan</code>, review, potem <code>apply tfplan</code> — zapisany plan wykonuje się bez pytania.</p>
+  <p class="reveal">Zapisany plan pamięta, z jakiego state powstał (numer <code>serial</code> i <code>lineage</code>). Jeśli w międzyczasie inny apply zmienił state, Terraform odrzuci plan błędem <code>Saved plan is stale</code>.</p>
+
+  <figure class="fig wide" id="f-cyc">
+    <div class="ftitle">▶ Potok w CI <span>plan -out, apply, a potem wyścig</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="ok">▶ init → plan -out → apply tfplan</button>
+      <button class="btn bad" data-act="stale">💥 ktoś zrobił apply w międzyczasie</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="cy-row" id="cy-row"></div>
+    <div class="log" id="cy-log"></div>
+    <div class="status" id="cy-st">Naciśnij ▶.</div>
+    <figcaption>Uproszczenie: logi skrócone; numery serial ilustracyjne. Komunikat błędu pochodzi z kodu źródłowego Terraform.</figcaption>
+  </figure>
+
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Opcja plan/apply</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>-out=FILE</code></td><td>zapisuje plan do pliku</td><td>review przed apply, CI</td></tr>
+      <tr><td><code>-destroy</code></td><td>plan usunięcia wszystkiego z state</td><td>środowiska tymczasowe</td></tr>
+      <tr><td><code>-refresh-only</code></td><td>tylko aktualizacja state do rzeczywistości</td><td>akceptacja driftu</td></tr>
+      <tr><td><code>-replace=ADRES</code></td><td>wymusza zastąpienie instancji</td><td>obiekt zdegradowany, choć konfiguracja się nie zmieniła</td></tr>
+      <tr><td><code>-target=ADRES</code></td><td>planuje tylko część zasobów</td><td>wyjątkowo: naprawy; nie rutynowo</td></tr>
+      <tr><td><code>-parallelism=n</code></td><td>limit równoległych operacji, domyślnie 10</td><td>limity API (throttling)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li><code>init</code> przygotowuje, <code>plan</code> liczy różnicę, <code>apply</code> ją wykonuje.</li>
+    <li>Zapisany plan wykonuje się bez pytania, ale tylko na tym samym state.</li>
+    <li><code>-target</code> to narzędzie awaryjne, nie codzienne.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-graph" data-level="1" data-title="Graf zależności">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Graf zależności i równoległość</h2><span class="tag">kolejność z referencji, nie z pliku</span></div></div>
+  <p class="reveal">Z referencji Terraform buduje <b>graf skierowany</b>: krawędź od zasobu do zasobu, od którego zależy. Graf musi być bez cykli. Potem go „przechodzi” równolegle: węzeł startuje, gdy skończą się wszystkie jego zależności. Liczbę równoczesnych operacji ogranicza <code>-parallelism</code> (domyślnie 10).</p>
+  <p class="reveal">Usuwanie idzie w odwrotnej kolejności: najpierw maszyna, potem podsieć, na końcu VPC. Gdy zależność nie wynika z żadnej referencji (np. aplikacja potrzebuje uprawnienia IAM, którego nie widać w argumentach), dopisujesz <code>depends_on</code> — ale tylko w ostateczności, bo robi plany bardziej zachowawczymi.</p>
+
+  <figure class="fig wide" id="f-graph">
+    <div class="ftitle">▶ Przejście grafu <span>zmień parallelism, potem dodaj cykl</span></div>
+    <div class="ctrl">
+      <label>parallelism <select id="gr-par"><option>1</option><option>2</option><option selected>10</option></select></label>
+      <button class="btn primary" data-act="walk">▶ apply</button>
+      <button class="btn bad" data-act="cycle">💥 dodaj cykl</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="scroll-x"><svg id="gr-svg" viewBox="0 0 700 250"></svg></div>
+    <div class="status" id="gr-st">Naciśnij ▶ apply.</div>
+    <figcaption>Uproszczenie: każda operacja trwa tyle samo „taktów” (ilustracyjnie); prawdziwe czasy zależą od API.</figcaption>
+  </figure>
+
+  <div class="box geek reveal" data-level="2"><span class="lbl">🤓 Głębiej</span>
+    <p><code>terraform graph</code> wypisuje graf w formacie DOT (Graphviz). Wewnętrznie Terraform buduje osobne grafy dla planu i apply; usuwanie i tworzenie tego samego zasobu mają różną kolejność, więc nie mogą być jednym węzłem.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Referencje → krawędzie grafu; graf bez cykli.</li>
+    <li>Niezależne węzły wykonują się równolegle, do limitu <code>-parallelism</code>.</li>
+    <li><code>depends_on</code> tylko dla zależności ukrytych.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-actions" data-level="1" data-title="Akcje planu">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Akcje planu: update czy replace?</h2><span class="tag">o tym decyduje API, nie ty</span></div></div>
+  <p class="reveal">Dla każdego zasobu plan wybiera akcję: <b>create</b> (<code>+</code>), <b>update in-place</b> (<code>~</code>), <b>destroy</b> (<code>-</code>) albo <b>replace</b> (<code>-/+</code>: zniszcz i utwórz). Replace pojawia się, gdy zmieniasz argument, którego zdalne API nie potrafi zmienić na żywym obiekcie. Tę wiedzę ma provider: w jego schemacie atrybut jest oznaczony jako wymagający zastąpienia (w Plugin Framework: plan modifier <code>RequiresReplace</code>). Plan pokazuje wtedy dopisek <code># forces replacement</code>.</p>
+
+  <figure class="fig wide" id="f-act">
+    <div class="ftitle">▶ Co zrobi plan? <span>wybierz zmianę w kodzie</span></div>
+    <div class="ctrl" id="ac-btns"></div>
+    <pre class="ac-out" id="ac-out"></pre>
+    <div class="status" id="ac-st"></div>
+    <figcaption>Ilustracja: zasób <code>example_db</code> jest wymyślony; który atrybut wymusza replace, zależy od konkretnego providera i API.</figcaption>
+  </figure>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga</span>
+    <p>Zawsze czytaj podsumowanie <code>Plan: X to add, Y to change, Z to destroy</code>. Niewinna zmiana nazwy bazy danych może oznaczać <code>-/+</code> i utratę danych. Na produkcji traktuj każde „to destroy” jak czerwoną lampkę.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li><code>+</code> create, <code>~</code> update, <code>-</code> destroy, <code>-/+</code> replace.</li>
+    <li>Replace wynika ze schematu providera i ograniczeń API.</li>
+    <li><code>-replace=ADRES</code> wymusza replace bez zmiany kodu.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-life" data-level="2" data-title="lifecycle">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>lifecycle: sterujesz kolejnością i ochroną</h2><span class="tag">create_before_destroy, prevent_destroy, ignore_changes</span></div></div>
+  <p class="reveal">Domyślnie replace to „najpierw zniszcz, potem utwórz” — przez chwilę obiektu nie ma. Blok <code>lifecycle</code> zmienia to zachowanie:</p>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Argument</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td><code>create_before_destroy</code></td><td>najpierw nowy obiekt, potem usunięcie starego</td><td>brak przerwy, gdy API pozwala na dwa obiekty naraz</td></tr>
+      <tr><td><code>prevent_destroy</code></td><td>błąd przy każdym planie, który niszczy obiekt</td><td>bazy, buckety z danymi</td></tr>
+      <tr><td><code>ignore_changes</code></td><td>ignoruje zmiany wskazanych atrybutów</td><td>atrybut zmienia ktoś inny legalnie</td></tr>
+      <tr><td><code>replace_triggered_by</code></td><td>replace, gdy zmieni się wskazany zasób/atrybut</td><td>wymiana instancji po zmianie zależności</td></tr>
+      <tr><td><code>precondition</code>/<code>postcondition</code></td><td>własne asercje z komunikatem</td><td>walidacja założeń</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <figure class="fig wide" id="f-cbd">
+    <div class="ftitle">▶ Replace na osi czasu <span>porównaj kolejność</span></div>
+    <div class="ctrl">
+      <button class="btn" data-act="def">domyślnie</button>
+      <button class="btn primary" data-act="cbd">create_before_destroy</button>
+      <button class="btn bad" data-act="name">💥 cbd + stała nazwa</button>
+      <button class="btn" data-act="prev">prevent_destroy</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="cb-tl" id="cb-tl"></div>
+    <div class="status" id="cb-st">Wybierz wariant.</div>
+    <figcaption>Ilustracja: czasy umowne. Konflikt nazw zależy od API — dotyczy zasobów, których nazwa musi być unikalna.</figcaption>
+  </figure>
+
+  <div class="box geek reveal" data-level="3"><span class="lbl">🤓 Głębiej</span>
+    <p>Z reguł lifecycle tylko <code>create_before_destroy</code> jest zapisywane w state. Pozostałe Terraform czyta wyłącznie z konfiguracji — stąd pułapka z rozdziału o <code>removed</code>: skasowany blok zabiera ze sobą <code>prevent_destroy</code>.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Domyślny replace: destroy → create (przerwa).</li>
+    <li><code>create_before_destroy</code>: create → destroy; uważaj na unikalne nazwy.</li>
+    <li><code>prevent_destroy</code> działa tylko, dopóki blok istnieje.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-count" data-level="2" data-title="count vs for_each">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>count kontra for_each</h2><span class="tag">indeks przesuwa się, klucz zostaje</span></div></div>
+  <p class="reveal">Oba tworzą wiele instancji z jednego bloku. <code>count</code> numeruje je <code>[0]</code>, <code>[1]</code>…, <code>for_each</code> nadaje klucze z mapy lub zbioru: <code>["a"]</code>, <code>["b"]</code>. Dokumentacja radzi: <code>count</code> dla niemal identycznych instancji, <code>for_each</code>, gdy argumenty różnią się wartościami, których nie da się wyprowadzić z liczby całkowitej. Różnica wychodzi przy usuwaniu elementu ze środka listy:</p>
+
+  <figure class="fig wide" id="f-cnt">
+    <div class="ftitle">▶ Usuń „a” z listy [a, b, c] <span>przełącz tryb</span></div>
+    <div class="ctrl">
+      <button class="btn on" data-act="count">count</button>
+      <button class="btn" data-act="fe">for_each</button>
+      <button class="btn bad" data-act="del">💥 usuń „a”</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="ct-rows" id="ct-rows"></div>
+    <div class="status" id="ct-st">Wybierz tryb i usuń „a”.</div>
+    <figcaption>Uproszczenie: nazwa użytkownika jest jedynym atrybutem; po usunięciu elementu z początku listy count przesuwa indeksy — gdyby zmiana nazwy wymuszała replace, dwa obiekty zostałyby zastąpione, a ostatni zniszczony, zamiast usunąć jeden.</figcaption>
+  </figure>
+
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga</span>
+    <p>Wartości <code>for_each</code> (klucze) muszą być znane podczas planowania. Referencja do atrybutu, który poznamy dopiero po apply — np. ID nadawanego przez API — kończy się błędem. Plan pokazuje takie wartości jako <code>(known after apply)</code>.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li><code>count</code>: tożsamość = pozycja; usunięcie ze środka przesuwa resztę.</li>
+    <li><code>for_each</code>: tożsamość = klucz; usuwasz dokładnie jeden obiekt.</li>
+    <li>Klucze <code>for_each</code> muszą być znane w czasie planu.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-mod" data-level="2" data-title="Moduły">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Moduły: funkcje z infrastrukturą w środku</h2><span class="tag">variable na wejściu, output na wyjściu</span></div></div>
+  <p class="reveal">Moduł to katalog plików <code>.tf</code>. Moduł główny wywołuje inne blokiem <code>module "net" { source = "./modules/network" … }</code>. Źródłem może być katalog lokalny, Registry albo repozytorium Git. Zasoby modułu dostają adresy z prefiksem <code>module.net.</code>, a wartości wychodzą na zewnątrz tylko przez <code>output</code>.</p>
+
+  <figure class="fig wide" id="f-mod">
+    <div class="ftitle">▶ Drzewo modułów <span>kliknij moduł</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="net">module.net</button>
+      <button class="btn" data-act="app">module.app</button>
+      <button class="btn" data-act="flow">⇢ przepływ outputu</button>
+      <button class="btn bad" data-act="leak">💥 sięgnij do wnętrza</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="md-tree" id="md-tree"></div>
+    <div class="status" id="md-st">Kliknij moduł.</div>
+    <figcaption>Nazwy modułów i zasobów ilustracyjne.</figcaption>
+  </figure>
+
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Przeniosłem zasoby do modułu i plan chce wszystko zniszczyć. Co zrobiłem źle?</div>
+      <div class="a">O:</div><div>Zmieniły się adresy (doszedł prefiks <code>module.…</code>). Dodaj bloki <code>moved { from = aws_vpc.main, to = module.net.aws_vpc.this }</code> — plan pokaże przeniesienie zamiast replace.</div>
+    </div>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Moduł = katalog; interfejs = variable + output.</li>
+    <li>Adresy w module mają prefiks <code>module.X.</code>.</li>
+    <li>Refaktoryzacja do modułów wymaga bloków <code>moved</code> (albo ręcznego <code>terraform state mv</code>).</li></ul>
+  </div>
+</section>
+
+<!-- ======================= PART IV ======================= -->
+<section class="part" id="part-4" data-level="2">
+  <span class="part-no">Część IV</span><h2>Jak abstrakcje mapują się na chmury</h2><p>Co provider robi z twoim blokiem, dlaczego „ta sama sieć” w trzech chmurach to trzy różne zasoby, i jak żyć z API, które odpowiada z opóźnieniem.</p>
+</section>
+
+<section class="chapter" id="ch-crud" data-level="2" data-title="Schema → CRUD → API">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Od bloku resource do wywołania API</h2><span class="tag">jeden typ zasobu = schemat + Create/Read/Update/Delete</span></div></div>
+  <p class="reveal">Każdy typ zasobu w providerze to <b>schemat</b> (jakie argumenty i atrybuty, które są wymagane, które wymuszają replace) oraz implementacja operacji <b>Create, Read, Update, Delete</b>. Core decyduje <em>co</em> zrobić (akcja z planu), provider <em>jak</em>: tłumaczy argumenty na żądania do API konkretnej chmury i zapisuje odpowiedź jako atrybuty w state.</p>
+  <p class="reveal">Dlatego abstrakcja Terraform kończy się na poziomie <b>cyklu życia</b>: create, read, update, delete, import. Same zasoby nie są abstrakcyjne — <code>aws_vpc</code> ma argumenty EC2, a <code>azurerm_virtual_network</code> argumenty ARM.</p>
+
+  <figure class="fig wide" id="f-crud">
+    <div class="ftitle">▶ Ta sama akcja, trzy API <span>wybierz chmurę i operację</span></div>
+    <div class="ctrl">
+      <label>chmura <select id="cr-cloud"><option value="aws">AWS</option><option value="az">Azure</option><option value="gcp">Google Cloud</option></select></label>
+      <button class="btn primary" data-act="create">create</button>
+      <button class="btn" data-act="read">read (refresh)</button>
+      <button class="btn bad" data-act="replace">💥 zmiana wymagająca replace</button>
+    </div>
+    <div class="cr-flow" id="cr-flow"></div>
+    <div class="status" id="cr-st">Wybierz operację.</div>
+    <figcaption>Uproszczenie: pokazano jedno główne wywołanie API na operację; provider zwykle wykonuje kilka (odczyt po utworzeniu, czekanie na gotowość). Ścieżki URL skrócone.</figcaption>
+  </figure>
+
+  <div class="box geek reveal" data-level="3"><span class="lbl">🤓 Głębiej: Azure ma dwa providery</span>
+    <p><code>azurerm</code> ma ręcznie zaprojektowane zasoby z wygodnymi argumentami. <code>azapi</code> to cienka warstwa na ARM REST API: pozwala zarządzać dowolnym typem zasobu Azure w dowolnej wersji API — także funkcjami, których <code>azurerm</code> jeszcze nie obsługuje. Płacisz za to mniej wygodnym, „surowym” ciałem żądania.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Core: co zrobić. Provider: jak to zrobić w danym API.</li>
+    <li>Wspólna jest semantyka cyklu życia, nie model zasobów.</li>
+    <li>Nowa funkcja chmury jest w Terraform dopiero wtedy, gdy ma ją provider.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-map3" data-level="2" data-title="Sieć, VM, IAM w 3 chmurach">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Ten sam pomysł, trzy różne zasoby</h2><span class="tag">Terraform nie jest warstwą multi-cloud</span></div></div>
+  <p class="reveal">Częsty mit: „napiszę kod raz i przeniosę między chmurami”. Terraform daje wspólny <b>język i workflow</b>, ale nie wspólny <b>model zasobów</b>. Sieć w AWS jest regionalna, w Google Cloud globalna (podsieci są regionalne), a w Azure każdy zasób musi leżeć w grupie zasobów. Kod trzeba napisać osobno dla każdej chmury.</p>
+
+  <figure class="fig wide" id="f-map3">
+    <div class="ftitle">▶ Słownik pojęć <span>wybierz koncept</span></div>
+    <div class="ctrl" id="m3-btns"></div>
+    <div class="m3-grid" id="m3-grid"></div>
+    <div class="status" id="m3-st"></div>
+    <figcaption>Wybrane typy zasobów z providerów hashicorp/aws, hashicorp/azurerm i hashicorp/google; każdy z nich ma też inne, pokrewne zasoby.</figcaption>
+  </figure>
+
+  <div class="box fireside reveal"><span class="lbl">🔥 Rozmowa przy kominku</span>
+    <div class="fire">
+      <div class="line l2"><span class="who">aws_vpc</span><span>Mam swój blok CIDR i żyję w regionie. Podsieć dostaje strefę dostępności.</span></div>
+      <div class="line l1"><span class="who">google_compute_network</span><span>Ja jestem globalna. Regiony mają dopiero moje podsieci.</span></div>
+      <div class="line l2"><span class="who">azurerm_virtual_network</span><span>A ja bez grupy zasobów nawet nie powstanę.</span></div>
+    </div>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Wspólny język, workflow i state — różne zasoby.</li>
+    <li>Kontener zakresu: konto+region (AWS), subskrypcja+grupa zasobów (Azure), projekt (GCP).</li>
+    <li>Wspólną fasadę możesz zbudować sam modułami, ale to twoja abstrakcja, nie Terraform.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-alias" data-level="2" data-title="Auth, aliasy, multi-region">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Uwierzytelnienie, aliasy i wiele regionów</h2><span class="tag">jeden provider, wiele konfiguracji</span></div></div>
+  <p class="reveal">Blok <code>provider</code> ustawia region, konto i uwierzytelnienie. Sekretów nie wpisuj w kod — providery czytają standardowe źródła poświadczeń chmury (zmienne środowiskowe, profile, tożsamość maszyny/CI). Gdy potrzebujesz dwóch regionów albo dwóch kont, tworzysz drugą konfigurację z argumentem <code>alias</code> i wskazujesz ją w zasobie przez <code>provider = aws.eu</code>.</p>
+
+  <figure class="fig wide" id="f-alias">
+    <div class="ftitle">▶ Routing zasobów do konfiguracji providera <span>kliknij zasób</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="b1">aws_s3_bucket.logs</button>
+      <button class="btn" data-act="b2">aws_s3_bucket.replica (provider = aws.eu)</button>
+      <button class="btn bad" data-act="bad">💥 zapomniany provider =</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+<pre class="al-pre"><code>provider "aws" { region = "us-east-1" }
+provider "aws" {
+  alias  = "eu"
+  region = "eu-central-1"
+}</code></pre>
+    <div class="al-row"><div class="al-reg" id="al-us"><b>aws (domyślny)</b><small>us-east-1</small><div class="al-items"></div></div><div class="al-reg" id="al-eu"><b>aws.eu</b><small>eu-central-1</small><div class="al-items"></div></div></div>
+    <div class="status" id="al-st">Kliknij zasób.</div>
+    <figcaption>Nazwy bucketów ilustracyjne.</figcaption>
+  </figure>
+
+  <div class="box geek reveal" data-level="3"><span class="lbl">🤓 Głębiej</span>
+    <p>Moduły nie powinny same deklarować bloków <code>provider</code> — moduł dziedziczy domyślne konfiguracje od wywołującego, a aliasy przekazuje się jawnie argumentem <code>providers = { aws = aws.eu }</code> w bloku <code>module</code>. State zapamiętuje, której konfiguracji providera użyto dla zasobu.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Konfiguracja bez <code>alias</code> jest domyślna.</li>
+    <li>Zasób wybiera alias przez <code>provider = aws.eu</code>.</li>
+    <li>Poświadczenia z otoczenia, nie z kodu.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-ec" data-level="3" data-title="Eventual consistency, timeouts">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>API, które odpowiada „jeszcze nie”</h2><span class="tag">utworzone ≠ widoczne wszędzie</span></div></div>
+  <p class="reveal">Chmury to systemy rozproszone. Wiele API jest <b>ostatecznie spójnych</b>: obiekt utworzony przed chwilą może przez moment nie być widoczny dla innego wywołania. Terraform Core tego nie rozwiązuje — robią to providery: ponawiają żądania, czekają na stan „gotowy” i mają limity czasu. Część zasobów pozwala zmienić te limity zagnieżdżonym blokiem <code>timeouts { create = "60m" }</code>.</p>
+
+  <figure class="fig wide" id="f-ec">
+    <div class="ftitle">▶ Rola IAM i jej pierwsze użycie <span>z ponawianiem i bez</span></div>
+    <div class="ctrl">
+      <button class="btn primary" data-act="retry">▶ provider z ponawianiem</button>
+      <button class="btn bad" data-act="noretry">💥 bez ponawiania</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="log" id="ec-log"></div>
+    <div class="status" id="ec-st">Wybierz wariant.</div>
+    <figcaption>Ilustracja: komunikaty i czasy wymyślone; pokazują wzorzec, a nie zachowanie konkretnego providera.</figcaption>
+  </figure>
+
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Spójność i ponawianie to odpowiedzialność providera.</li>
+    <li>Długie operacje: blok <code>timeouts</code>, jeśli zasób go wspiera.</li>
+    <li>Błąd po timeout nie cofa zmian — zobacz następny rozdział.</li></ul>
+  </div>
+</section>
+
+<!-- ======================= PART V ======================= -->
+<section class="part" id="part-5" data-level="2">
+  <span class="part-no">Część V</span><h2>Granice i porównania</h2><p>Czego Terraform nie robi, i jak to samo rozwiązują natywne narzędzia AWS, Azure i Google Cloud.</p>
+</section>
+
+<section class="chapter" id="ch-limits" data-level="2" data-title="Co można, czego nie">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Co można, a czego nie</h2><span class="tag">brak rollbacku to cecha, nie bug</span></div></div>
+  <p class="reveal">Gdy apply trafi na błąd, Terraform loguje błąd, zapisuje w state zmiany, które już się udały, zdejmuje blokadę i kończy. <b>Nie cofa automatycznie</b> częściowo wykonanego apply. Infrastruktura może zostać w stanie pośrednim; poprawiasz kod (albo przyczynę) i uruchamiasz apply ponownie — plan dokończy resztę.</p>
+
+  <figure class="fig wide" id="f-part">
+    <div class="ftitle">▶ Apply przerwany w połowie <span>Terraform vs rollback stosu</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-act="tf">💥 Terraform: błąd w kroku 3</button>
+      <button class="btn" data-act="fix">🔧 popraw i apply ponownie</button>
+      <button class="btn" data-act="cfn">CloudFormation: Roll back</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="pa-steps" id="pa-steps"></div>
+    <div class="status" id="pa-st">Wybierz scenariusz.</div>
+    <figcaption>Uproszczenie: cztery niezależne kroki wykonywane po kolei; w Terraform mogłyby iść równolegle.</figcaption>
+  </figure>
+
+  <div class="two reveal">
+    <div><h3>✅ Terraform potrafi</h3>
+      <ul><li>deklaratywnie zarządzać zasobami każdej usługi, dla której jest provider (chmury, DNS, SaaS, Kubernetes…)</li>
+      <li>pokazać plan przed zmianą</li>
+      <li>wykryć drift obiektów, które zna</li>
+      <li>przejąć istniejące zasoby (<code>import</code>) i refaktoryzować (<code>moved</code>)</li>
+      <li>walidować założenia: <code>validation</code>, <code>precondition</code>, bloki <code>check</code></li></ul></div>
+    <div><h3>❌ Terraform nie</h3>
+      <ul><li>nie cofa automatycznie nieudanego apply</li>
+      <li>nie widzi zasobów spoza state</li>
+      <li>nie jest narzędziem do konfiguracji systemów operacyjnych — provisionery to ostateczność</li>
+      <li>nie da kluczy <code>for_each</code> znanych dopiero po apply</li>
+      <li>nie ukryje sekretów w state przez samo <code>sensitive</code></li></ul></div>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga</span>
+    <p>Provisionery (<code>local-exec</code>, <code>remote-exec</code>) uruchamiają skrypty po utworzeniu zasobu, ale Terraform nie modeluje ich skutków w planie. Dokumentacja każe wyczerpać wszystkie alternatywy (obrazy maszyn, narzędzia do zarządzania konfiguracją, mechanizmy samego providera) i dopiero w ostateczności sięgać po provisioner.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Nieudany apply: część zmian zostaje, state je zna, brak rollbacku.</li>
+    <li>Naprawa = poprawka + kolejny apply.</li>
+    <li>Konfiguracja OS i aplikacji — inne narzędzia.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-cfn" data-level="2" data-title="vs CloudFormation">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Terraform kontra CloudFormation</h2><span class="tag">plik state u ciebie vs stos po stronie AWS</span></div></div>
+  <p class="reveal">CloudFormation to natywne IaC AWS. Szablon (JSON/YAML) opisuje zasoby; z szablonu powstaje <b>stos</b> (stack), którego stan trzyma usługa AWS — nie masz pliku state ani backendu. Odpowiednikiem planu jest <b>change set</b>: pokazuje, co się zmieni (także czy zasób zostanie usunięty lub zastąpiony), a zmiany wchodzą dopiero po jego wykonaniu.</p>
+  <p class="reveal">Przy niepowodzeniu operacji stos można wycofać do ostatniego stabilnego stanu albo — opcją „Preserve successfully provisioned resources” — zachować udane zasoby i ponowić. Drift wykrywa osobna operacja <b>drift detection</b>; zasoby, które jej nie wspierają, dostają status <code>NOT_CHECKED</code>.</p>
+
+  <figure class="fig wide" id="f-cmp">
+    <div class="ftitle">▶ Porównywarka <span>wybierz scenariusz</span></div>
+    <div class="ctrl" id="cm-btns"></div>
+    <div class="cm-grid" id="cm-grid"></div>
+    <div class="status" id="cm-st"></div>
+    <figcaption>Uproszczenie: jedno zdanie na narzędzie; szczegóły w tekście rozdziałów. Stan na październik 2026.</figcaption>
+  </figure>
+
+  <div class="box geek reveal"><span class="lbl">🤓 Głębiej</span>
+    <p>W CloudFormation usunięcie zasobu z szablonu usuwa go przy aktualizacji stosu; atrybut <code>DeletionPolicy: Retain</code> zachowuje obiekt — to odpowiednik <code>removed</code> z <code>destroy = false</code>. Jedna operacja na hierarchii zagnieżdżonych stosów może tworzyć, zmieniać lub usuwać najwyżej 2500 zasobów.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>CFN: stan po stronie AWS, Terraform: plik state w backendzie.</li>
+    <li>Change set ≈ plan; drift detection ≈ refresh, ale na żądanie.</li>
+    <li>CFN tylko AWS; Terraform: każdy provider.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-bicep" data-level="2" data-title="vs ARM/Bicep">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Terraform kontra ARM i Bicep</h2><span class="tag">Azure trzyma stan za ciebie</span></div></div>
+  <p class="reveal">Bicep to język kompilowany do szablonów ARM. Nie ma plików state: Azure Resource Manager przechowuje stan zasobów, a wdrożenie jest idempotentne. Podgląd zmian daje operacja <b>what-if</b>. Domyślny tryb wdrożenia to <b>incremental</b>: zasoby w grupie, których nie ma w szablonie, zostają nietknięte. Tryb <b>complete</b> by je usunął, ale Microsoft go stopniowo wycofuje i do usuwania poleca <b>deployment stacks</b>.</p>
+  <p class="reveal">Różnica w myśleniu: Terraform usuwa to, co zna ze state, a czego nie ma w kodzie. ARM w trybie incremental niczego nie usuwa; dopiero deployment stack śledzi „swoje” zasoby i może je usunąć lub odłączyć, a także zablokować zmiany spoza stosu (<code>denySettings</code>).</p>
+  <div class="scroll-x reveal">
+  <table class="mini">
+    <thead><tr><th>Pojęcie Terraform</th><th>Odpowiednik Bicep/ARM</th><th>Różnica</th></tr></thead>
+    <tbody>
+      <tr><td>plik state</td><td>stan w ARM</td><td>nic do przechowywania ani blokowania</td></tr>
+      <tr><td><code>terraform plan</code></td><td>what-if</td><td>podgląd przed wdrożeniem</td></tr>
+      <tr><td>usunięcie z kodu</td><td>incremental: nic; deployment stack: usuń lub odłącz</td><td>trzeba świadomie wybrać stack</td></tr>
+      <tr><td>provider azurerm/azapi</td><td>typy zasobów ARM z wersją API</td><td>Bicep zna nowe typy bez czekania na providera</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>Bicep: brak state, what-if jako podgląd.</li>
+    <li>Incremental (domyślny) nie usuwa niczego.</li>
+    <li>Usuwanie i ochrona przed zmianami: deployment stacks.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="ch-gcp" data-level="3" data-title="GCP, OpenTofu">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Google Cloud i OpenTofu: gdy natywne = Terraform</h2><span class="tag">Deployment Manager odszedł</span></div></div>
+  <p class="reveal">Google Cloud Deployment Manager osiągnął koniec wsparcia 31 marca 2026 r.; Google każe migrować do <b>Infrastructure Manager</b>. Infra Manager to zarządzana usługa, która wdraża <em>konfiguracje Terraform</em> (z Cloud Storage, repozytorium Git lub katalogu lokalnego). Natywne IaC w Google Cloud to więc Terraform uruchamiany przez Google, a nie osobny język.</p>
+  <p class="reveal"><b>OpenTofu</b> powstał w 2023 r. jako fork Terraform, po tym jak HashiCorp zmienił licencję swoich produktów na Business Source License (BSL). Projekt trafił pod skrzydła Linux Foundation i dąży do zgodności z konfiguracjami Terraform — większość kodu działa bez zmian, ale funkcje dodane po rozejściu się projektów mogą się różnić.</p>
+  <div class="box relax reveal"><span class="lbl">😌 Spokojnie</span>
+    <p>Mechanizmy z tego przewodnika — state, graf, plan, providery — są wspólne dla Terraform, OpenTofu i Infra Managera. Uczysz się raz.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
+    <ul><li>GCP: Deployment Manager wycofany, Infra Manager uruchamia Terraform.</li>
+    <li>OpenTofu: otwarty fork Terraform, cel — zgodność.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="final" data-title="Egzamin + ściąga">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Egzamin + ściąga</h2><span class="tag">sprawdź, co zostało w głowie</span></div></div>
+  <div id="quiz"></div>
+  <div class="score" id="score">Wynik: 0 / 0</div>
+  <h3 class="reveal">Ściąga</h3>
+  <div class="scroll-x reveal">
+  <table class="mini cheat">
+    <thead><tr><th>Komenda / blok</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+    <tbody>
+      <tr><td>terraform init</td><td>backend, providery, moduły, lock file</td><td>nowy katalog, zmiana providerów/backendu</td></tr>
+      <tr><td>terraform init -upgrade</td><td>wybiera najnowsze wersje zgodne z ograniczeniami</td><td>świadoma aktualizacja providerów</td></tr>
+      <tr><td>terraform plan -out=tfplan</td><td>zapisuje plan</td><td>review w CI</td></tr>
+      <tr><td>terraform apply tfplan</td><td>wykonuje zapisany plan bez pytania</td><td>po zatwierdzeniu planu</td></tr>
+      <tr><td>plan/apply -refresh-only</td><td>tylko aktualizacja state</td><td>akceptacja driftu</td></tr>
+      <tr><td>plan/apply -replace=ADDR</td><td>wymusza replace</td><td>uszkodzony obiekt</td></tr>
+      <tr><td>-parallelism=n</td><td>limit równoległości, domyślnie 10</td><td>throttling API</td></tr>
+      <tr><td>terraform graph</td><td>graf w formacie DOT</td><td>debug zależności</td></tr>
+      <tr><td>import { to, id }</td><td>przejęcie istniejącego obiektu</td><td>zasoby z konsoli</td></tr>
+      <tr><td>moved { from, to }</td><td>zmiana adresu bez replace</td><td>rename, przeniesienie do modułu</td></tr>
+      <tr><td>removed { from … destroy = false }</td><td>usunięcie ze state bez niszczenia</td><td>oddanie zasobu</td></tr>
+      <tr><td>lifecycle { create_before_destroy }</td><td>nowy przed starym</td><td>replace bez przerwy</td></tr>
+      <tr><td>lifecycle { prevent_destroy }</td><td>błąd przy planie niszczącym</td><td>dane krytyczne</td></tr>
+      <tr><td>lifecycle { ignore_changes }</td><td>ignoruje zmiany atrybutów</td><td>atrybut zmienia ktoś inny</td></tr>
+      <tr><td>backend "s3" { use_lockfile = true }</td><td>blokada state w S3</td><td>zespół na AWS</td></tr>
+      <tr><td>provider = aws.eu</td><td>wybór aliasu providera</td><td>wiele regionów/kont</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box relax reveal"><span class="lbl">🎓 Gratulacje</span><p>Odpowiedź na pytanie z początku: kod już nie opisuje maszyny, ale <b>state</b> dalej trzyma wpis <code>aws_instance.web → i-…</code>. Adres w state bez odpowiednika w konfiguracji to dla planu akcja <code>destroy</code> — i stąd Terraform wie, którą dokładnie maszynę usunąć. Następny krok: weź małe środowisko, zrób refaktor z <code>moved</code>, przejmij jeden ręczny zasób przez <code>import</code> i przeczytaj każdy plan, zanim go zatwierdzisz.</p></div>
+</section>
+</main>
+
+<footer>
+  Przewodnik edukacyjny w jednym pliku HTML — bez frameworków, bez kroku budowania, bez zależności sieciowych.
+  Fakty sprawdzone (październik 2026) z dokumentacją developer.hashicorp.com/terraform, dokumentacją providerów hashicorp/aws, azurerm i google, docs.aws.amazon.com (CloudFormation, EC2 API), learn.microsoft.com (Bicep, ARM), cloud.google.com (Deployment Manager, Infrastructure Manager, Compute API) i opentofu.org.
+  Terraform jest znakiem towarowym HashiCorp; AWS, Azure i Google Cloud — ich właścicieli.
+</footer>
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sleep = ms => new Promise(r => setTimeout(r, REDUCE ? 0 : ms));
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, text, attrs = {}) {
+  const t = S('text', Object.assign({ x, y, 'text-anchor': 'middle' }, attrs), parent);
+  t.textContent = text;
+  return t;
+}
+function H(tag, cls, html, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const ease = k => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (REDUCE || ms <= 0) { fn(1); return res(); }
+    const t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / ms);
+      fn(ease(k));
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+function flyDot(parent, x0, y0, x1, y1, { ms = 600, color, r = 5 } = {}) {
+  const c = S('circle', { cx: x0, cy: y0, r, class: 'fly' }, parent);
+  c.style.fill = color || C.accent;
+  return tween(ms, k => { c.setAttribute('cx', x0 + (x1 - x0) * k); c.setAttribute('cy', y0 + (y1 - y0) * k); }).then(() => c.remove());
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function readColors() { for (const k of ['ink', 'paper', 'paper2', 'mut', 'line', 'accent', 'accent2', 'ok', 'bad', 'warn', 'dim', 'card']) C[k] = cssVar('--' + k); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function ringXY(cx, cy, r, f) { const a = f * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+
+/* ---------- structure: auto numbering, TOC, course map, level chips, depth switch ---------- */
+const LEVELS = ['Podstawy', 'Praktyk', 'Ekspert'];
+const lvlOf = el => +(el.dataset.level || 1);
+const levelled = (root = document) => $$('main [data-level]', root).filter(e => !e.closest('#map'));   // content, not the map's own links
+const DEPTH_KEY = 'akp-depth:' + location.pathname;
+const blocks = $$('main > section.part, main > section.chapter');
+const chapters = blocks.filter(b => b.classList.contains('chapter'));
+chapters.forEach((s, i) => { const n = $('.chap-num', s); if (n && !n.textContent.trim()) n.textContent = i; });
+const titleOf = s => s.dataset.title || $('h2', s).textContent.trim();
+(() => {
+  const toc = $('#toc'), map = $('#map');
+  if (toc) toc.innerHTML = '<b>Spis treści</b>';
+  let grp = null;
+  for (const b of blocks) {
+    const lv = lvlOf(b);
+    if (b.classList.contains('part')) {
+      const name = `${$('.part-no', b)?.textContent || ''} · ${$('h2', b).textContent}`;
+      if (toc) H('div', 'toc-part', null, toc).textContent = name;
+      if (map) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = name; grp.dataset.level = lv; }
+      continue;
+    }
+    const num = $('.chap-num', b)?.textContent || '';
+    if (toc) { const a = H('a', '', null, toc); a.href = '#' + b.id; a.textContent = `${num} · ${titleOf(b)}`; a.dataset.level = lv; }
+    if (map) {
+      if (!grp) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = 'Start'; }
+      const a = H('a', 'map-ch l' + lv, `<i>${num}</i><span></span>`, grp); a.href = '#' + b.id; a.dataset.level = lv;
+      $('span', a).textContent = titleOf(b);
+    }
+  }
+  const multi = levelled().some(e => lvlOf(e) > 1);
+  // level chips on chapter headings and "go deeper" summaries
+  chapters.forEach(s => { if (multi && s.dataset.level) { const h = $('.chap-head h2', s); if (h) H('span', 'lvl-chip l' + lvlOf(s), `L${lvlOf(s)} · ${LEVELS[lvlOf(s) - 1] || ''}`, h); } });
+  $$('details.deeper').forEach(d => { const sm = $('summary', d); if (sm) sm.insertAdjacentHTML('afterbegin', `<span class="lvl-chip l${lvlOf(d)}">L${lvlOf(d)}</span>`); });
+  // jumping to a chapter deeper than the current depth raises the depth first
+  $$('#toc a, #map a').forEach(a => a.addEventListener('click', () => { if (+a.dataset.level > depth) setDepth(+a.dataset.level); }));
+  const dEl = $('#depth');
+  if (!multi || !dEl) { if (dEl) dEl.remove(); return; }
+  dEl.innerHTML = '<span>Głębokość</span>';
+  LEVELS.forEach((n, i) => { const b = H('button', '', `${i + 1}<span class="nm"> ${n}</span>`, dEl); b.title = n; b.onclick = () => setDepth(i + 1); });
+})();
+let depth = LEVELS.length;
+try { const d = +localStorage.getItem(DEPTH_KEY); if (d >= 1 && d <= LEVELS.length) depth = d; } catch (e) { }
+function setDepth(d) {
+  depth = d;
+  try { localStorage.setItem(DEPTH_KEY, d); } catch (e) { }
+  levelled().forEach(el => el.classList.toggle('lvl-off', lvlOf(el) > depth));
+  $$('#toc a, #map a, .map-part').forEach(a => a.classList.toggle('dim', lvlOf(a) > depth));
+  $$('#depth button').forEach((b, i) => b.classList.toggle('on', i + 1 === depth));
+  $$('.lvl-hint').forEach(h => h.remove());
+  chapters.forEach(s => {
+    if (s.classList.contains('lvl-off')) return;
+    const hid = levelled(s).filter(e => e.classList.contains('lvl-off'));
+    if (!hid.length) return;
+    const need = Math.min(...hid.map(lvlOf));
+    const b = H('button', 'lvl-hint', `＋ ukryte głębsze bloki: ${hid.length} — pokaż poziom ${need} (${LEVELS[need - 1] || ''})`, s);
+    b.onclick = () => setDepth(need);
+  });
+}
+setDepth(depth);
+
+/* ---------- scroll machinery ---------- */
+const bar = $('#progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+    document.body.classList.toggle('past-cover', scrollY > innerHeight * .8);
+    ticking = false;
+  });
+}, { passive: true });
+
+const revealIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('shown'); revealIO.unobserve(e.target); }
+}), { threshold: 0.12 });
+$$('.reveal').forEach(el => revealIO.observe(el));
+
+const tocLinks = new Map($$('#toc a').map(a => [a.getAttribute('href').slice(1), a]));
+const tocIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove('active'));
+  const a = tocLinks.get(e.target.id); if (a) a.classList.add('active');
+  $$('#map a').forEach(m => { const on = m.getAttribute('href') === '#' + e.target.id; m.classList.toggle('here', on); if (on) m.classList.add('seen'); });
+}), { rootMargin: '-35% 0px -60% 0px' });
+$$('section.chapter').forEach(s => tocIO.observe(s));
+
+const figIO = new IntersectionObserver(es => es.forEach(e => {
+  const f = e.target._fig; if (!f) return;
+  if (e.isIntersecting) {
+    if (f.visible) return;
+    f.visible = true;
+    if (!f.seen) { f.seen = true; f.first && f.first(); }
+    f.enter && f.enter();
+  } else if (f.visible) {
+    f.visible = false; f.leave && f.leave();
+  }
+}), { threshold: 0.25 });
+function registerFig(el, api) { el._fig = api; figIO.observe(el); return api; }
+
+/* enqueue helper: serialize animation runs, drop excess clicks */
+function makeQueue() {
+  let queue = Promise.resolve(), pending = 0;
+  return fn => { if (pending >= 3) return; pending++; queue = queue.then(fn).catch(e => console.error(e)).finally(() => pending--); };
+}
+
+
+/* ---------- generic helpers ---------- */
+function paintBar(el, segs, cap) {           // stacked bar: segs = [{k, v, c, t}], widths as % of cap
+  for (const s of segs) {
+    let d = el.querySelector(`[data-k="${s.k}"]`);
+    if (!d) { d = H('div', 'seg', null, el); d.dataset.k = s.k; }
+    d.style.width = Math.min(100, 100 * s.v / cap) + '%';
+    d.style.background = s.c;
+    d.textContent = s.v >= cap * 0.07 ? s.t : '';
+  }
+}
+function logLine(box, text, cls = '') {      // append a fading-in line to a .log box (textContent: safe)
+  const d = H('div', cls, null, box); d.textContent = text;
+  requestAnimationFrame(() => d.classList.add('shown'));
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+function say(el, html, cls = '') { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = html; }
+const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase labels wrap between words, not mid-word
+
+/* ---------- cover ---------- */
+(() => {
+  const g = $('#cover-nodes');
+  const icons = ['📄', '🔌', '🗂️', '🔒', '🕸️', '📋', '☁️', '🧭'];
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = ringXY(200, 200, 150, i / 8);
+    const c = S('circle', { cx: x, cy: y, r: 17 }, g);
+    c.style.fill = C.paper2; c.style.stroke = C.ink; c.style.strokeWidth = 3;
+    T(g, x, y + 6, icons[i], { 'font-size': 16 });
+  }
+})();
+
+/* shared: three columns config | state | cloud */
+function triPaint(el, cols) {
+  const names = ['Konfiguracja (.tf)', 'State', 'Chmura (API)'];
+  el.innerHTML = '';
+  cols.forEach((items, i) => {
+    const c = H('div', 'tri-col', `<b>${names[i]}</b>`, el);
+    items.forEach(([t, cls]) => { const d = H('div', 'tri-it' + (cls ? ' ' + cls : ''), null, c); d.textContent = t; });
+  });
+}
+function planPaint(el, lines) { el.innerHTML = lines.join('\n'); }
+
+/* ---------- 1. decl ---------- */
+(() => {
+  const root = $('#f-decl'), S1 = $('#dc-s'), T1 = $('#dc-t'), st = $('#dc-st');
+  let s, t, run = 0; const enqueue = makeQueue();
+  function paint() {
+    S1.innerHTML = ''; T1.innerHTML = '';
+    s.forEach((v, i) => H('div', 'dc-vm' + (i >= 2 && v ? ' extra' : '') + (v ? '' : ' gone'), 'VM', S1));
+    t.forEach(v => H('div', 'dc-vm' + (v ? '' : ' gone'), 'VM', T1));
+  }
+  function reset() { run++; s = []; t = []; paint(); say(st, 'Naciśnij ▶.'); }
+  async function go() {
+    const my = run; const first = !t.length;
+    s.push(1, 1);
+    const missing = t.filter(v => !v).length;
+    if (first) t = [1, 1]; else t = t.map(() => 1);
+    paint(); await sleep(400); if (my !== run) return;
+    const live = s.filter(Boolean).length;
+    if (first) say(st, '<b>Pierwsze uruchomienie:</b> oba podejścia tworzą 2 VM. Na razie bez różnicy.', 'ok');
+    else if (missing) say(st, `<b>Skrypt</b> dołożył kolejne 2 VM (razem ${live}). <b>Terraform</b> wykrył brak jednej maszyny i odtworzył tylko ją — cel to 2.`, 'warn');
+    else say(st, `<b>Skrypt</b> nie wie, co już jest — ma teraz ${live} VM. <b>Terraform</b> porównał cel ze stanem: „No changes”.`, 'warn');
+  }
+  function manual() {
+    if (!t.length) { say(st, 'Najpierw ▶ — nie ma czego usuwać.'); return; }
+    run++; t[0] = 0; const i = s.indexOf(1); if (i >= 0) s[i] = 0; paint();
+    say(st, '<b>Ręczne usunięcie</b> po obu stronach. Naciśnij ▶ jeszcze raz.', 'bad');
+  }
+  $('[data-act=run]', root).onclick = () => enqueue(go);
+  $('[data-act=manual]', root).onclick = manual;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(go); enqueue(go); } });
+})();
+
+/* ---------- 2. hcl ---------- */
+(() => {
+  const root = $('#f-hcl'), pre = $('.hcl-pre', root), st = $('#hcl-st'), box = $('#hcl-btns');
+  const D = {
+    terraform: 'Ustawienia samego Terraform: skąd i w jakich wersjach pobrać providery (<code>required_providers</code>) oraz gdzie trzymać state (<code>backend</code>).',
+    provider: 'Konfiguracja wtyczki <code>aws</code>: tu region. Poświadczenia provider zwykle bierze z otoczenia, nie z kodu.',
+    variable: 'Wejście modułu. Wartość podasz w <code>-var</code>, pliku <code>.tfvars</code> lub zmiennej środowiskowej <code>TF_VAR_env</code>; tu jest wartość domyślna.',
+    locals: 'Nazwane wyrażenie. Odwołanie: <code>local.name</code> (liczba pojedyncza!).',
+    data: 'Tylko odczyt: znajdź najnowszy obraz AMI danego właściciela. Nic nie tworzy.',
+    resource: 'Obiekt zarządzany. Referencje <code>data.aws_ami.ubuntu.id</code> i <code>local.name</code> tworzą zależności w grafie.',
+    output: 'Wyjście: <code>public_ip</code> poznamy dopiero po utworzeniu maszyny — w planie będzie „(known after apply)”.'
+  };
+  Object.keys(D).forEach(k => { const b = H('button', 'btn', k, box); b.dataset.act = k; b.onclick = () => pick(k); });
+  function pick(k) {
+    pre.classList.add('sel');
+    $$('span[data-b]', pre).forEach(s => s.classList.toggle('on', s.dataset.b === k));
+    $$('button', box).forEach(b => b.classList.toggle('on', b.dataset.act === k));
+    say(st, `<b>${k}</b> — ${D[k]}`);
+  }
+  registerFig(root, { first() { pick('resource'); } });
+})();
+
+/* ---------- 3. provider ---------- */
+(() => {
+  const root = $('#f-prov'), st = $('#pv-st'), ver = $('#pv-ver'), lock = $('#pv-lock');
+  const core = $('#pv-core'), plug = $('#pv-plug'), api = $('#pv-api'), l1 = $('#pv-l1'), l2 = $('#pv-l2');
+  let inited, run = 0; const enqueue = makeQueue();
+  const hot = (...e) => { [core, plug, api, l1, l2].forEach(x => x.classList.remove('hot', 'err')); e.forEach(x => x.classList.add('hot')); };
+  function reset() { run++; inited = false; hot(); ver.textContent = 'nie pobrany'; lock.textContent = '.terraform.lock.hcl: —'; say(st, 'Naciśnij <code>terraform init</code>.'); }
+  async function init() {
+    const my = run; hot(core); say(st, 'Czytam <code>required_providers</code>: aws ~&gt; 6.0…');
+    await sleep(600); if (my !== run) return;
+    hot(plug); ver.textContent = 'v6.4.0 w .terraform/'; lock.textContent = '.terraform.lock.hcl: hashicorp/aws version = "6.4.0", constraints = "~> 6.0", hashes = [h1:…]';
+    inited = true;
+    say(st, '<b>init:</b> pobrano providera pasującego do ograniczenia i zapisano wybór oraz sumy kontrolne w lock file.', 'ok');
+  }
+  async function plan() {
+    if (!inited) { say(st, 'Bez <code>init</code> nie ma providera — plan nie ruszy.', 'bad'); return; }
+    const my = run; hot(core, l1); say(st, 'Core prosi providera przez gRPC o zaplanowanie zmian…');
+    await sleep(600); if (my !== run) return;
+    hot(plug, l2, api); say(st, 'Provider woła API AWS (odczyt bieżącego stanu) i zwraca wynik do Core.');
+    await sleep(700); if (my !== run) return;
+    hot(core); say(st, '<b>plan gotowy.</b> Core nie wysłał ani jednego żądania do AWS sam — zawsze przez providera.', 'ok');
+  }
+  function bump() {
+    if (!inited) { say(st, 'Najpierw <code>init</code>.'); return; }
+    run++; hot(plug);
+    say(st, 'W Registry jest v6.5.0, ale <code>terraform init</code> dalej wybiera <b>6.4.0</b> z lock file. Aktualizacja tylko świadomie: <code>terraform init -upgrade</code>, potem commit nowego lock file.', 'warn');
+  }
+  $('[data-act=init]', root).onclick = () => enqueue(init);
+  $('[data-act=plan]', root).onclick = () => enqueue(plan);
+  $('[data-act=bump]', root).onclick = bump;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(init); enqueue(plan); } });
+})();
+
+/* ---------- 4. addresses ---------- */
+(() => {
+  const root = $('#f-addr'), sel = $('#ad-sel'), parts = $('#ad-parts'), st = $('#ad-st');
+  const A = [
+    ['aws_instance.web', [['aws_instance', 'typ zasobu'], ['web', 'nazwa lokalna']], 'Pojedynczy zasób. Prefiks <code>aws_</code> mówi, że obsłuży go provider aws.'],
+    ['aws_instance.web[0]', [['aws_instance', 'typ'], ['web', 'nazwa'], ['[0]', 'indeks count']], 'Pierwsza instancja przy <code>count</code>. Indeksy od zera.'],
+    ['aws_instance.web["api"]', [['aws_instance', 'typ'], ['web', 'nazwa'], ['["api"]', 'klucz for_each']], 'Instancja przy <code>for_each</code> — tożsamość to klucz, nie pozycja.'],
+    ['module.net.aws_subnet.this["b"]', [['module.net', 'wywołanie modułu'], ['aws_subnet', 'typ'], ['this', 'nazwa'], ['["b"]', 'klucz']], 'Zasób wewnątrz modułu <code>net</code>. Ten sam blok w innym wywołaniu modułu ma inny adres.'],
+    ['data.aws_ami.ubuntu', [['data', 'data source'], ['aws_ami', 'typ'], ['ubuntu', 'nazwa']], 'Data source — tylko odczyt. Prefiks <code>data.</code> odróżnia go od zasobu zarządzanego tego samego typu.']
+  ];
+  A.forEach(([a], i) => { const o = H('option', '', null, sel); o.value = i; o.textContent = a; });
+  function show() {
+    const [a, p, d] = A[+sel.value]; parts.innerHTML = '';
+    p.forEach(([c, s]) => { const e = H('div', 'ad-part', '<code></code><small></small>', parts); $('code', e).textContent = c; $('small', e).textContent = s; });
+    say(st, d);
+  }
+  sel.onchange = show; show();
+  registerFig(root, { first() { sel.value = 3; show(); } });
+})();
+
+/* ---------- 5. state map ---------- */
+(() => {
+  const root = $('#f-map'), tri = $('#mp-tri'), pl = $('#mp-plan'), st = $('#mp-st');
+  let s, run = 0;
+  function paint() {
+    const cfg = [[`resource "aws_instance" "${s.name}"`, '']];
+    const state = s.state ? [[`aws_instance.${s.stName} → ${s.id}`, s.stName !== s.name ? 'warn' : '']] : [['(pusto)', 'dim']];
+    const cloud = s.cloud.map(([id, cls]) => [`EC2 ${id}`, cls]);
+    triPaint(tri, [cfg, state, cloud.length ? cloud : [['(nic)', 'dim']]]);
+  }
+  function reset() { run++; s = { name: 'web', stName: 'web', state: false, id: '', cloud: [] }; paint(); planPaint(pl, ['<span class="p">+ aws_instance.web will be created</span>']); say(st, 'Naciśnij apply.'); }
+  function apply() {
+    run++;
+    if (!s.state) { s.state = true; s.id = 'i-0abc'; s.stName = s.name; s.cloud = [['i-0abc', 'new']]; paint(); planPaint(pl, ['Apply complete! Resources: 1 added, 0 changed, 0 destroyed.']); say(st, '<b>apply:</b> obiekt powstał, a state zapisał mapowanie adresu na ID.', 'ok'); return; }
+    if (s.lost) { s.state = true; s.stName = s.name; s.id = 'i-0def'; s.cloud = [['i-0abc', 'bad'], ['i-0def', 'new']]; s.lost = false; paint(); planPaint(pl, ['Apply complete! Resources: 1 added, 0 changed, 0 destroyed.']); say(st, '<b>Duplikat.</b> Stara maszyna i-0abc dalej działa (i kosztuje), ale żaden state o niej nie wie.', 'bad'); return; }
+    if (s.stName !== s.name && !s.moved) { s.cloud = [['i-0abc', 'dim'], ['i-0ghi', 'new']]; s.id = 'i-0ghi'; s.stName = s.name; paint(); planPaint(pl, ['Apply complete! Resources: 1 added, 0 changed, 1 destroyed.']); say(st, 'Stara maszyna zniszczona, nowa utworzona — tylko dlatego, że zmieniła się <b>nazwa w kodzie</b>.', 'bad'); return; }
+    say(st, 'Brak zmian do wykonania.');
+  }
+  function rename(withMoved) {
+    if (!s.state) { say(st, 'Najpierw apply.'); return; }
+    run++; s.name = 'app'; s.moved = withMoved;
+    if (withMoved) { s.stName = 'app'; paint(); planPaint(pl, ['# aws_instance.web has moved to aws_instance.app', 'Plan: 0 to add, 0 to change, 0 to destroy.']); say(st, '<b>moved { from = aws_instance.web, to = aws_instance.app }</b> — state zmienia adres, obiekt i-0abc zostaje nietknięty.', 'ok'); return; }
+    paint();
+    planPaint(pl, ['<span class="m">- aws_instance.web will be destroyed</span>', '<span class="p">+ aws_instance.app will be created</span>', 'Plan: 1 to add, 0 to change, 1 to destroy.']);
+    say(st, 'Adres <code>aws_instance.web</code> jest w state, ale nie w kodzie → destroy. <code>aws_instance.app</code> jest w kodzie, ale nie w state → create. Naciśnij apply, żeby zobaczyć skutek.', 'warn');
+  }
+  function lose() {
+    if (!s.state) { say(st, 'Najpierw apply.'); return; }
+    run++; s.state = false; s.lost = true; paint();
+    planPaint(pl, ['<span class="p">+ aws_instance.' + s.name + ' will be created</span>', 'Plan: 1 to add, 0 to change, 0 to destroy.']);
+    say(st, 'Bez state Terraform nie wie, że i-0abc to „jego” maszyna. Plan: utwórz od nowa. Naciśnij apply.', 'bad');
+  }
+  $('[data-act=apply]', root).onclick = apply;
+  $('[data-act=rename]', root).onclick = () => rename(false);
+  $('[data-act=moved]', root).onclick = () => { if (s.state && s.name === 'app') { reset(); apply(); } rename(true); };
+  $('[data-act=lose]', root).onclick = lose;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { apply(); } });
+})();
+
+/* ---------- 6. drift ---------- */
+(() => {
+  const root = $('#f-drift'), tri = $('#dr-tri'), pl = $('#dr-plan'), st = $('#dr-st');
+  let s;
+  function paint() {
+    triPaint(tri, [
+      [[`tags = { env = "prod" }`, ''], ...(s.ign ? [['lifecycle { ignore_changes = [tags] }', 'new']] : [])],
+      [[`env = "${s.st}"`, s.st !== 'prod' ? 'warn' : '']],
+      [[`env = "${s.cloud}"`, s.cloud !== 'prod' ? 'bad' : '']]
+    ]);
+  }
+  function reset() { s = { st: 'prod', cloud: 'prod', ign: false }; paint(); planPaint(pl, ['No changes. Your infrastructure matches the configuration.']); say(st, 'Zacznij od ręcznej zmiany.'); }
+  function manual() { reset(); s.cloud = 'test'; paint(); planPaint(pl, ['(state jeszcze o tym nie wie)']); say(st, 'Ktoś zmienił tag w konsoli. State i kod mówią „prod”, chmura „test”.', 'bad'); }
+  function plan() {
+    if (s.cloud === 'prod') { say(st, 'Brak driftu — najpierw ✋.'); return; }
+    s.st = s.cloud; paint();
+    if (s.ign) { planPaint(pl, ['No changes. Your infrastructure matches the configuration.']); say(st, '<b>ignore_changes</b>: Terraform widzi różnicę w tagach, ale nie planuje jej poprawiać.', 'ok'); return; }
+    planPaint(pl, ['Note: Objects have changed outside of Terraform', '<span class="u">~ tags = { "env" = "test" -> "prod" }</span>', 'Plan: 0 to add, 1 to change, 0 to destroy.']);
+    say(st, '<b>plan</b> odświeżył state (teraz zna „test”), porównał z kodem („prod”) i proponuje <b>przywrócić</b> wartość z kodu.', 'warn');
+  }
+  function ro() {
+    if (s.cloud === 'prod') { say(st, 'Brak driftu — najpierw ✋.'); return; }
+    s.st = s.cloud; paint(); planPaint(pl, ['Apply complete! Resources: 0 added, 0 changed, 0 destroyed.']);
+    say(st, '<b>-refresh-only</b>: state przyjął „test”. Chmury nie dotknięto. Kod dalej mówi „prod” — następny zwykły plan znów zaproponuje zmianę.', 'ok');
+  }
+  function ign() { s.ign = true; paint(); say(st, 'Dodano <code>ignore_changes = [tags]</code>. Naciśnij plan.'); }
+  $('[data-act=manual]', root).onclick = manual;
+  $('[data-act=plan]', root).onclick = plan;
+  $('[data-act=ro]', root).onclick = ro;
+  $('[data-act=ign]', root).onclick = ign;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { manual(); setTimeout(plan, REDUCE ? 0 : 900); } });
+})();
+
+/* ---------- 7. lock ---------- */
+(() => {
+  const root = $('#f-lock'), A = $('#lk-a'), B = $('#lk-b'), Sx = $('#lk-s'), sv = $('#lk-sv'), pad = $('#lk-pad'), st = $('#lk-st');
+  let run = 0; const enqueue = makeQueue();
+  function clr() { [A, B].forEach(x => x.classList.remove('hot', 'wait')); Sx.classList.remove('bad'); pad.textContent = ''; }
+  function reset() { run++; clr(); sv.textContent = 'serial 5'; say(st, 'Wybierz scenariusz.'); }
+  async function nolock() {
+    reset(); const my = run;
+    A.classList.add('hot'); B.classList.add('hot'); say(st, 'Ala i Bartek jednocześnie czytają state (serial 5) i planują.');
+    await sleep(900); if (my !== run) return;
+    sv.textContent = 'serial 6: bucket'; say(st, 'Ala kończy apply i zapisuje state z bucketem.');
+    await sleep(900); if (my !== run) return;
+    Sx.classList.add('bad'); sv.textContent = 'serial 6: kolejka'; pad.textContent = '⚠️';
+    say(st, '<b>Zgubiona aktualizacja.</b> Bartek nadpisał state wersją bez bucketa. Bucket istnieje w chmurze, ale state o nim zapomniał.', 'bad');
+  }
+  async function lock() {
+    reset(); const my = run;
+    A.classList.add('hot'); pad.textContent = '🔒'; say(st, 'Ala bierze blokadę i robi apply.');
+    await sleep(700); if (my !== run) return;
+    B.classList.add('wait'); say(st, 'Bartek próbuje: <code>Error acquiring the state lock</code> — Terraform nie kontynuuje.', 'warn');
+    await sleep(1100); if (my !== run) return;
+    A.classList.remove('hot'); sv.textContent = 'serial 6: bucket'; pad.textContent = '🔓';
+    await sleep(500); if (my !== run) return;
+    B.classList.remove('wait'); B.classList.add('hot'); pad.textContent = '🔒'; say(st, 'Blokada zwolniona. Bartek planuje od nowa na serial 6 — z bucketem.');
+    await sleep(800); if (my !== run) return;
+    B.classList.remove('hot'); pad.textContent = '🔓'; sv.textContent = 'serial 7: bucket + kolejka';
+    say(st, '<b>Obie zmiany zachowane.</b> Blokada serializuje zapisy state.', 'ok');
+  }
+  $('[data-act=nolock]', root).onclick = () => enqueue(nolock);
+  $('[data-act=lock]', root).onclick = () => enqueue(lock);
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(lock); } });
+})();
+
+/* ---------- 8. import / removed ---------- */
+(() => {
+  const root = $('#f-ops'), tri = $('#op-tri'), pl = $('#op-plan'), st = $('#op-st');
+  function base() { triPaint(tri, [[['resource "aws_s3_bucket" "data"', '']], [['aws_s3_bucket.data → app-data', '']], [['bucket app-data', ''], ['bucket app-logs (ręczny)', 'warn']]]); planPaint(pl, ['']); }
+  function reset() { base(); say(st, 'Bucket <code>app-logs</code> istnieje w chmurze, ale Terraform go nie zna.'); }
+  function imp() {
+    triPaint(tri, [[['resource "aws_s3_bucket" "data"', ''], ['import { to = aws_s3_bucket.logs, id = "app-logs" }', 'new'], ['resource "aws_s3_bucket" "logs"', 'new']], [['aws_s3_bucket.data → app-data', ''], ['aws_s3_bucket.logs → app-logs', 'new']], [['bucket app-data', ''], ['bucket app-logs', '']]]);
+    planPaint(pl, ['aws_s3_bucket.logs: Importing... [id=app-logs]', 'Plan: 1 to import, 0 to add, 0 to change, 0 to destroy.']);
+    say(st, '<b>import</b>: obiekt trafia do state pod adresem z <code>to</code>. Od teraz Terraform nim zarządza — także usunie go, jeśli skasujesz blok.', 'ok');
+  }
+  function removed() {
+    triPaint(tri, [[['removed { from = aws_s3_bucket.data, lifecycle { destroy = false } }', 'new']], [['(aws_s3_bucket.data usunięty ze state)', 'dim']], [['bucket app-data', ''], ['bucket app-logs (ręczny)', 'warn']]]);
+    planPaint(pl, ['# aws_s3_bucket.data will no longer be managed by Terraform', 'Plan: 0 to add, 0 to change, 0 to destroy.']);
+    say(st, '<b>removed + destroy = false</b>: Terraform zapomina obiekt, ale go nie niszczy. Bucket z danymi zostaje w chmurze.', 'ok');
+  }
+  function del() {
+    triPaint(tri, [[['(blok skasowany)', 'dim']], [['aws_s3_bucket.data → app-data', 'bad']], [['bucket app-data', 'bad'], ['bucket app-logs (ręczny)', 'warn']]]);
+    planPaint(pl, ['<span class="m">- aws_s3_bucket.data will be destroyed</span>', '  (because aws_s3_bucket.data is not in configuration)', 'Plan: 0 to add, 0 to change, 1 to destroy.']);
+    say(st, '<b>Skasowany blok = destroy.</b> Adres w state bez konfiguracji. Gdyby był tu <code>prevent_destroy</code>, zniknąłby razem z blokiem.', 'bad');
+  }
+  $('[data-act=import]', root).onclick = imp;
+  $('[data-act=removed]', root).onclick = removed;
+  $('[data-act=delete]', root).onclick = del;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { imp(); } });
+})();
+
+/* ---------- 9. secrets ---------- */
+(() => {
+  const root = $('#f-sec'), grid = $('#sc-grid'), st = $('#sc-st'), box = $('#sc-btns');
+  const M = {
+    plain: ['zwykła zmienna', [1, 1, 1], 'Bez oznaczeń hasło jest widoczne w wyjściu planu, w pliku planu i w state.'],
+    sens: ['sensitive = true', [0, 1, 1], '<b>sensitive</b> redaguje wyjście CLI („(sensitive value)”), ale wartość dalej trafia do planu i state. A <code>terraform output -raw</code> pokaże ją otwartym tekstem.'],
+    wo: ['write-only (password_wo)', [0, 0, 0], '<b>Argument write-only</b>: wartość trafia do providera w trakcie operacji i nie jest zapisywana w planie ani w state.'],
+    eph: ['ephemeral', [0, 0, 0], '<b>Zasób ephemeral</b> (np. odczyt sekretu z menedżera sekretów): wartość istnieje tylko w trakcie operacji i Terraform jej nie utrwala.']
+  };
+  const where = ['wyjście plan/apply', 'plik planu', 'state'];
+  Object.keys(M).forEach(k => { const b = H('button', 'btn', M[k][0], box); b.dataset.act = k; b.onclick = () => pick(k); });
+  function pick(k) {
+    const [n, leak, d] = M[k]; grid.innerHTML = '';
+    where.forEach((w, i) => { const c = H('div', 'sc-cell ' + (leak[i] ? 'leak' : 'safe'), `<b>${w}</b>`, grid); H('code', '', null, c).textContent = leak[i] ? 'S3cr3t!' : (i === 0 && k === 'sens' ? '(sensitive value)' : '— brak —'); });
+    $$('button', box).forEach(b => b.classList.toggle('on', b.dataset.act === k));
+    say(st, d, leak[2] ? 'bad' : 'ok');
+  }
+  pick('plain');
+  registerFig(root, { first() { setTimeout(() => pick('sens'), REDUCE ? 0 : 900); } });
+})();
+
+/* ---------- 10. cycle ---------- */
+(() => {
+  const root = $('#f-cyc'), row = $('#cy-row'), log = $('#cy-log'), st = $('#cy-st');
+  const steps = ['init', 'plan -out', 'review', 'apply tfplan'];
+  let run = 0; const enqueue = makeQueue();
+  function reset() { run++; row.innerHTML = ''; steps.forEach(s => H('span', 'cy-step', s, row)); log.innerHTML = ''; say(st, 'Naciśnij ▶.'); }
+  const mark = (i, c) => { row.children[i].className = 'cy-step ' + c; };
+  async function go(stale) {
+    reset(); const my = run;
+    const L = [
+      ['$ terraform init', 'u'], ['Terraform has been successfully initialized!', 'g'],
+      ['$ terraform plan -out=tfplan', 'u'], ['Plan: 2 to add, 0 to change, 0 to destroy.', ''], ['Saved the plan to: tfplan', ''], ['# plan powstał ze state o serial 41', '']
+    ];
+    for (let i = 0; i < L.length; i++) {
+      mark(i < 2 ? 0 : 1, 'hot'); logLine(log, L[i][0], L[i][1]); await sleep(450); if (my !== run) return;
+      if (i === 1) mark(0, 'ok');
+    }
+    mark(1, 'ok'); mark(2, 'hot'); logLine(log, '… review w pull requeście …'); await sleep(700); if (my !== run) return;
+    if (stale) { logLine(log, '(w tym czasie inny potok zrobił apply — state serial 42)', 'e'); await sleep(600); if (my !== run) return; }
+    mark(2, 'ok'); mark(3, 'hot'); logLine(log, '$ terraform apply tfplan', 'u'); await sleep(500); if (my !== run) return;
+    if (stale) {
+      mark(3, 'bad'); logLine(log, 'Error: Saved plan is stale', 'e');
+      say(st, '<b>Plan odrzucony.</b> State zmienił się po utworzeniu planu (serial 41 → 42). Zrób nowy plan i review.', 'bad'); return;
+    }
+    mark(3, 'ok'); logLine(log, 'Apply complete! Resources: 2 added, 0 changed, 0 destroyed.', 'g');
+    say(st, '<b>Zapisany plan</b> wykonał się bez pytania o zgodę — dokładnie to, co przeszło review.', 'ok');
+  }
+  $('[data-act=ok]', root).onclick = () => enqueue(() => go(false));
+  $('[data-act=stale]', root).onclick = () => enqueue(() => go(true));
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => go(false)); } });
+})();
+
+/* ---------- 11. graph ---------- */
+(() => {
+  const root = $('#f-graph'), svg = $('#gr-svg'), st = $('#gr-st'), par = $('#gr-par');
+  const N = { vpc: [80, 60, 'aws_vpc'], role: [80, 190, 'aws_iam_role'], bucket: [455, 215, 'aws_s3_bucket'], subnet: [265, 30, 'aws_subnet'], sg: [265, 110, 'aws_security_group'], prof: [265, 170, 'instance_profile'], vm: [455, 100, 'aws_instance'], dns: [625, 165, 'dns_record'] };
+  const E = [['vpc', 'subnet'], ['vpc', 'sg'], ['role', 'prof'], ['subnet', 'vm'], ['sg', 'vm'], ['prof', 'vm'], ['vm', 'dns']];
+  let run = 0, nodes = {}, cyc = null; const enqueue = makeQueue();
+  function draw() {
+    svg.innerHTML = '<defs><marker id="gr-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mut)"/></marker></defs>';
+    E.forEach(([a, b]) => S('path', { class: 'gr-e', d: `M${N[a][0] + 70} ${N[a][1]} L${N[b][0] - 72} ${N[b][1]}` }, svg));
+    cyc = null; nodes = {};
+    for (const k in N) {
+      const [x, y, l] = N[k]; const g = S('g', { class: 'gr-n' }, svg);
+      S('rect', { x: x - 70, y: y - 15, width: 140, height: 30, rx: 7 }, g); T(g, x, y + 4, l, { class: 'small' }).style.fontWeight = 700;
+      nodes[k] = g;
+    }
+  }
+  function reset() { run++; draw(); say(st, 'Naciśnij ▶ apply.'); }
+  async function walk() {
+    reset(); const my = run, P = +par.value; const done = new Set(); let tick = 0;
+    while (done.size < Object.keys(N).length) {
+      const ready = Object.keys(N).filter(k => !done.has(k) && E.filter(e => e[1] === k).every(e => done.has(e[0]))).slice(0, P);
+      tick++; ready.forEach(k => nodes[k].classList.add('run'));
+      say(st, `Takt ${tick}: równolegle ${ready.length} — ${ready.map(k => N[k][2]).join(', ')}`);
+      await sleep(800); if (my !== run) return;
+      ready.forEach(k => { nodes[k].classList.remove('run'); nodes[k].classList.add('done'); done.add(k); });
+    }
+    say(st, `<b>Gotowe w ${tick} taktach</b> przy parallelism=${P}. ${P === 1 ? 'Jedna operacja naraz — jak skrypt.' : 'Niezależne gałęzie (VPC, IAM, bucket) szły równolegle; aws_instance czekał na wszystkie swoje zależności.'}`, 'ok');
+  }
+  function cycle() {
+    reset();
+    const p = S('path', { class: 'gr-e cyc', d: `M${N.vm[0]} ${N.vm[1] - 15} C ${N.vm[0]} -30, ${N.vpc[0]} -30, ${N.vpc[0]} ${N.vpc[1] - 15}` }, svg);
+    svg.insertBefore(p, svg.children[1]);
+    nodes.vm.classList.add('cyc'); nodes.vpc.classList.add('cyc'); nodes.subnet.classList.add('cyc');
+    say(st, '<b>Error: Cycle:</b> aws_vpc.main, aws_subnet.a, aws_instance.web (format uproszczony). Graf musi być acykliczny — Terraform nie wie, od czego zacząć, i przerywa przed jakąkolwiek zmianą.', 'bad');
+  }
+  $('[data-act=walk]', root).onclick = () => enqueue(walk);
+  $('[data-act=cycle]', root).onclick = cycle;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(walk); } });
+})();
+
+/* ---------- 12. actions ---------- */
+(() => {
+  const root = $('#f-act'), out = $('#ac-out'), st = $('#ac-st'), box = $('#ac-btns');
+  const A = {
+    tag: ['zmień tag', ['  <span class="u">~</span> resource "example_db" "main" {', '      <span class="u">~</span> tags = { "team" = "a" -> "b" }', '    }', 'Plan: 0 to add, 1 to change, 0 to destroy.'], '<b>update in-place:</b> API umie zmienić tagi na żywym obiekcie.', 'ok'],
+    name: ['zmień name', ['<span class="m">-</span>/<span class="p">+</span> resource "example_db" "main" {', '      <span class="u">~</span> name = "orders" -> "orders2" <span class="m"># forces replacement</span>', '    }', 'Plan: 1 to add, 0 to change, 1 to destroy.'], '<b>replace:</b> w tym (ilustracyjnym) API nazwy nie da się zmienić — provider oznaczył atrybut jako wymagający zastąpienia. Stara baza zniknie razem z danymi.', 'bad'],
+    add: ['dodaj blok', ['  <span class="p">+</span> resource "example_db" "audit" {', '      <span class="p">+</span> id   = (known after apply)', '      <span class="p">+</span> name = "audit"', '    }', 'Plan: 1 to add, 0 to change, 0 to destroy.'], '<b>create:</b> ID nada API — w planie „(known after apply)”.', 'ok'],
+    del: ['usuń blok', ['  <span class="m">-</span> resource "example_db" "main" {', '      <span class="m">-</span> name = "orders" -> null', '    }', 'Plan: 0 to add, 0 to change, 1 to destroy.'], '<b>destroy:</b> adres jest w state, nie ma go w kodzie.', 'bad'],
+    rep: ['-replace=example_db.main', ['<span class="m">-</span>/<span class="p">+</span> resource "example_db" "main" {', '    # will be replaced, as requested', '    }', 'Plan: 1 to add, 0 to change, 1 to destroy.'], '<b>wymuszony replace</b> bez zmiany kodu — gdy obiekt jest uszkodzony.', 'warn']
+  };
+  Object.keys(A).forEach(k => { const b = H('button', 'btn', A[k][0], box); b.dataset.act = k; b.onclick = () => pick(k); });
+  function pick(k) { const [, l, d, c] = A[k]; out.innerHTML = l.join('\n'); $$('button', box).forEach(b => b.classList.toggle('on', b.dataset.act === k)); say(st, d, c); }
+  registerFig(root, { first() { pick('tag'); setTimeout(() => pick('name'), REDUCE ? 0 : 1600); } });
+  pick('tag');
+})();
+
+/* ---------- 13. lifecycle cbd ---------- */
+(() => {
+  const root = $('#f-cbd'), tl = $('#cb-tl'), st = $('#cb-st');
+  let run = 0; const enqueue = makeQueue();
+  function rows(list) {
+    tl.innerHTML = '';
+    list.forEach(([lbl, segs]) => {
+      const r = H('div', 'cb-row', `<span>${lbl}</span><div class="cb-track"></div>`, tl);
+      segs.forEach(([x, w, c, t]) => { const s = H('div', 'cb-seg', null, $('.cb-track', r)); s.style.left = x + '%'; s.style.width = '0'; s.style.background = c; s.textContent = t; s.dataset.w = w; });
+    });
+    requestAnimationFrame(() => $$('.cb-seg', tl).forEach(s => s.style.width = s.dataset.w + '%'));
+  }
+  function reset() { run++; rows([['stary', [[0, 100, C.ok, 'działa']]], ['nowy', []], ['ruch', [[0, 100, C.accent, 'obsługiwany']]]]); say(st, 'Wybierz wariant.'); }
+  function def() { run++; rows([['stary', [[0, 30, C.ok, 'działa'], [30, 15, C.bad, 'destroy']]], ['nowy', [[45, 25, C.warn, 'create'], [70, 30, C.ok, 'działa']]], ['ruch', [[0, 30, C.accent, 'ok'], [30, 40, C.bad, 'PRZERWA'], [70, 30, C.accent, 'ok']]]]); say(st, '<b>Domyślnie:</b> destroy, potem create. Między nimi obiektu nie ma — przerwa w działaniu.', 'warn'); }
+  function cbd() { run++; rows([['stary', [[0, 55, C.ok, 'działa'], [55, 15, C.bad, 'destroy']]], ['nowy', [[0, 25, C.warn, 'create'], [25, 75, C.ok, 'działa']]], ['ruch', [[0, 100, C.accent, 'bez przerwy']]]]); say(st, '<b>create_before_destroy:</b> nowy obiekt powstaje pierwszy, stary znika na końcu. Przez chwilę istnieją oba.', 'ok'); }
+  function name() { run++; rows([['stary', [[0, 100, C.ok, 'działa']]], ['nowy', [[0, 20, C.bad, 'create: nazwa zajęta']]], ['ruch', [[0, 100, C.accent, 'ok (stary)']]]]); say(st, '<b>Konflikt:</b> oba obiekty muszą istnieć naraz, a API wymaga unikalnej nazwy. Rozwiązanie: generowana nazwa (np. <code>name_prefix</code>, jeśli zasób go ma).', 'bad'); }
+  function prev() { run++; rows([['stary', [[0, 100, C.ok, 'działa']]], ['nowy', []], ['ruch', [[0, 100, C.accent, 'ok']]]]); say(st, '<b>prevent_destroy:</b> plan z destroy tego zasobu kończy się błędem — nic się nie wykona. Działa, dopóki blok jest w kodzie.', 'warn'); }
+  $('[data-act=def]', root).onclick = def;
+  $('[data-act=cbd]', root).onclick = cbd;
+  $('[data-act=name]', root).onclick = name;
+  $('[data-act=prev]', root).onclick = prev;
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { def(); } });
+})();
+
+/* ---------- 14. count vs for_each ---------- */
+(() => {
+  const root = $('#f-cnt'), rows = $('#ct-rows'), st = $('#ct-st');
+  let mode = 'count', deleted = false;
+  const L = ['a', 'b', 'c'];
+  function paint() {
+    rows.innerHTML = '';
+    H('div', 'ct-row h', '<span>adres</span><span>name</span><span>akcja</span>', rows);
+    const R = mode === 'count'
+      ? (deleted ? [['[0]', 'a → b', 'update', 'u'], ['[1]', 'b → c', 'update', 'u'], ['[2]', 'c', 'destroy', 'm']] : L.map((v, i) => [`[${i}]`, v, '—', 'k']))
+      : (deleted ? [['["a"]', 'a', 'destroy', 'm'], ['["b"]', 'b', '—', 'k'], ['["c"]', 'c', '—', 'k']] : L.map(v => [`["${v}"]`, v, '—', 'k']));
+    R.forEach(([a, n, act, c]) => { const r = H('div', 'ct-row', '<span></span><span></span><span></span>', rows); const sp = r.children; sp[0].textContent = 'aws_iam_user.u' + a; sp[1].textContent = n; sp[2].textContent = act; sp[2].className = c; });
+    $$('[data-act=count],[data-act=fe]', root).forEach(b => b.classList.toggle('on', b.dataset.act === (mode === 'count' ? 'count' : 'fe')));
+  }
+  function set(m) { mode = m; deleted = false; paint(); say(st, m === 'count' ? 'count = length(var.users): tożsamość to pozycja na liście.' : 'for_each = toset(var.users): tożsamość to klucz.'); }
+  function del() { deleted = true; paint(); say(st, mode === 'count' ? '<b>count:</b> wszystko się przesunęło — 2 aktualizacje i 1 destroy, choć usunąłeś tylko „a”.' : '<b>for_each:</b> znika dokładnie <code>["a"]</code>. Reszta nietknięta.', mode === 'count' ? 'bad' : 'ok'); }
+  $('[data-act=count]', root).onclick = () => set('count');
+  $('[data-act=fe]', root).onclick = () => set('fe');
+  $('[data-act=del]', root).onclick = del;
+  $('[data-act=reset]', root).onclick = () => set(mode);
+  set('count');
+  registerFig(root, { first() { setTimeout(del, REDUCE ? 0 : 700); } });
+})();
+
+/* ---------- 15. modules ---------- */
+(() => {
+  const root = $('#f-mod'), tree = $('#md-tree'), st = $('#md-st');
+  function paint(hot, bad) {
+    tree.innerHTML = `<div class="md-node"><b>moduł główny</b>
+      <div class="md-node" id="md-net"><b>module.net</b> <small>source = "./modules/network"</small>
+        <span class="md-res">module.net.aws_vpc.this</span><span class="md-res">module.net.aws_subnet.this["a"]</span><span class="md-res">module.net.aws_subnet.this["b"]</span><span class="md-res" data-o>output "subnet_ids"</span></div>
+      <div class="md-node" id="md-app"><b>module.app</b> <small>subnet_ids = module.net.subnet_ids</small>
+        <span class="md-res" data-i>variable "subnet_ids"</span><span class="md-res">module.app.aws_instance.web</span></div></div>`;
+    if (hot) $('#md-' + hot).classList.add('hot');
+    if (bad) $('#md-app').classList.add('bad');
+  }
+  const net = () => { paint('net'); $$('#md-net .md-res').forEach(r => r.classList.add('on')); say(st, 'Zasoby modułu dostają prefiks <code>module.net.</code>. Ten sam kod wywołany drugi raz (np. <code>module "net2"</code>) da osobne adresy i osobne obiekty.'); };
+  const app = () => { paint('app'); $$('#md-app .md-res').forEach(r => r.classList.add('on')); say(st, 'module.app przyjmuje <code>subnet_ids</code> jako zmienną — nie wie, skąd pochodzą.'); };
+  const flow = () => { paint(); $('#md-net [data-o]').classList.add('on'); $('#md-app [data-i]').classList.add('on'); say(st, '<b>output → variable:</b> wartość wychodzi z module.net i wchodzi do module.app. Ta referencja tworzy też zależność: instancja poczeka na podsieci.', 'ok'); };
+  const leak = () => { paint(null, true); say(st, '<code>module.net.aws_subnet.this</code> użyte w module głównym → błąd. Zasoby modułu są prywatne; na zewnątrz widać tylko outputy.', 'bad'); };
+  $('[data-act=net]', root).onclick = net; $('[data-act=app]', root).onclick = app; $('[data-act=flow]', root).onclick = flow; $('[data-act=leak]', root).onclick = leak;
+  $('[data-act=reset]', root).onclick = () => { paint(); say(st, 'Kliknij moduł.'); };
+  paint();
+  registerFig(root, { first() { flow(); } });
+})();
+
+/* ---------- 16. crud ---------- */
+(() => {
+  const root = $('#f-crud'), flow = $('#cr-flow'), st = $('#cr-st'), cl = $('#cr-cloud');
+  const R = {
+    aws: { res: 'aws_vpc', create: 'EC2 API: CreateVpc', read: 'EC2 API: DescribeVpcs', note: 'API EC2 to akcje w stylu RPC (Action=CreateVpc).' },
+    az: { res: 'azurerm_virtual_network', create: 'PUT management.azure.com/…/Microsoft.Network/virtualNetworks/{name}?api-version=…', read: 'GET …/virtualNetworks/{name}?api-version=…', note: 'ARM to REST: PUT tworzy lub aktualizuje zasób pod jego ścieżką.' },
+    gcp: { res: 'google_compute_network', create: 'POST compute.googleapis.com/compute/v1/projects/{project}/global/networks', read: 'GET …/global/networks/{network}', note: 'Sieć VPC w GCP jest zasobem globalnym — widać to w ścieżce /global/.' }
+  };
+  function box(t, c, hot) { const b = H('div', 'cr-box' + (hot ? ' hot' : ''), `<b>${t}</b>`, flow); H('code', '', null, b).textContent = c; }
+  function show(op) {
+    const r = R[cl.value]; flow.innerHTML = '';
+    if (op === 'replace') {
+      box('plan (Core)', `${r.res}: -/+ replace`, true); box('provider', 'Delete, potem Create', false); box('API', 'usunięcie + ' + r.create, false);
+      say(st, 'Replace to dwie operacje na API: usunięcie i utworzenie. Kolejność odwraca <code>create_before_destroy</code>.', 'warn'); return;
+    }
+    box('plan (Core)', `${r.res}: ${op === 'create' ? '+ create' : 'refresh'}`, true);
+    box('provider', op === 'create' ? 'Create(): argumenty → żądanie' : 'Read(): odpowiedź → atrybuty w state', true);
+    box('API', op === 'create' ? r.create : r.read, true);
+    say(st, r.note, 'ok');
+  }
+  let last = 'create';
+  $('[data-act=create]', root).onclick = () => show(last = 'create');
+  $('[data-act=read]', root).onclick = () => show(last = 'read');
+  $('[data-act=replace]', root).onclick = () => show(last = 'replace');
+  cl.onchange = () => show(last);
+  show('create');
+  registerFig(root, { first() { setTimeout(() => { cl.value = 'az'; show(last); }, REDUCE ? 0 : 900); } });
+})();
+
+/* ---------- 17. map3 ---------- */
+(() => {
+  const root = $('#f-map3'), grid = $('#m3-grid'), st = $('#m3-st'), box = $('#m3-btns');
+  const M = {
+    scope: ['zakres', [['AWS', 'konto + region', 'region w bloku provider'], ['Azure', 'azurerm_resource_group', 'subskrypcja + grupa zasobów'], ['Google Cloud', 'projekt', 'argument project w providerze lub zasobie']], 'Każda chmura inaczej „trzyma” zasoby. W Azure grupa zasobów to też zasób Terraform.'],
+    net: ['sieć', [['AWS', 'aws_vpc', 'regionalna, cidr_block'], ['Azure', 'azurerm_virtual_network', 'w grupie zasobów, address_space'], ['Google Cloud', 'google_compute_network', 'globalna']], 'Trzy różne typy, trzy różne zestawy argumentów.'],
+    subnet: ['podsieć', [['AWS', 'aws_subnet', 'w strefie dostępności'], ['Azure', 'azurerm_subnet', 'w sieci wirtualnej'], ['Google Cloud', 'google_compute_subnetwork', 'regionalna']], 'Podsieć istnieje wszędzie, ale z innym zakresem.'],
+    vm: ['VM', [['AWS', 'aws_instance', 'instance_type, ami'], ['Azure', 'azurerm_linux_virtual_machine', 'size, osobny azurerm_network_interface'], ['Google Cloud', 'google_compute_instance', 'machine_type, zone']], 'Nawet „maszyna wirtualna” ma inne obowiązkowe zależności.'],
+    iam: ['uprawnienia', [['AWS', 'aws_iam_role + aws_iam_role_policy_attachment', 'role i polityki'], ['Azure', 'azurerm_role_assignment', 'rola + zakres + principal'], ['Google Cloud', 'google_project_iam_member', 'rola + członek na projekcie']], 'Modele IAM różnią się koncepcyjnie — nie da się ich przetłumaczyć 1:1.'],
+    store: ['storage', [['AWS', 'aws_s3_bucket', 'nazwa globalnie unikalna'], ['Azure', 'azurerm_storage_account', 'kontenery jako azurerm_storage_container'], ['Google Cloud', 'google_storage_bucket', 'location']], 'Obiektowy storage: bucket w AWS i GCP, konto + kontener w Azure.']
+  };
+  Object.keys(M).forEach(k => { const b = H('button', 'btn', M[k][0], box); b.dataset.act = k; b.onclick = () => pick(k); });
+  function pick(k) {
+    const [, cards, d] = M[k]; grid.innerHTML = '';
+    cards.forEach(([c, r, n]) => { const e = H('div', 'm3-card', `<b>${c}</b><code></code><span></span>`, grid); $('code', e).textContent = r; $('span', e).textContent = n; });
+    $$('button', box).forEach(b => b.classList.toggle('on', b.dataset.act === k));
+    say(st, d);
+  }
+  pick('scope');
+  registerFig(root, { first() { setTimeout(() => pick('net'), REDUCE ? 0 : 900); } });
+})();
+
+/* ---------- 18. alias ---------- */
+(() => {
+  const root = $('#f-alias'), us = $('#al-us .al-items'), eu = $('#al-eu .al-items'), st = $('#al-st');
+  const add = (el, t, c) => { const d = H('div', c || '', null, el); d.textContent = t; };
+  function reset() { us.innerHTML = ''; eu.innerHTML = ''; say(st, 'Kliknij zasób.'); }
+  $('[data-act=b1]', root).onclick = () => { reset(); add(us, 'aws_s3_bucket.logs'); say(st, 'Brak argumentu <code>provider</code> → domyślna konfiguracja (bez aliasu): us-east-1.'); };
+  $('[data-act=b2]', root).onclick = () => { reset(); add(us, 'aws_s3_bucket.logs'); add(eu, 'aws_s3_bucket.replica'); say(st, '<code>provider = aws.eu</code> kieruje zasób do konfiguracji z aliasem eu: eu-central-1.', 'ok'); };
+  $('[data-act=bad]', root).onclick = () => { reset(); add(us, 'aws_s3_bucket.logs'); add(us, 'aws_s3_bucket.replica', 'bad'); say(st, 'Zapomniany <code>provider = aws.eu</code>: replika powstała w <b>tym samym</b> regionie co oryginał. Bez błędu — tylko z bezsensownym wynikiem.', 'bad'); };
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { $('[data-act=b2]', root).click(); } });
+})();
+
+/* ---------- 19. eventual consistency ---------- */
+(() => {
+  const root = $('#f-ec'), log = $('#ec-log'), st = $('#ec-st');
+  let run = 0; const enqueue = makeQueue();
+  function reset() { run++; log.innerHTML = ''; say(st, 'Wybierz wariant.'); }
+  async function go(retry) {
+    reset(); const my = run;
+    const L = [['aws_iam_role.app: Creation complete', 'g'], ['aws_iam_instance_profile.app: Creating...', 'u'], ['→ API: rola „app” nie istnieje (jeszcze nie rozpropagowana)', 'e']];
+    for (const [t, c] of L) { logLine(log, t, c); await sleep(500); if (my !== run) return; }
+    if (!retry) { logLine(log, 'Error: creating instance profile: role not found', 'e'); say(st, '<b>Bez ponawiania</b> apply kończy się błędem, choć rola istnieje. Kolejny apply zwykle przejdzie — to typowy objaw braku spójności.', 'bad'); return; }
+    for (const t of ['retry 1 po 2 s → nadal nie widać roli', 'retry 2 po 4 s → OK']) { logLine(log, t); await sleep(600); if (my !== run) return; }
+    logLine(log, 'aws_iam_instance_profile.app: Creation complete', 'g');
+    say(st, '<b>Provider ponawia</b> z rosnącą przerwą, aż API „zobaczy” rolę albo minie limit czasu. Core nic o tym nie wie.', 'ok');
+  }
+  $('[data-act=retry]', root).onclick = () => enqueue(() => go(true));
+  $('[data-act=noretry]', root).onclick = () => enqueue(() => go(false));
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => go(true)); } });
+})();
+
+/* ---------- 20. partial apply ---------- */
+(() => {
+  const root = $('#f-part'), box = $('#pa-steps'), st = $('#pa-st');
+  const N = ['sieć', 'baza', 'kolejka', 'aplikacja'];
+  let run = 0, failed = false; const enqueue = makeQueue();
+  function paint(cls, sub) { box.innerHTML = ''; N.forEach((n, i) => H('div', 'pa-s ' + (cls[i] || ''), `<b>${i + 1}. ${n}</b><small>${sub[i] || ''}</small>`, box)); }
+  function reset() { run++; failed = false; paint([], []); say(st, 'Wybierz scenariusz.'); }
+  async function seq(fail, mode) {
+    reset(); const my = run; const c = [], s = [];
+    for (let i = 0; i < 4; i++) {
+      c[i] = 'run'; paint(c, s); await sleep(500); if (my !== run) return;
+      if (i === 2 && fail) { c[i] = 'bad'; s[i] = 'błąd API'; break; }
+      c[i] = 'ok'; s[i] = mode === 'cfn' ? 'utworzono' : 'w state';
+    }
+    paint(c, s); await sleep(400); if (my !== run) return;
+    if (mode === 'tf') { failed = true; say(st, '<b>Terraform:</b> sieć i baza zostają i są zapisane w state. Kolejka — błąd, aplikacja — nie ruszona. Brak automatycznego rollbacku.', 'bad'); return; }
+    if (mode === 'cfn') {
+      for (const i of [1, 0]) { c[i] = 'rb'; s[i] = 'wycofano'; paint(c, s); await sleep(500); if (my !== run) return; }
+      say(st, '<b>CloudFormation (Roll back):</b> stos wraca do ostatniego stabilnego stanu — utworzone zasoby są usuwane. Alternatywa: „Preserve successfully provisioned resources” i ponowienie.', 'warn');
+    }
+  }
+  async function fix() {
+    if (!failed) { say(st, 'Najpierw zepsuj apply 💥.'); return; }
+    const my = run; const c = ['ok', 'ok', 'run'], s = ['bez zmian', 'bez zmian'];
+    paint(c, s); await sleep(500); if (my !== run) return;
+    c[2] = 'ok'; s[2] = 'utworzono'; c[3] = 'run'; paint(c, s); await sleep(500); if (my !== run) return;
+    c[3] = 'ok'; s[3] = 'utworzono'; paint(c, s); failed = false;
+    say(st, '<b>Drugi apply</b> porównał state z kodem i dokończył tylko brakujące kroki: Plan: 2 to add, 0 to change, 0 to destroy.', 'ok');
+  }
+  $('[data-act=tf]', root).onclick = () => enqueue(() => seq(true, 'tf'));
+  $('[data-act=fix]', root).onclick = () => enqueue(fix);
+  $('[data-act=cfn]', root).onclick = () => enqueue(() => seq(true, 'cfn'));
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() { enqueue(() => seq(true, 'tf')); } });
+})();
+
+/* ---------- 21. compare ---------- */
+(() => {
+  const root = $('#f-cmp'), grid = $('#cm-grid'), st = $('#cm-st'), box = $('#cm-btns');
+  const T = ['Terraform', 'CloudFormation', 'Bicep / ARM', 'GCP Infra Manager'];
+  const M = {
+    state: ['gdzie jest stan', ['plik state w backendzie, który wybierasz i zabezpieczasz', 'stos po stronie usługi AWS', 'brak plików state — stan trzyma Azure', 'usługa uruchamia Terraform i zarządza jego state'], 'Największa różnica operacyjna: kto pilnuje pamięci o zasobach.'],
+    preview: ['podgląd zmian', ['terraform plan', 'change set', 'what-if', 'podgląd planu Terraform'], 'Każde narzędzie ma „plan”; różnią się szczegółowością i miejscem wykonania.'],
+    fail: ['błąd w połowie', ['brak rollbacku; udane zmiany w state; popraw i apply ponownie', 'roll back do stabilnego stanu albo zachowanie udanych zasobów i ponowienie', 'domyślnie wdrożenie kończy się błędem, a udane zasoby zostają (opcjonalnie rollback-on-error)', 'jak Terraform'], 'CloudFormation może wycofać cały stos do stabilnego stanu; ARM/Bicep ma opcjonalny rollback-on-error (ponowne wdrożenie ostatniego udanego); Terraform nie ma rollbacku.'],
+    drift: ['zmiana ręczna', ['wykrywa przy każdym planie (refresh) i proponuje przywrócenie', 'osobna operacja drift detection; nie naprawia sama', 'kolejne wdrożenie nadpisuje właściwości z szablonu; deployment stack może blokować zmiany (denySettings)', 'jak Terraform'], 'Wykrycie driftu to nie to samo co jego naprawa.'],
+    delete: ['usunięcie z kodu', ['destroy (chyba że removed + destroy = false)', 'usunięcie przy aktualizacji (chyba że DeletionPolicy: Retain)', 'incremental: zasób zostaje; deployment stack: usuń lub odłącz', 'jak Terraform'], 'Bicep w trybie domyślnym niczego nie usuwa — to odwrotna intuicja niż w Terraform.'],
+    scope: ['zasięg', ['każdy provider: AWS, Azure, GCP, SaaS, Kubernetes…', 'AWS (plus rozszerzenia przez rejestr typów)', 'Azure (zasoby ARM)', 'Google Cloud (i inne providery Terraform)'], 'Terraform to jeden workflow dla wielu API; natywne narzędzia obsługują tylko swoją chmurę, za to bez pośrednika w postaci providera.']
+  };
+  Object.keys(M).forEach(k => { const b = H('button', 'btn', M[k][0], box); b.dataset.act = k; b.onclick = () => pick(k); });
+  function pick(k) {
+    const [, cells, d] = M[k]; grid.innerHTML = '';
+    cells.forEach((c, i) => { const e = H('div', 'cm-c', `<b>${T[i]}</b><span></span>`, grid); $('span', e).textContent = c; });
+    $$('button', box).forEach(b => b.classList.toggle('on', b.dataset.act === k));
+    say(st, d);
+  }
+  pick('state');
+  registerFig(root, { first() { setTimeout(() => pick('fail'), REDUCE ? 0 : 900); } });
+})();
+
+/* ---------- quiz ---------- */
+(() => {
+  const Q = [
+    ['Uruchamiasz <code>terraform apply</code> drugi raz bez zmian w kodzie i chmurze. Co się stanie?', ['Powstanie druga kopia zasobów', 'Plan pokaże „No changes”', 'Terraform usunie i odtworzy zasoby'], 1, 'Model deklaratywny: plan to różnica między celem a stanem. Brak różnicy = brak akcji.'],
+    ['Czym różni się blok <code>data</code> od <code>resource</code>?', ['data tworzy obiekt, jeśli go nie ma', 'data tylko czyta istniejący obiekt', 'data działa tylko z modułami'], 1, 'Terraform wykonuje na data source wyłącznie operacje odczytu.'],
+    ['Wyszła nowa wersja providera. Co zrobi zwykłe <code>terraform init</code> z istniejącym lock file?', ['Pobierze najnowszą wersję', 'Wybierze wersję zapisaną w lock file', 'Zgłosi błąd'], 1, 'Nowsza wersja tylko przez <code>init -upgrade</code>.'],
+    ['Adres <code>module.net.aws_subnet.this["b"]</code> oznacza:', ['instancję o kluczu "b" zasobu w module net', 'trzecią podsieć z count', 'data source o nazwie b'], 0, 'Prefiks module.net, typ, nazwa lokalna i klucz for_each.'],
+    ['Zmieniasz nazwę zasobu w kodzie z web na app, bez innych zmian. Co pokaże plan?', ['Nic — to tylko etykieta', 'Destroy web + create app', 'Update in-place'], 1, 'Adres to tożsamość. Bez bloku <code>moved</code> stary adres jest do usunięcia, nowy do utworzenia.'],
+    ['Po <code>apply -refresh-only</code>, który zaakceptował ręczną zmianę tagu, zwykły plan:', ['pokaże „No changes”', 'znów zaproponuje wartość z kodu', 'usunie zasób'], 1, 'Refresh-only zmienia state, nie konfigurację. Kod nadal mówi co innego.'],
+    ['Jak włączyć blokadę state w backendzie S3 bez DynamoDB?', ['use_lockfile = true', 'lock = "s3"', 'Blokada w S3 jest niemożliwa'], 0, 'use_lockfile domyślnie false; dynamodb_table jest przestarzałe.'],
+    ['(L2) Chcesz, by Terraform przestał zarządzać bucketem, ale go nie usuwał. Co robisz?', ['Kasuję blok resource', 'Blok removed z lifecycle { destroy = false }', 'Dodaję prevent_destroy i kasuję blok'], 1, 'Skasowany blok = destroy, a prevent_destroy znika razem z blokiem.'],
+    ['(L2) Zmienna ma <code>sensitive = true</code>. Gdzie hasło jest nadal jawne?', ['Nigdzie', 'W state (i w terraform output -raw)', 'Tylko w logach CI'], 1, 'sensitive redaguje wyjście CLI; state przechowuje wartości. Omijają go write-only i ephemeral.'],
+    ['Zapisany plan zatwierdzono, ale w międzyczasie inny potok zmienił state. <code>apply tfplan</code>:', ['wykona stary plan', 'odrzuci go: Saved plan is stale', 'połączy oba plany'], 1, 'Plan pamięta serial state, z którego powstał.'],
+    ['Jak Terraform ustala kolejność tworzenia zasobów?', ['Kolejność w plikach .tf', 'Graf zależności z referencji', 'Alfabetycznie'], 1, 'Referencje → krawędzie grafu; niezależne węzły idą równolegle (domyślnie do 10).'],
+    ['Co oznacza w planie <code>-/+</code>?', ['update in-place', 'replace: destroy i create', 'import'], 1, 'Atrybut wymaga zastąpienia — API nie zmieni go na żywym obiekcie.'],
+    ['(L2) Masz <code>create_before_destroy</code> i stałą, unikalną nazwę zasobu. Ryzyko?', ['Brak ryzyka', 'Nowy obiekt nie powstanie, bo nazwa jest zajęta', 'Terraform pominie destroy na zawsze'], 1, 'Oba obiekty muszą istnieć naraz.'],
+    ['(L2) Usuwasz pierwszy element z listy użytej w <code>count</code>. Co się stanie?', ['Zniknie tylko pierwszy obiekt', 'Kolejne instancje przesuną się — aktualizacje i destroy ostatniej', 'Błąd planu'], 1, 'Przy count tożsamość to indeks. for_each usunąłby jeden klucz.'],
+    ['(L2) Moduł główny chce ID podsieci z modułu net. Jak?', ['module.net.aws_subnet.this.id', 'Przez output modułu net', 'Przez terraform_remote_state'], 1, 'Wnętrze modułu jest prywatne; interfejsem są outputy.'],
+    ['(L2) Kto tłumaczy „create aws_vpc” na wywołanie API?', ['Terraform Core', 'Provider', 'Backend'], 1, 'Core planuje, provider implementuje Create/Read/Update/Delete.'],
+    ['(L2) Czy kod dla aws_vpc zadziała w Azure po zmianie providera?', ['Tak, Terraform abstrahuje chmury', 'Nie — każda chmura ma własne typy zasobów', 'Tak, przez azapi'], 1, 'Wspólny jest język i workflow, nie model zasobów.'],
+    ['(L2) Jak utworzyć bucket w innym regionie niż domyślny?', ['Drugi provider z alias i provider = aws.eu w zasobie', 'Argument region w terraform {}', 'Osobny state'], 0, 'Aliasy providerów kierują zasoby do konfiguracji.'],
+    ['(L3) Kto ponawia żądania, gdy API jest ostatecznie spójne?', ['Terraform Core', 'Provider', 'Nikt'], 1, 'Ponawianie i czekanie na gotowość to logika providera.'],
+    ['(L2) Apply wywrócił się na trzecim z czterech zasobów. Co robi Terraform?', ['Cofa dwa pierwsze', 'Zapisuje udane zmiany w state i kończy; brak rollbacku', 'Ponawia w nieskończoność'], 1, 'Naprawa = poprawka i kolejny apply.'],
+    ['(L2) Gdzie CloudFormation trzyma stan?', ['W pliku .tfstate', 'W stosie po stronie AWS', 'W S3 użytkownika'], 1, 'Nie ma pliku state do zabezpieczania.'],
+    ['(L2) Bicep, tryb domyślny (incremental). Usuwasz zasób z szablonu i wdrażasz:', ['Zasób zostaje usunięty', 'Zasób zostaje nietknięty', 'Wdrożenie się nie uda'], 1, 'Do usuwania służą deployment stacks.'],
+    ['(L3) Co zastępuje Deployment Manager w Google Cloud?', ['Infrastructure Manager, który uruchamia Terraform', 'CloudFormation for GCP', 'Nic'], 0, 'Deployment Manager osiągnął koniec wsparcia 31 marca 2026 r.']
+  ];
+  const box = $('#quiz'); let answered = 0, good = 0; const scoreEl = $('#score');
+  function upd() { scoreEl.textContent = `Wynik: ${good} / ${answered}`; }
+  Q.forEach(([q, opts, ok, why], n) => {
+    const d = H('div', 'quiz-q reveal', `<h4>${n + 1}. ${q}</h4><div class="opts"></div><div class="why">💡 ${why}</div>`, box);
+    opts.forEach((t, i) => {
+      const b = H('button', '', null, $('.opts', d)); b.innerHTML = t;
+      b.onclick = () => {
+        if (d.classList.contains('done')) return;
+        d.classList.add('done'); answered++;
+        if (i === ok) good++; else b.classList.add('wrong');
+        $('.opts', d).children[ok].classList.add('right');
+        $$('button', d).forEach(x => x.disabled = true);
+        upd();
+      };
+    });
+    revealIO.observe(d);
+  });
+})();
+</script>
+</body>
+</html>
