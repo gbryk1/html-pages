@@ -1,0 +1,1943 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>23 wzorce GoF przed i po — animowany przewodnik</title>
+<meta name="description" content="Animowany przewodnik po 23 wzorcach projektowych GoF: kod bez wzorca i z wzorcem, co to poprawia, kiedy stosować i po czym poznać, że to miejsce na wzorzec.">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper:#fbf8f1; --paper2:#ffffff; --ink:#1c1c22; --mut:#5d5f6b; --line:#d9d3c4; --shadow:#1c1c22;
+  --accent:#1b6fa8; --accent2:#e39b2d; --ok:#2f9e63; --bad:#d64545; --warn:#c98a00;
+  --pen:#b8431f; --note:#fff4c2; --card:#f1ece0; --code:#f3efe6; --dim:#9aa0ab;
+  --hand:"Segoe Print","Bradley Hand","Comic Neue","Comic Sans MS","Chalkboard SE","Marker Felt",cursive;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,"Palatino Linotype",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#15171c; --paper2:#1d2027; --ink:#e7e5df; --mut:#a3a6b1; --line:#383c49; --shadow:#000;
+          --accent:#5aa9e6; --accent2:#f0b34f; --ok:#4cc38a; --bad:#f06b6b; --warn:#f0c040;
+          --pen:#ff9a6b; --note:#3a3420; --card:#232730; --code:#22262e; --dim:#5d6270; }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.68 var(--serif); }
+a { color:var(--accent); }
+code, kbd { font:.86em var(--mono); background:var(--code); padding:.08em .35em; border-radius:4px; }
+pre { font:14px/1.5 var(--mono); background:var(--code); border-left:4px solid var(--accent); padding:.9rem 1rem; overflow:auto; border-radius:4px; }
+pre code { background:none; padding:0; font-size:inherit; }
+h1,h2,h3,h4 { font-family:var(--sans); line-height:1.2; }
+h3 { font-size:1.28rem; margin:2.2rem 0 .6rem; }
+strong, b { font-weight:700; }
+.hand { font-family:var(--hand); color:var(--pen); }
+.mut { color:var(--mut); }
+
+/* progress + toc */
+#progress { position:fixed; inset:0 0 auto 0; height:5px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform-origin:0 50%; transform:scaleX(0); z-index:50; }
+#toc { position:fixed; top:1.4rem; left:1rem; width:205px; font:13.5px/1.35 var(--sans); z-index:40; display:none; opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #toc { opacity:1; pointer-events:auto; }
+#toc b { display:block; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.5rem; }
+#toc a { display:block; padding:.28rem .55rem; border-left:3px solid var(--line); color:var(--mut); text-decoration:none; }
+#toc a:hover { color:var(--ink); }
+#toc a.active { border-color:var(--accent2); color:var(--ink); font-weight:700; background:var(--card); }
+@media (min-width:1440px) { #toc { display:block; } }
+
+/* cover */
+.cover { min-height:96vh; display:grid; place-items:center; padding:3rem 1.2rem; position:relative; overflow:hidden;
+         background:radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 55%), var(--paper); }
+.cover-inner { max-width:1040px; width:100%; display:grid; gap:2rem; grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px) { .cover-inner { grid-template-columns:1.1fr .9fr; } }
+.cover .kicker { font:700 .85rem var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); }
+.cover h1 { font-size:clamp(2.4rem,5.6vw,4.2rem); margin:.3rem 0 .6rem; letter-spacing:-.02em; }
+.cover h1 span { display:inline-block; background:var(--ink); color:var(--paper); padding:0 .25em; transform:rotate(-1.5deg); }
+.cover .sub { font-size:1.2rem; color:var(--mut); max-width:34em; }
+.cover .stamp { display:inline-block; margin-top:1.2rem; font:700 1rem var(--hand); color:var(--pen); border:3px solid var(--pen); padding:.3rem .8rem; border-radius:8px; transform:rotate(-4deg); }
+.cover svg { width:100%; max-width:400px; justify-self:center; overflow:visible; }
+.spin { animation:spin 50s linear infinite; transform-origin:200px 200px; }
+.spin-rev { animation:spin 34s linear infinite reverse; transform-origin:200px 200px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.cover .scroll-hint { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); font:1rem var(--hand); color:var(--mut); animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob { 50% { transform:translate(-50%,8px); } }
+
+/* layout */
+main { max-width:800px; margin:0 auto; padding:0 1.2rem 6rem; }
+.chapter { padding-top:4.5rem; }
+.chap-head { display:flex; gap:1.1rem; align-items:center; margin-bottom:1rem; }
+.chap-num { flex:none; width:4.2rem; height:4.2rem; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font:800 1.7rem var(--sans); transform:rotate(-6deg); box-shadow:4px 4px 0 var(--accent2); }
+.chap-head h2 { font-size:clamp(1.6rem,3.8vw,2.2rem); margin:0; }
+.chap-head .tag { font:1.02rem var(--hand); color:var(--pen); display:block; margin-top:.3rem; }
+
+/* reveal */
+.js .reveal { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.js .reveal.shown { opacity:1; transform:none; }
+
+/* head-first boxes */
+.box { position:relative; margin:2rem 0; padding:1.1rem 1.25rem 1rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper2); box-shadow:5px 5px 0 var(--shadow); }
+.box > .lbl { position:absolute; top:-1rem; left:1rem; font:800 .82rem var(--sans); letter-spacing:.06em; text-transform:uppercase; background:var(--ink); color:var(--paper); padding:.25rem .65rem; border-radius:4px; transform:rotate(-2deg); }
+.box.brain { border-style:dashed; background:color-mix(in srgb, var(--accent) 8%, var(--paper2)); }
+.box.brain > .lbl { background:var(--accent); color:#fff; }
+.box.pencil { background:color-mix(in srgb, var(--accent2) 10%, var(--paper2)); }
+.box.pencil > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.watch { border-color:var(--bad); box-shadow:5px 5px 0 var(--bad); }
+.box.watch > .lbl { background:var(--bad); color:#fff; }
+.box.geek { background:var(--card); font-size:.95em; }
+.box.geek > .lbl { background:var(--mut); }
+.box.relax { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); }
+.box.relax > .lbl { background:var(--ok); color:#fff; }
+.box.bullets { background:var(--note); transform:rotate(-.4deg); }
+.box.bullets ul { margin:.3rem 0 0; padding-left:1.2rem; }
+.box.bullets li { margin:.35rem 0; }
+.box.bullets li::marker { content:"▸ "; color:var(--pen); }
+.box.usecase { border-color:var(--accent); box-shadow:5px 5px 0 var(--accent); }
+.box.usecase > .lbl { background:var(--accent); color:#fff; }
+.box.usecase ol { margin:.5rem 0 .3rem; padding-left:1.3rem; }
+.box.usecase li { margin:.4rem 0; }
+.box p:first-of-type { margin-top:.4rem; }
+.box p:last-child { margin-bottom:0; }
+.qa { display:grid; grid-template-columns:auto 1fr; gap:.4rem .8rem; margin:.8rem 0 1rem; }
+.qa .q, .qa .a { font:800 1.15rem var(--sans); }
+.qa .q { color:var(--accent); } .qa .a { color:var(--pen); }
+.qa div { margin:0; }
+details { margin-top:.8rem; }
+summary { cursor:pointer; font:700 .95rem var(--sans); color:var(--pen); }
+.fire { display:grid; gap:.7rem; margin-top:.5rem; }
+.fire .who { font:800 .85rem var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.fire .line { display:grid; grid-template-columns:7.5rem 1fr; gap:.8rem; }
+.fire .line.l2 .who { color:var(--accent); } .fire .line.l1 .who { color:var(--pen); }
+@media (max-width:560px) { .fire .line { grid-template-columns:1fr; gap:.1rem; } }
+.anno { font:1.05rem/1.35 var(--hand); color:var(--pen); display:block; margin:.4rem 0 .4rem 1.2rem; transform:rotate(-1.2deg); }
+.anno::before { content:"↖ "; }
+.pull { font:italic 1.35rem/1.45 var(--serif); border-left:6px solid var(--accent2); padding:.2rem 0 .2rem 1rem; margin:1.6rem 0; }
+.prompt-ex { font:13.5px/1.5 var(--mono); background:var(--code); border:1.5px dashed var(--line); border-radius:6px; padding:.7rem .85rem; margin-top:.7rem; white-space:pre-wrap; }
+.prompt-ex b { font-family:var(--sans); color:var(--pen); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+
+/* figures (generic) */
+.fig { margin:2.2rem -1rem; padding:1rem 1rem .9rem; background:var(--paper2); border:2px solid var(--ink); border-radius:8px; box-shadow:6px 6px 0 var(--shadow); position:relative; }
+@media (min-width:1000px) { .fig.wide { margin-left:-6rem; margin-right:-6rem; } }
+.fig .ftitle { font:800 .95rem var(--sans); margin:0 0 .6rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.fig .ftitle span { font:400 .85rem var(--sans); color:var(--mut); }
+.fig figcaption, .fig .cap { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.6rem; }
+.fig svg { display:block; width:100%; height:auto; }
+.fig svg text { fill:var(--ink); font-family:var(--sans); }
+.ctrl { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.4rem 0 .6rem; font:14px var(--sans); }
+.btn { font:700 13.5px var(--sans); color:var(--ink); background:var(--paper2); border:2px solid var(--ink); border-radius:999px; padding:.33rem .85rem; box-shadow:2px 2px 0 var(--shadow); cursor:pointer; transition:transform .08s; }
+.btn:hover { background:var(--card); }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.on { background:var(--ink); color:var(--paper); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.ctrl input[type=text], .ctrl select, .calc input { font:14px var(--mono); padding:.3rem .5rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); }
+.ctrl input[type=text] { width:9rem; }
+.ctrl label { display:inline-flex; gap:.35rem; align-items:center; }
+.scroll-x { overflow-x:auto; }
+.scroll-x > svg { min-width:620px; }
+.two { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:720px) { .two { grid-template-columns:1.2fr 1fr; align-items:start; } }
+table.mini { width:100%; border-collapse:collapse; font:13.5px var(--sans); }
+table.mini th, table.mini td { text-align:left; padding:.28rem .4rem; border-bottom:1px solid var(--line); }
+table.mini th { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+table.mini tr.flash td { animation:flashbg 1.2s ease; }
+@keyframes flashbg { 0%{ background:color-mix(in srgb, var(--accent2) 45%, transparent);} 100%{ background:transparent;} }
+.chip { display:inline-block; min-width:1.6em; text-align:center; font:800 12px var(--sans); color:#fff; padding:.1rem .4rem; border-radius:999px; }
+.status { font:14px/1.45 var(--sans); padding:.55rem .75rem; border-radius:6px; background:var(--card); margin-top:.5rem; min-height:2.2rem; }
+.status.ok { background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.status.bad { background:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.status.warn { background:color-mix(in srgb, var(--warn) 20%, var(--paper2)); }
+.fly { pointer-events:none; }
+.small { font-size:11px; }
+.tiny { font-size:9.5px; }
+.edge { stroke:var(--line); stroke-width:2; }
+.nd circle, .nd rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2.2; transition:fill .3s, opacity .3s; }
+.nd text { font-weight:800; font-size:12px; pointer-events:none; }
+.nd.off circle, .nd.off rect { fill:var(--dim); opacity:.5; stroke-dasharray:4 3; }
+.nd.hot circle, .nd.hot rect { fill:var(--accent2); }
+.nd.pulse circle, .nd.pulse rect, .pop { animation:pulse .6s ease; transform-box:fill-box; transform-origin:center; }
+@keyframes pulse { 40% { transform:scale(1.3); } }
+
+
+/* ---- generic extras: meters, legends, logs, stacked token bars ---- */
+main, footer { overflow-wrap:break-word; }   /* long URLs / identifiers in prose must not widen the page */
+.two > * { min-width:0; }
+.ctrl label { flex-wrap:wrap; max-width:100%; }
+.ctrl select { max-width:100%; min-width:0; }
+.meter { height:12px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.meter > i { display:block; height:100%; width:0; background:var(--ok); transition:width .6s ease, background .4s; }
+.legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.3rem; background:var(--c); vertical-align:-1px; }
+.log { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; height:190px; overflow-y:auto; }
+.log div { opacity:0; transform:translateX(-6px); transition:opacity .3s, transform .3s; white-space:pre-wrap; }
+.log div.shown { opacity:1; transform:none; }
+.log .u { color:var(--accent); font-weight:700; } .log .e { color:var(--bad); } .log .g { color:var(--ok); }
+.stack { position:relative; height:34px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:var(--paper); display:flex; }
+.stack .seg { height:100%; transition:width .7s ease; overflow:hidden; white-space:nowrap; font:700 10.5px/34px var(--sans); color:#fff; text-indent:4px; }
+
+/* ---- multi-level structure: parts, level chips, depth switch, "go deeper", course map ---- */
+.part { margin:5rem 0 0; padding:1.4rem 1.3rem 1.2rem; border-radius:10px; background:var(--ink); color:var(--paper); box-shadow:6px 6px 0 var(--accent2); }
+.part .part-no { font:800 .8rem var(--sans); letter-spacing:.18em; text-transform:uppercase; color:var(--accent2); }
+.part h2 { margin:.2rem 0 .35rem; font-size:clamp(1.7rem,4vw,2.4rem); }
+.part p { margin:0; font-size:1rem; opacity:.85; }
+.lvl-chip { display:inline-block; vertical-align:middle; margin-left:.5rem; font:800 10.5px/1.5 var(--sans); letter-spacing:.06em; text-transform:uppercase; padding:.08rem .5rem; border-radius:999px; color:#fff; background:var(--ok); }
+.lvl-chip.l2 { background:var(--accent); } .lvl-chip.l3 { background:#8e44ad; } .lvl-chip.l4 { background:var(--bad); }
+.lvl-off { display:none !important; }
+details.deeper { border:2px dashed #8e44ad; border-radius:8px; padding:.6rem .9rem; margin:1.8rem 0; background:color-mix(in srgb, #8e44ad 6%, var(--paper2)); }
+details.deeper > summary { font:700 1rem var(--sans); color:var(--ink); }
+details.deeper > summary .lvl-chip { margin:0 .4rem 0 0; }
+details.deeper[open] > summary { margin-bottom:.5rem; }
+.lvl-hint { display:block; width:100%; text-align:left; margin:1.4rem 0 0; font:700 13px var(--sans); color:var(--accent); background:none; border:2px dashed var(--accent); border-radius:8px; padding:.45rem .8rem; cursor:pointer; }
+#depth { position:fixed; left:1rem; bottom:1rem; z-index:45; display:flex; gap:.2rem; align-items:center; font:700 12px var(--sans); background:var(--paper2); color:var(--ink); border:2px solid var(--ink); border-radius:999px; padding:.22rem .3rem .22rem .75rem; box-shadow:3px 3px 0 var(--shadow); opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #depth { opacity:1; pointer-events:auto; }
+#depth button { font:700 12px var(--sans); border:0; border-radius:999px; padding:.25rem .6rem; background:transparent; color:var(--ink); cursor:pointer; }
+#depth button.on { background:var(--ink); color:var(--paper); }
+@media (max-width:640px) { #depth .nm { display:none; } }
+#toc { max-height:calc(100vh - 5.5rem); overflow-y:auto; }
+.toc-part { font:800 .7rem var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:.8rem 0 .2rem .2rem; }
+#map { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.7rem; margin:1.5rem 0; }
+.map-part { border:2px solid var(--line); border-radius:10px; padding:.55rem .6rem; background:var(--paper2); }
+.map-part > b { display:block; font:800 11.5px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin-bottom:.35rem; }
+.map-ch { display:flex; gap:.45rem; align-items:baseline; font:13px/1.3 var(--sans); color:var(--ink); text-decoration:none; padding:.22rem .4rem; border-radius:6px; border-left:4px solid var(--ok); margin:.15rem 0; transition:background .3s; }
+.map-ch.l2 { border-left-color:var(--accent); } .map-ch.l3 { border-left-color:#8e44ad; } .map-ch.l4 { border-left-color:var(--bad); }
+.map-ch i { font:800 11px var(--mono); font-style:normal; color:var(--mut); min-width:1.4em; }
+.map-ch:hover { background:var(--card); }
+.map-ch.here { background:var(--accent2); color:#1c1c22; font-weight:700; }
+.map-ch.seen::after { content:"✓"; margin-left:auto; color:var(--ok); font-weight:800; }
+.map-ch.dim, #toc a.dim { opacity:.4; }
+
+.gof-code { display:grid; grid-template-columns:1fr; gap:.8rem; margin:1.2rem 0; }
+@media (min-width:760px) { .gof-code { grid-template-columns:1fr 1fr; } }
+.gof-code > div { min-width:0; }
+.gof-code pre { font-size:12.5px; margin:.3rem 0 0; }
+.gof-code b { font:800 .8rem var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.gof-bad { color:var(--bad); } .gof-ok { color:var(--ok); }
+.gof-code > div:first-child pre { border-left-color:var(--bad); }
+.gof-code > div:last-child pre { border-left-color:var(--ok); }
+.gof-seen { font-size:.95em; color:var(--mut); }
+.gn rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2; }
+.gn text { font-weight:800; }
+.gn .gn-sub { font-size:9px; font-weight:400; fill:var(--mut); }
+.gn.smell rect { fill:color-mix(in srgb, var(--warn) 22%, var(--paper2)); }
+.gn.edit rect { stroke:var(--bad); stroke-width:3; fill:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.gn.add rect { stroke:var(--ok); stroke-width:3; stroke-dasharray:5 3; fill:color-mix(in srgb, var(--ok) 14%, var(--paper2)); }
+.gn .gn-badge { fill:var(--bad); font-size:13px; }
+.gn-edge { stroke:var(--mut); stroke-width:1.6; }
+.gn-edge.add { stroke:var(--ok); stroke-dasharray:5 3; }
+.gn-arrow { fill:var(--mut); }
+.gof-cnt { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.4rem; }
+.gof-pill { font:12.5px var(--sans); padding:.2rem .6rem; border-radius:999px; border:1.5px solid var(--line); background:var(--card); }
+.gof-pill.bez { border-color:var(--bad); } .gof-pill.z { border-color:var(--ok); }
+.gof-sx > svg { min-width:440px; }
+.sym-list { display:flex; flex-wrap:wrap; gap:.35rem; margin:.3rem 0 .8rem; }
+.sym-btn { font-weight:600; font-size:12.5px; text-align:left; }
+.sym-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.6rem; }
+.sym-col { border:2px solid var(--line); border-radius:8px; padding:.45rem .5rem; display:flex; flex-wrap:wrap; gap:.3rem; align-content:flex-start; }
+.sym-col > b { width:100%; font:800 11px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); }
+.sym-chip { font:700 12.5px var(--sans); color:var(--ink); text-decoration:none; padding:.15rem .5rem; border-radius:999px; border:1.5px solid var(--line); transition:background .3s, opacity .3s; }
+.sym-grid:has(.hit) .sym-chip:not(.hit) { opacity:.35; }
+.sym-chip.hit { background:var(--accent2); border-color:var(--ink); color:#1c1c22; }
+
+.ex-row { display:grid; grid-template-columns:6rem 1fr; gap:.6rem; align-items:center; font:12.5px var(--sans); margin:.4rem 0; }
+/* quiz */
+.quiz-q { margin:1.2rem 0; padding:.9rem 1rem; border:2px solid var(--ink); border-radius:8px; background:var(--paper2); }
+.quiz-q h4 { margin:0 0 .6rem; font-size:1rem; }
+.quiz-q .opts { display:grid; gap:.4rem; }
+.quiz-q button { text-align:left; font:14px/1.4 var(--sans); color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:6px; padding:.45rem .7rem; cursor:pointer; }
+.quiz-q button:hover:not(:disabled) { border-color:var(--ink); }
+.quiz-q button.right { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+.quiz-q button.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); }
+.quiz-q .why { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.5rem; display:none; }
+.quiz-q.done .why { display:block; }
+.score { position:sticky; bottom:1rem; margin-left:auto; width:max-content; font:800 1rem var(--sans); background:var(--ink); color:var(--paper); padding:.45rem .9rem; border-radius:999px; box-shadow:3px 3px 0 var(--accent2); }
+.cheat td:first-child { font-family:var(--mono); font-size:12.5px; white-space:nowrap; }
+footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var(--sans); color:var(--mut); border-top:2px solid var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+  html { scroll-behavior:auto; }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<nav id="toc" aria-label="Rozdziały"></nav>
+<div id="depth" role="group" aria-label="Głębokość"></div>
+<header class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="kicker">Animowany przewodnik · Wzorce projektowe GoF</div>
+      <h1>23 wzorce GoF <span>przed i po</span></h1>
+      <p class="sub">Każdy wzorzec pokazany tak samo: najpierw kod, który powstaje bez niego, potem kod z nim — i co się
+        dzieje, gdy przychodzi nowe wymaganie. Do tego przykład z prawdziwego projektu i sygnały, po których poznasz,
+        że to właśnie tu. Przewiń — diagramy ruszą same.</p>
+      <div class="stamp">bez wzorca → z wzorcem 🧠</div>
+    </div>
+    <svg viewBox="0 0 400 400" aria-hidden="true">
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <g id="cover-nodes"></g>
+      </g>
+      <g class="spin-rev">
+        <circle cx="200" cy="200" r="95" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 10"/>
+      </g>
+      <circle cx="200" cy="200" r="46" fill="var(--accent)" stroke="var(--ink)" stroke-width="4"/>
+      <text x="200" y="208" text-anchor="middle" font-size="24" font-weight="800" fill="#fff" font-family="system-ui,sans-serif">GoF</text>
+    </svg>
+  </div>
+  <div class="scroll-hint">przewiń ↓</div>
+</header>
+
+<main>
+<section class="chapter" id="intro" data-title="Jak czytać">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Jak czytać ten przewodnik</h2><span class="tag">wzorzec to nazwa na rozwiązanie, które już znasz</span></div></div>
+  <p class="reveal">W 1994 roku Erich Gamma, Richard Helm, Ralph Johnson i John Vlissides — „Gang of Four”, w skrócie GoF —
+    wydali książkę <em>Design Patterns: Elements of Reusable Object-Oriented Software</em>. Opisali w niej 23 wzorce
+    w trzech grupach: 5 kreacyjnych (jak tworzyć obiekty), 7 strukturalnych (jak je składać) i 11 behawioralnych
+    (jak rozdzielać odpowiedzialność i komunikację).</p>
+  <p class="reveal">Każdy wzorzec w książce ma cztery podstawowe elementy: <b>nazwę</b>, <b>problem</b>, <b>rozwiązanie</b>
+    i <b>konsekwencje</b>. Ten przewodnik skupia się na problemie i konsekwencjach, bo tam jest cała wartość. Diagram klas
+    zapamiętasz w minutę. Trudniej rozpoznać, kiedy go użyć — i kiedy nie.</p>
+  <p class="reveal">Każdy rozdział ma ten sam układ: <b>intencja</b> → <b>sytuacja z życia</b> → <b>kod bez wzorca i z wzorcem</b>
+    → <b>animacja</b> → <b>co to poprawia</b> → <b>kiedy nie</b> → <b>🔎 po czym poznać</b>. Kod jest w Javie (z
+    nowościami do Javy 21), ale wzorce działają tak samo w C#, TypeScripcie czy Kotlinie.</p>
+  <div id="map" class="reveal"></div>
+  <div class="box brain reveal"><span class="lbl">🧠 Zagadka na start</span>
+    <p>Strategy i State mają <em>identyczny</em> diagram klas: obiekt-kontekst trzyma referencję do interfejsu, a pod nim
+      kilka implementacji. Skoro struktura jest ta sama, to czym te wzorce się różnią? Odpowiedź na końcu.</p>
+  </div>
+</section>
+
+<section class="chapter" id="basics" data-title="Wspólny mianownik">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Wspólny mianownik: co wzorce naprawdę robią</h2><span class="tag">zamieniają „edytuj” na „dodaj”</span></div></div>
+  <p class="reveal">Na początku książki GoF stawia dwie zasady, na których stoi prawie każdy wzorzec:</p>
+  <p class="pull reveal">„Program to an interface, not an implementation.”<br>„Favor object composition over class inheritance.”</p>
+  <p class="reveal">Po polsku: kod wołający ma zależeć od interfejsu, a nie od konkretnej klasy. Zachowanie lepiej
+    składać z obiektów niż dziedziczyć. Efekt jest zwykle podobny: miejsce, które się często zmienia, zostaje
+    <b>odizolowane</b> za interfejsem. Nowe wymaganie oznacza wtedy <em>nową klasę</em>, a nie edycję pięciu starych.
+    Bertrand Meyer już w 1988 roku sformułował zasadę otwarte–zamknięte (moduł otwarty na rozszerzenia, zamknięty na modyfikacje); wersję opartą na interfejsach spopularyzował później Robert C. Martin.</p>
+  <p class="reveal">Dlatego każda animacja w tym przewodniku ma licznik. Po kliknięciu <b>💥 Nowe wymaganie</b> zobaczysz, ile
+    istniejących klas trzeba edytować (✎, na czerwono) i ile nowych dochodzi (＋, na zielono) — najpierw bez wzorca,
+    potem z nim.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga na wzorcomanię</span>
+    <p>Wzorzec kosztuje: więcej klas, więcej skoków po kodzie, abstrakcja do zrozumienia. Opłaca się tylko tam, gdzie
+      zmiana <em>faktycznie</em> przychodzi. Dwa przypadki w ifie, które nie zmieniły się od trzech lat, nie potrzebują
+      Strategy. Dobra heurystyka: pierwszy raz napisz wprost, przy drugim podobnym przypadku zanotuj, przy trzecim
+      refaktoryzuj do wzorca.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Wzorzec = nazwana odpowiedź na powtarzający się problem projektowy, z konsekwencjami.</li>
+      <li>Prawie każdy wzorzec izoluje zmienne miejsce za interfejsem albo kompozycją.</li>
+      <li>Miara sukcesu: nowe wymaganie dodaje kod, zamiast przepisywać istniejący.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="symptoms" data-title="Symptom → wzorzec">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Diagnoza: po czym poznać, że to miejsce na wzorzec</h2><span class="tag">zacznij od bólu, nie od katalogu</span></div></div>
+  <p class="reveal">Nikt nie zaczyna dnia od „dziś użyję Mediatora”. Zaczynasz od kodu, który boli: każda zmiana dotyka
+    pięciu plików, switch rośnie co sprint, klasy mnożą się jak króliki. Ten ból ma powtarzalne kształty. Kliknij
+    symptom, który znasz z własnego projektu — zobaczysz kandydatów.</p>
+  <figure class="fig wide" id="fig-sym">
+    <div class="ftitle">▶ Symptom → kandydaci <span>kliknij objaw, potem nazwę wzorca</span></div>
+    <div class="ctrl"><button class="btn" data-act="reset">↺ Reset</button></div>
+    <div class="sym-list"></div>
+    <div class="sym-grid"></div>
+    <div class="status" id="sym-status">Wybierz symptom.</div>
+    <figcaption>Mapa jest heurystyką, nie algorytmem: symptom wskazuje kandydatów, a decyzję podejmujesz po przeczytaniu
+      sekcji „Kiedy nie” w rozdziale wzorca.</figcaption>
+  </figure>
+  <div class="box bullets reveal"><span class="lbl">📌 Bullet points</span>
+    <ul><li>Najczęstsze sygnały: powtarzany switch po typie, zmiana rozlewająca się po wielu klasach, eksplozja podklas.</li>
+      <li>Wzorzec to hipoteza. Sprawdź, czy zmiana, przed którą chroni, naprawdę przychodzi.</li></ul>
+  </div>
+</section>
+
+<!-- ======================= KREACYJNE ======================= -->
+<section class="part" id="part-1">
+  <span class="part-no">Część I</span><h2>Wzorce kreacyjne</h2><p>Kto i jak tworzy obiekty — żeby kod wołający nie musiał znać konkretnych klas.</p>
+</section>
+
+<section class="chapter" id="factory-method" data-title="Factory Method">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Factory Method</h2><span class="tag">podklasa decyduje, co powstaje</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Klasa bazowa definiuje metodę tworzącą obiekt, a podklasy decydują, jaki konkretnie
+    obiekt powstanie. Reszta algorytmu w klasie bazowej pracuje tylko z interfejsem produktu.</p>
+  <p class="reveal"><b>Sytuacja.</b> Generator dokumentów sprzedażowych. Proces jest zawsze ten sam: nagłówek, pozycje,
+    stopka, podpis. Różni się format wyjścia: PDF dla klienta, XML dla KSeF (Krajowego Systemu e-Faktur), a za chwilę
+    HTML do podglądu w panelu.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>class Document {
+  byte[] generate(String format) {
+    Renderer r;
+    if (format.equals("pdf"))
+      r = new PdfRenderer();
+    else if (format.equals("ksef"))
+      r = new KsefXmlRenderer();
+    else throw new IllegalArgumentException();
+    header(r); items(r); footer(r); sign(r);
+    return r.bytes();
+  }
+}</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>abstract class Document {
+  final byte[] generate() {
+    Renderer r = createRenderer();
+    header(r); items(r); footer(r); sign(r);
+    return r.bytes();
+  }
+  // factory method:
+  protected abstract Renderer createRenderer();
+}
+class KsefInvoice extends Document {
+  protected Renderer createRenderer() {
+    return new KsefXmlRenderer();
+  }
+}</code></pre></div></div>
+  <figure class="fig gof" id="f-factory-method"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Document przestaje znać konkretne renderery. Nowy format to nowa podklasa, a
+    wspólny proces generowania zostaje w jednym miejscu. GoF zauważa, że metody wytwórcze często wołane są właśnie z
+    metod szablonowych (Template Method) — tak jak tutaj.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Jeśli podklasa istnieje <em>tylko</em> po to, żeby nadpisać jedną metodę tworzącą, a nic poza tym jej nie wyróżnia,
+      prościej przekazać fabrykę (np. <code>Supplier&lt;Renderer&gt;</code>) w konstruktorze. To ta sama idea, tylko
+      przez kompozycję zamiast dziedziczenia.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>Collection.iterator()</code> w JDK — każda kolekcja
+    tworzy własną implementację <code>Iterator</code>, a kod wołający zna tylko interfejs.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Wspólny algorytm, w którym różni się tylko to, <em>jaki obiekt</em> jest tworzony w środku.</li>
+      <li><code>if/switch</code> po typie stoi tuż przed <code>new</code>.</li>
+      <li>Masz już hierarchię klas (np. typy dokumentów) i każda potrzebuje „swojego” pomocnika.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="abstract-factory" data-title="Abstract Factory">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Abstract Factory</h2><span class="tag">rodzina obiektów, które muszą do siebie pasować</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Interfejs do tworzenia całych rodzin powiązanych obiektów bez wskazywania ich
+    konkretnych klas.</p>
+  <p class="reveal"><b>Sytuacja.</b> Produkt SaaS wdrażany u klientów na AWS albo na Google Cloud. Aplikacja potrzebuje
+    trzech rzeczy: magazynu plików, kolejki i menedżera sekretów. Na AWS to S3, SQS i Secrets Manager, na GCP — Cloud
+    Storage, Pub/Sub i Secret Manager. Pomieszanie (S3 z Pub/Sub w jednym wdrożeniu) to błąd, który wychodzi dopiero na
+    produkcji.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>class UploadService {
+  Storage storage() {
+    return cloud == AWS ? new S3Storage()
+                        : new GcsStorage();
+  }
+}
+class Notifier {          // ta sama decyzja,
+  Secrets secrets() {     // inne miejsce
+    return cloud == AWS ? new AwsSecrets()
+                        : new GcpSecrets();
+  }
+}</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>interface CloudFactory {
+  Storage storage();
+  Queue queue();
+  Secrets secrets();
+}
+class AwsFactory implements CloudFactory { … }
+class GcpFactory implements CloudFactory { … }
+
+// raz, przy starcie aplikacji:
+CloudFactory cloud = cfg.isAws()
+    ? new AwsFactory() : new GcpFactory();
+new UploadService(cloud.storage());</code></pre></div></div>
+  <figure class="fig gof" id="f-abstract-factory"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Decyzja „która chmura” zapada raz. Spójność rodziny jest gwarantowana
+    konstrukcyjnie: fabryka AWS nie zwróci kolejki z GCP. Bonus w testach: <code>InMemoryFactory</code> z fałszywymi
+    implementacjami podmienia całą infrastrukturę jedną linią.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Dodanie nowego <em>rodzaju</em> produktu (np. cache) wymaga zmiany interfejsu fabryki i wszystkich jej
+      implementacji — GoF wymienia to jako główną wadę wzorca. Jeśli produkty nie muszą do siebie pasować, wystarczą
+      niezależne fabryki albo zwykłe wstrzykiwanie zależności.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Ten sam <code>if (provider == …)</code> rozsiany po wielu klasach.</li>
+      <li>Obiekty mają sens tylko w komplecie (ten sam dostawca, motyw, wersja protokołu).</li>
+      <li>Chcesz w testach podmienić całą „platformę” naraz.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="builder" data-title="Builder">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Builder</h2><span class="tag">złożony obiekt krok po kroku, z nazwami</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Oddzielić konstruowanie złożonego obiektu od jego reprezentacji, tak by budować go
+    krok po kroku. W praktyce Javy najczęściej spotkasz odmianę spopularyzowaną przez Joshuę Blocha w <em>Effective
+    Java</em>: builder jako zamiennik konstruktora z wieloma opcjonalnymi parametrami.</p>
+  <p class="reveal"><b>Sytuacja.</b> Wyszukiwarka sklepu: fraza, kategoria, marka, cena od–do, tylko dostępne, sortowanie,
+    strona. Większość parametrów jest opcjonalna, a każde wywołanie ustawia inny podzbiór.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>new SearchQuery("buty", null, null,
+                100, 300, true, null, 2);
+// kategoria? marka? min? max?
+// dostępne? sortowanie? strona?
+// zamiana 100 z 300 kompiluje się</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>SearchQuery q = SearchQuery.builder()
+    .phrase("buty")
+    .price(100, 300)
+    .onlyAvailable()
+    .page(2)
+    .build();  // walidacja: min ≤ max</code></pre></div></div>
+  <figure class="fig gof" id="f-builder"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Wywołanie czyta się jak zdanie. Nowy parametr z wartością domyślną nie psuje
+    istniejących wywołań. <code>build()</code> to jedno miejsce na walidację reguł między polami, a wynik może być
+    niezmienny (immutable).</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Trzy obowiązkowe pola to nie powód do buildera — wystarczy konstruktor albo <code>record</code>. Builder dodaje
+      klasę do utrzymania (chyba że generuje ją np. Lombok <code>@Builder</code>).</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>HttpRequest.newBuilder()</code> z
+    <code>java.net.http</code> (od Javy 11), <code>Stream.builder()</code>, Lombok <code>@Builder</code>.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Konstruktor z 5+ parametrami, w wywołaniach pełno <code>null</code> i <code>true/false</code>.</li>
+      <li>Kilka przeciążonych konstruktorów („teleskopowych”), bo każdy klient chce innego podzbioru.</li>
+      <li>Reguły między polami (min ≤ max) sprawdzane w różnych miejscach albo wcale.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="prototype" data-title="Prototype">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Prototype</h2><span class="tag">obiekt sam robi swoją kopię</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Tworzyć nowe obiekty przez kopiowanie istniejącego egzemplarza (prototypu) zamiast
+    budowania od zera — bez znajomości jego konkretnej klasy.</p>
+  <p class="reveal"><b>Sytuacja.</b> CRM, przycisk „Duplikuj ofertę”. Oferta ma pozycje, rabaty, warunki płatności, a
+    oferty B2B i B2C różnią się polami. Handlowiec kopiuje zeszłoroczną ofertę i zmienia trzy rzeczy.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>Offer duplicate(Offer o) {
+  if (o instanceof B2BOffer b) {
+    var c = new B2BOffer();
+    c.setClient(b.getClient());
+    c.setItems(b.getItems()); // ta sama lista!
+    c.setDiscounts(b.getDiscounts());
+    return c;
+  } else if (o instanceof B2COffer b) {
+    …
+  }
+}</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>interface Offer { Offer copy(); }
+
+class B2BOffer implements Offer {
+  public B2BOffer copy() {
+    var c = new B2BOffer(client);
+    c.items = items.stream()
+        .map(Item::copy).toList();
+    c.discounts = new ArrayList&lt;&gt;(discounts);
+    return c;
+  }
+}
+Offer draft = selected.copy();</code></pre></div></div>
+  <figure class="fig gof" id="f-prototype"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Wiedza „jak mnie skopiować” leży obok pól, których dotyczy. Kod wołający nie
+    potrzebuje <code>instanceof</code> ani getterów do wszystkiego. Nowe pole i jego kopiowanie zmieniasz w jednej klasie.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie / pułapka</span>
+    <p>Kopia płytka vs głęboka: <code>c.setItems(b.getItems())</code> sprawia, że oryginał i kopia dzielą jedną listę, więc
+      edycja kopii zmienia ofertę klienta. W Javie unikaj <code>Object.clone()</code>: Joshua Bloch w <em>Effective
+      Java</em> zaleca zamiast niego konstruktor kopiujący albo fabrykę kopiującą.</p>
+  </div>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Kod spoza klasy kopiuje obiekt pole po polu, z <code>instanceof</code> po typie.</li>
+      <li>Użytkownik ma „szablony” albo „duplikuj” w interfejsie.</li>
+      <li>Tworzenie od zera jest drogie (konfiguracja, zapytania), a kopie różnią się szczegółami.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="singleton" data-title="Singleton">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Singleton</h2><span class="tag">dokładnie jedna instancja — i dlaczego dziś rzadko piszesz go ręcznie</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Zagwarantować, że klasa ma tylko jedną instancję, i dać do niej globalny punkt dostępu.</p>
+  <p class="reveal"><b>Sytuacja.</b> Pula połączeń do bazy danych. Każde repozytorium potrzebuje połączeń, ale pula musi
+    być jedna: kilka pul to kilka razy więcej otwartych połączeń i przekroczony limit bazy.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>class OrderRepo {
+  private final ConnectionPool pool =
+      new ConnectionPool(10);
+}
+class UserRepo {
+  private final ConnectionPool pool =
+      new ConnectionPool(10); // druga pula
+}</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>// wariant eager (GoF tworzy leniwie):
+final class ConnectionPool {
+  private static final ConnectionPool
+      INSTANCE = new ConnectionPool(10);
+  private ConnectionPool(int size) { … }
+  static ConnectionPool getInstance() {
+    return INSTANCE;
+  }
+}
+// dziś częściej: jedna instancja z DI
+@Bean DataSource dataSource() { … }</code></pre></div></div>
+  <figure class="fig gof" id="f-singleton"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Jeden zasób, jeden limit, jedno miejsce do strojenia.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Klasyczny Singleton to globalny stan: każda klasa może go zawołać, zależność jest ukryta, a w testach trudno go
+      podmienić. Dziś „jedną instancję” zwykle zapewnia kontener DI — w Springu beany mają domyślnie zakres
+      <code>singleton</code> — a klasa dostaje zależność przez konstruktor. Jeśli piszesz Singleton ręcznie,
+      <em>Effective Java</em> poleca jednoelementowy <code>enum</code>.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>Runtime.getRuntime()</code> w JDK.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Zasób, którego druga kopia to błąd (pula, cache procesu, rejestr metryk).</li>
+      <li>Kilka miejsc robi <code>new</code> tego samego ciężkiego obiektu.</li>
+      <li>Najpierw sprawdź, czy kontener DI nie rozwiąże tego bez globalnego stanu.</li></ul>
+  </div>
+</section>
+
+<!-- ======================= STRUKTURALNE ======================= -->
+<section class="part" id="part-2">
+  <span class="part-no">Część II</span><h2>Wzorce strukturalne</h2><p>Jak składać klasy i obiekty w większe struktury, nie wiążąc wszystkiego ze wszystkim.</p>
+</section>
+
+<section class="chapter" id="adapter" data-title="Adapter">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Adapter</h2><span class="tag">przejściówka między twoim interfejsem a cudzym</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Przekształcić interfejs klasy w inny interfejs, którego oczekuje klient, tak by
+    współpracowały klasy o niezgodnych interfejsach.</p>
+  <p class="reveal"><b>Sytuacja.</b> Twój sklep płaci przez interfejs <code>PaymentGateway.charge(Money)</code>. Dochodzi
+    nowy operator płatności, którego SDK ma <code>createCharge(long cents, String currency)</code> i własne wyjątki.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>// CheckoutService
+if (provider == NEWPAY) {
+  try {
+    newPay.createCharge(amount.cents(), "PLN");
+  } catch (NewPayException e) { … }
+} else {
+  payCo.charge(amount);
+}
+// RefundService: to samo jeszcze raz</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>class NewPayAdapter
+    implements PaymentGateway {
+  private final NewPaySdk sdk;
+  public void charge(Money m) {
+    try {
+      sdk.createCharge(m.cents(), m.currency());
+    } catch (NewPayException e) {
+      throw new PaymentFailed(e);
+    }
+  }
+}</code></pre></div></div>
+  <figure class="fig gof" id="f-adapter"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Cudzy interfejs nie wycieka do logiki biznesowej. Przeliczenie jednostek i
+    tłumaczenie błędów są w jednym pliku. Gdy SDK zmieni API albo zmienisz operatora, poprawiasz tylko adapter. W
+    Domain-Driven Design ten sam pomysł w większej skali nazywa się warstwą antykorupcyjną.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Jeśli cudza biblioteka jest jedyną implementacją, jej API jest stabilne i dobrze pasuje do domeny, adapter
+      „na zapas” to tylko dodatkowa warstwa przekazująca wywołania.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>Arrays.asList(array)</code> (tablica widziana jako
+    <code>List</code>), <code>InputStreamReader</code> (strumień bajtów widziany jako <code>Reader</code> znaków).</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Typy i wyjątki zewnętrznego SDK pojawiają się w klasach domenowych.</li>
+      <li>To samo przeliczanie (jednostki, formaty, kody błędów) w kilku miejscach.</li>
+      <li>Masz dwóch dostawców tej samej usługi o różnych API.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="bridge" data-title="Bridge">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Bridge</h2><span class="tag">dwie osie zmian zamiast iloczynu klas</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Oddzielić abstrakcję od jej implementacji, tak by obie mogły zmieniać się niezależnie.</p>
+  <p class="reveal"><b>Sytuacja.</b> System powiadomień. Rodzaje: alert, raport, przypomnienie (różna treść, priorytet,
+    ponawianie). Kanały: e-mail, SMS, Slack (różna wysyłka). Dziedziczenie po obu osiach naraz daje klasę na każdą
+    kombinację.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>class AlertEmail  extends Notification {…}
+class AlertSms    extends Notification {…}
+class ReportEmail extends Notification {…}
+class ReportSms   extends Notification {…}
+// 3 rodzaje × 3 kanały = 9 klas,
+// kod wysyłki SMS skopiowany 3 razy</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>interface Channel {
+  void deliver(String to, String body);
+}
+abstract class Notification {
+  protected final Channel channel; // most
+  Notification(Channel c) { channel = c; }
+  abstract void send(User u);
+}
+class Alert extends Notification { … }
+new Alert(new SmsChannel());</code></pre></div></div>
+  <figure class="fig gof" id="f-bridge"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Zamiast <em>rodzaje × kanały</em> klas masz <em>rodzaje + kanały</em>. Nowy kanał
+    to jedna klasa, która od razu działa z każdym rodzajem. Kombinację wybierasz w czasie działania programu.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Gdy zmienia się tylko jedna oś (np. kanał, a rodzaj jest jeden), wystarczy zwykła Strategy. Bridge projektuje się
+      zwykle od początku, gdy widać dwie niezależne hierarchie; Adapter dokleja się później do czegoś, co już istnieje.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> JDBC bywa podawany jako przykład: twój kod używa
+    <code>Connection</code> i <code>Statement</code>, a implementację dostarcza sterownik konkretnej bazy.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Nazwy klas są złożeniem dwóch słów z dwóch list (<code>AlertSms</code>, <code>ReportSlack</code>).</li>
+      <li>Dodanie jednej rzeczy na jednej osi wymaga N nowych klas.</li>
+      <li>Kod jednej osi (wysyłka) jest skopiowany w wielu klasach drugiej osi.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="composite" data-title="Composite">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Composite</h2><span class="tag">liść i grupa mają ten sam interfejs</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Składać obiekty w struktury drzewiaste i traktować pojedyncze obiekty oraz ich
+    złożenia jednakowo.</p>
+  <p class="reveal"><b>Sytuacja.</b> Koszyk w sklepie z zestawami. Zestaw „Startowy pakiet biurowy” zawiera produkty i
+    mniejszy zestaw „Przybory”. Trzeba policzyć cenę (z rabatem zestawu), wagę do wysyłki i dostępność.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>BigDecimal price(Object item) {
+  if (item instanceof Product p)
+    return p.price();
+  if (item instanceof Bundle b) {
+    var sum = ZERO;
+    for (Object x : b.items())
+      sum = sum.add(price(x));
+    return sum.multiply(b.discount());
+  }
+  throw new IllegalStateException();
+}
+// weight(), inStock(): to samo</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>interface Item {
+  BigDecimal price(); int grams();
+}
+record Product(BigDecimal price, int grams)
+    implements Item {}
+class Bundle implements Item {
+  List&lt;Item&gt; items;
+  public BigDecimal price() {
+    return items.stream().map(Item::price)
+        .reduce(ZERO, BigDecimal::add)
+        .multiply(discount);
+  }
+}</code></pre></div></div>
+  <figure class="fig gof" id="f-composite"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Rekurencja po drzewie jest w jednym miejscu: w <code>Bundle</code>. Kod koszyka
+    woła <code>item.price()</code> i nie wie, czy ma przed sobą produkt, czy zestaw z zestawami w środku. Nowy typ pozycji
+    to nowa klasa implementująca <code>Item</code>.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Gdy struktura nie jest naprawdę rekurencyjna (jeden poziom grupowania), wystarczy zwykła lista. Uważaj też na
+      operacje, które mają sens tylko dla liścia lub tylko dla grupy: wspólny interfejs kusi, by wrzucić do niego
+      wszystko, i wtedy połowa metod rzuca wyjątek.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> AWT: <code>java.awt.Container</code> dziedziczy po
+    <code>Component</code> i zawiera inne komponenty. Drzewo DOM, system plików, struktura organizacyjna.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Dane tworzą drzewo dowolnej głębokości (zestawy, foldery, działy, menu).</li>
+      <li>Ta sama rekurencja z <code>instanceof</code> powtarza się w kilku operacjach.</li>
+      <li>Klient chce traktować „jedną rzecz” i „grupę rzeczy” tak samo.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="decorator" data-title="Decorator">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Decorator</h2><span class="tag">warstwy jak cebula, w dowolnej kombinacji</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Dynamicznie dodawać obiektowi odpowiedzialności przez opakowanie go obiektem o tym
+    samym interfejsie. Elastyczna alternatywa dla dziedziczenia.</p>
+  <p class="reveal"><b>Sytuacja.</b> Klient HTTP do zewnętrznego API cen. Jeden serwis potrzebuje ponawiania i cache, drugi
+    logowania i metryk, trzeci wszystkiego naraz.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>class RetryingClient
+    extends HttpClient { … }
+class RetryingCachingClient
+    extends RetryingClient { … }
+class LoggingRetryingCachingClient
+    extends RetryingCachingClient { … }
+// a cache bez retry? kolejna podklasa</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>class Retry implements Client {
+  private final Client next;
+  Retry(Client next) { this.next = next; }
+  public Response get(String url) {
+    for (int i = 1; ; i++) {
+      try { return next.get(url); }
+      catch (UncheckedIOException e) {
+        if (i == 3) throw e;
+      }
+    }
+  }
+}
+Client c = new Logging(new Retry(
+    new Cache(new Http())));</code></pre></div></div>
+  <figure class="fig gof" id="f-decorator"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Każdy dodatek to mała klasa z jedną odpowiedzialnością. Kombinacje składasz w
+    konfiguracji zamiast tworzyć podklasę na każdy wariant. Przy <em>n</em> niezależnych dodatkach dziedziczenie potrzebuje
+    do 2<sup>n</sup> wariantów, dekoratory — <em>n</em> klas.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie / pułapka</span>
+    <p>Kolejność warstw zmienia zachowanie. <code>Retry(Cache(…))</code> ponawia tylko to, co nie trafiło do cache;
+      <code>Cache(Retry(…))</code> zapisuje w cache wynik po ponowieniach. Głęboki stos dekoratorów trudno też debugować:
+      stack trace ma kilka warstw opakowań.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>new BufferedInputStream(new FileInputStream(f))</code>
+    w <code>java.io</code>, <code>Collections.unmodifiableList(list)</code>.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Nazwy klas to sklejki przymiotników: <code>LoggingRetryingCaching…</code>.</li>
+      <li>Dodatki są niezależne i potrzebne w różnych kombinacjach.</li>
+      <li>Chcesz dodać zachowanie do obiektu, którego klasy nie możesz lub nie chcesz zmieniać.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="facade" data-title="Facade">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Facade</h2><span class="tag">jedno proste wejście do skomplikowanego podsystemu</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Dać jeden, uproszczony interfejs do zestawu interfejsów podsystemu.</p>
+  <p class="reveal"><b>Sytuacja.</b> Złożenie zamówienia: rezerwacja w magazynie, pobranie płatności (z cofnięciem
+    rezerwacji przy błędzie), faktura, zlecenie wysyłki. Zamówienia przychodzą z trzech wejść: strony, aplikacji
+    mobilnej i importu B2B.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>// WebController, MobileApi, B2bImport:
+stock.reserve(cart);
+try {
+  payments.charge(cart.total());
+} catch (PaymentFailed e) {
+  stock.release(cart); throw e;
+}
+invoices.issue(cart);
+shipping.schedule(cart);</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>class OrderPlacement {      // fasada
+  Order place(Cart cart) {
+    stock.reserve(cart);
+    try { payments.charge(cart.total()); }
+    catch (PaymentFailed e) {
+      stock.release(cart); throw e;
+    }
+    invoices.issue(cart);
+    return shipping.schedule(cart);
+  }
+}</code></pre></div></div>
+  <figure class="fig gof" id="f-facade"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Kolejność kroków i kompensacje są w jednym miejscu. Wejścia (web, mobile, B2B)
+    zależą od jednej klasy zamiast od czterech podsystemów. Fasada nie zabrania dostępu do podsystemów — kto potrzebuje
+    szczegółów, nadal może ich użyć.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Fasada, do której trafia każda nowa operacja, rośnie w „klasę-boga”. Trzymaj ją cienką: koordynuje, ale nie
+      zawiera reguł biznesowych podsystemów.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> SLF4J — sama nazwa to <em>Simple Logging Facade for Java</em>.
+    Serwisy aplikacyjne w architekturze warstwowej często pełnią rolę fasady nad domeną.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Ta sama sekwencja wywołań kilku podsystemów skopiowana w kilku wejściach.</li>
+      <li>Klient musi znać kolejność i obsługę błędów cudzych modułów.</li>
+      <li>Chcesz, by moduł miał małą, stabilną „powierzchnię” dla reszty systemu.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="flyweight" data-title="Flyweight">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Flyweight</h2><span class="tag">tysiące obiektów, wspólne ciężkie części</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Współdzielić obiekty, by wydajnie obsłużyć ogromną liczbę drobnych elementów. Stan
+    dzieli się na <b>wewnętrzny</b> (wspólny, niezmienny — np. bitmapa ikony) i <b>zewnętrzny</b> (unikalny, przekazywany
+    z zewnątrz — np. pozycja).</p>
+  <p class="reveal"><b>Sytuacja.</b> Mapa punktów odbioru paczek: dziesiątki tysięcy znaczników, ale tylko kilka rodzajów
+    ikon (paczkomat, punkt partnerski, placówka, punkt z płatnością).</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>class Marker {
+  double lat, lon;
+  BufferedImage icon; // własna kopia bitmapy
+  Marker(double lat, double lon, String type)
+      throws IOException {
+    this.lat = lat; this.lon = lon;
+    icon = ImageIO.read(
+        new File("icons/" + type + ".png"));
+  }
+}</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>class IconFactory {
+  private final Map&lt;String, Icon&gt; cache =
+      new HashMap&lt;&gt;();
+  Icon get(String type) {
+    return cache.computeIfAbsent(
+        type, Icon::load);
+  }
+}
+record Marker(double lat, double lon,
+              Icon icon) {}  // ikona wspólna</code></pre></div></div>
+  <figure class="fig gof" id="f-flyweight"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Pamięć rośnie z liczbą <em>rodzajów</em>, a nie z liczbą obiektów. Bitmapa ładuje
+    się raz na typ.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Przy setkach obiektów zysk jest pomijalny, a kod się komplikuje. Współdzielony stan musi być niezmienny: jeśli
+      ktoś pokoloruje „swoją” ikonę, zmieni ją wszystkim. Zanim zaczniesz, zmierz pamięć profilerem.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>Integer.valueOf(int)</code> zwraca obiekty z cache dla
+    wartości od −128 do 127, dlatego <code>==</code> na małych <code>Integer</code> „działa”, a na dużych nie.
+    <code>String.intern()</code>.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Bardzo dużo obiektów, a profiler pokazuje, że pamięć zjadają powtarzające się dane.</li>
+      <li>Większość stanu obiektów jest identyczna, różnią się kilkoma polami (pozycja, liczba).</li>
+      <li>Wspólna część może być niezmienna.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="proxy" data-title="Proxy">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Proxy</h2><span class="tag">zastępca, który kontroluje dostęp</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Dostarczyć zastępcę obiektu, który kontroluje dostęp do niego. Odmiany z GoF:
+    <b>remote</b> (obiekt jest w innym procesie), <b>virtual</b> (leniwe tworzenie drogiego obiektu), <b>protection</b>
+    (kontrola uprawnień).</p>
+  <p class="reveal"><b>Sytuacja.</b> System dokumentów wielu klientów (multi-tenant). Dokumenty czytają kontroler, eksport
+    i wyszukiwarka. Każde z tych miejsc musi sprawdzić uprawnienia.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>// DocController
+if (!user.canRead(doc)) throw new Forbidden();
+return repo.load(id);
+// ExportJob: własna wersja sprawdzania
+// SearchApi: … zapomniane</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>class SecuredDocRepo
+    implements DocumentRepo {
+  private final DocumentRepo real;
+  public Document load(DocId id) {
+    Document d = real.load(id);
+    if (!access.canRead(user(), d))
+      throw new Forbidden(id);
+    audit.log(user(), id);
+    return d;
+  }
+}</code></pre></div></div>
+  <figure class="fig gof" id="f-proxy"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Klient nie ma referencji do prawdziwego repozytorium, więc nie może ominąć
+    kontroli. Reguła dostępu i audyt żyją w jednym miejscu.</p>
+  <div class="box geek reveal"><span class="lbl">🤓 Proxy vs Decorator</span>
+    <p>Struktura jest prawie identyczna: obiekt o tym samym interfejsie trzyma referencję do innego. Różni je intencja.
+      Decorator <em>dodaje</em> zachowanie i zwykle składasz go dowolnie. Proxy <em>kontroluje dostęp</em> do obiektu i
+      często sam zarządza jego cyklem życia (np. tworzy go leniwie).</p>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Pułapka</span>
+    <p>Spring realizuje <code>@Transactional</code> przez proxy. Gdy metoda wywoła inną metodę <em>tego samego</em> obiektu
+      (<code>this.save()</code>), wywołanie omija proxy, więc transakcja z adnotacji na wywoływanej metodzie nie zadziała.
+      Leniwe proxy Hibernate potrafią z kolei rzucić <code>LazyInitializationException</code> po zamknięciu sesji.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>java.lang.reflect.Proxy</code>, proxy Spring AOP,
+    leniwe encje Hibernate, klienci RPC (gRPC stub to remote proxy).</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>To samo sprawdzenie (uprawnienia, limit, cache) przed każdym użyciem obiektu.</li>
+      <li>Obiekt jest drogi do utworzenia, a często nie jest w ogóle użyty.</li>
+      <li>Obiekt jest zdalny, a chcesz go wołać jak lokalny.</li></ul>
+  </div>
+</section>
+
+<!-- ======================= BEHAWIORALNE ======================= -->
+<section class="part" id="part-3">
+  <span class="part-no">Część III</span><h2>Wzorce behawioralne</h2><p>Kto za co odpowiada i jak obiekty rozmawiają — żeby zmiana reguły nie wymagała zmiany rozmówców.</p>
+</section>
+
+<section class="chapter" id="chain" data-title="Chain of Responsibility">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Chain of Responsibility</h2><span class="tag">żądanie wędruje przez ogniwa</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Uniknąć wiązania nadawcy żądania z odbiorcą: przekazywać żądanie wzdłuż łańcucha
+    obiektów, z których każdy może je obsłużyć, przerwać albo przekazać dalej.</p>
+  <p class="reveal"><b>Sytuacja.</b> Endpoint API zamówień. Przed logiką: uwierzytelnienie, limit zapytań, walidacja
+    JSON-a. Każdy krok może zakończyć żądanie odpowiedzią błędu.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>Response handle(Request r) {
+  if (!tokens.valid(r.auth()))
+    return status(401);
+  if (limiter.exceeded(r.clientId()))
+    return status(429);
+  if (!schema.valid(r.body()))
+    return status(400);
+  // dopiero tu logika zamówienia
+}</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>class RateLimit extends Handler {
+  Response handle(Request r) {
+    if (limiter.exceeded(r.clientId()))
+      return status(429);  // przerwij
+    return next.handle(r); // albo dalej
+  }
+}
+auth.then(rateLimit)
+    .then(validation)
+    .then(orderEndpoint);</code></pre></div></div>
+  <figure class="fig gof" id="f-chain"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Każdy krok to osobna, testowalna klasa. Łańcuch składasz konfiguracją, a nowy
+    krok (np. blokada IP) wpinasz bez dotykania endpointów.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie / pułapka</span>
+    <p>Kolejność ogniw ma znaczenie (limit przed uwierzytelnieniem liczy też zapytania anonimowe). GoF wprost ostrzega:
+      nie ma gwarancji, że ktoś obsłuży żądanie — źle złożony łańcuch może je po cichu zgubić. Dodaj ogniwo końcowe albo
+      test składania łańcucha.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>Filter</code> i <code>FilterChain.doFilter()</code> w
+    Servlet API, łańcuch filtrów Spring Security, middleware w Express (<code>next()</code>).</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Długa seria <code>if … return</code> na początku metody, kopiowana między endpointami.</li>
+      <li>Kroki przetwarzania mają się zmieniać lub być różne dla różnych tras.</li>
+      <li>Nie wiadomo z góry, kto obsłuży żądanie (eskalacja: L1 → L2 → L3 wsparcia).</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="command" data-title="Command">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Command</h2><span class="tag">operacja jako obiekt: kolejkuj, loguj, cofaj</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Zamknąć żądanie w obiekcie. Dzięki temu można je parametryzować, kolejkować, logować
+    i cofać.</p>
+  <p class="reveal"><b>Sytuacja.</b> Panel administracyjny sklepu z operacjami masowymi: zmiana ceny 300 produktów,
+    przeniesienie do kategorii. Biznes chce „Cofnij” i dziennik, kto co zmienił.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>priceButton.onClick(e -&gt;
+    priceService.change(selected, price));
+moveButton.onClick(e -&gt;
+    catalog.move(selected, category));
+// cofnąć? ponowić? kto to zrobił?</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>class ChangePrice implements Command {
+  private final Map&lt;Sku, Money&gt; old =
+      new HashMap&lt;&gt;();
+  public void execute() {
+    for (Sku s : skus) {
+      old.put(s, prices.get(s));
+      prices.set(s, price);
+    }
+  }
+  public void undo() { old.forEach(prices::set); }
+}
+history.run(new ChangePrice(selected, price));</code></pre></div></div>
+  <figure class="fig gof" id="f-command"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Operacja przestaje być ulotnym wywołaniem metody. Obiekt polecenia można
+    odłożyć na stos (cofanie), zapisać (audyt), wysłać do kolejki (wykonanie w tle) albo ponowić po błędzie.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Jeśli nie potrzebujesz cofania, kolejkowania ani historii, klasa na każdą akcję to zbędny narzut — wystarczy
+      lambda. Cofanie bywa też trudne: wysłanego maila nie da się „odwysłać”, więc <code>undo()</code> musi być operacją
+      kompensującą, a nie magicznym przewinięciem czasu.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>Runnable</code> i <code>Callable</code> przekazywane do
+    <code>ExecutorService</code> (polecenie bez cofania), <code>javax.swing.Action</code>, Ctrl+Z w edytorach.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Wymaganie „cofnij/ponów”, historia operacji, audyt.</li>
+      <li>Operację trzeba wykonać później, w innym wątku albo procesie.</li>
+      <li>Te same akcje są wyzwalane z wielu miejsc (przycisk, skrót, API).</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="interpreter" data-title="Interpreter">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Interpreter</h2><span class="tag">mały język jako drzewo obiektów</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Dla prostego języka zdefiniować reprezentację gramatyki (klasa na regułę) i
+    interpreter, który wykonuje zdania tego języka, zwykle jako drzewo składniowe (AST).</p>
+  <p class="reveal"><b>Sytuacja.</b> Dział marketingu co tydzień zmienia reguły rabatów: „koszyk powyżej 200 zł i
+    kategoria książki, albo klient VIP”. Każda zmiana to dziś zadanie dla programisty i wdrożenie.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>boolean discount(Cart c) {
+  return (c.total() &gt; 200
+          &amp;&amp; c.has("książki"))
+      || c.customer().isVip();
+}  // zmiana reguły = deploy</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>interface Rule { boolean eval(Cart c); }
+record Gt(int min) implements Rule {
+  public boolean eval(Cart c) {
+    return c.total() &gt; min;
+  }
+}
+record And(Rule l, Rule r) implements Rule {
+  public boolean eval(Cart c) {
+    return l.eval(c) &amp;&amp; r.eval(c);
+  }
+}
+// tekst z konfiguracji → drzewo:
+Rule rule = parser.parse(text);</code></pre></div></div>
+  <figure class="fig gof" id="f-interpreter"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Reguły stają się danymi, które można zapisać w bazie i zmieniać bez wdrożenia.
+    Każdy węzeł jest prosty i testowalny. Nowy rodzaj warunku to jedna klasa.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>GoF zaznacza, że wzorzec sprawdza się przy prostych gramatykach. Dla złożonych języków lepszy jest generator
+      parserów (np. ANTLR) albo gotowy język wyrażeń (SpEL, CEL). Pamiętaj też, że reguły pisane przez biznes nadal
+      wymagają testów i wersjonowania.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> Spring Expression Language (SpEL), filtry wyszukiwania typu
+    <code>status:open AND label:bug</code>, wyrażenia reguł w systemach alertów.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Biznes chce zmieniać warunki bez wdrożenia.</li>
+      <li>Warunki składają się z kilku powtarzalnych klocków (porównanie, AND, OR, NOT).</li>
+      <li>Te same reguły trzeba też wyświetlić, zwalidować albo przetłumaczyć (np. na SQL).</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="iterator" data-title="Iterator">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Iterator</h2><span class="tag">przechodzenie bez wiedzy o strukturze</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Sekwencyjny dostęp do elementów kolekcji bez ujawniania jej wewnętrznej reprezentacji.</p>
+  <p class="reveal"><b>Sytuacja.</b> Zewnętrzne API faktur zwraca dane stronami po 100, z tokenem następnej strony. Raport
+    miesięczny, synchronizacja i eksport przechodzą po wszystkich fakturach.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>String token = null;
+do {
+  Page p = api.list(token);
+  for (Invoice i : p.items()) process(i);
+  token = p.nextPageToken();
+} while (token != null);
+// ta pętla w pięciu miejscach</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>class InvoiceIterator
+    implements Iterator&lt;Invoice&gt; {
+  public boolean hasNext() {
+    while (!page.hasNext() &amp;&amp; !last) {
+      Page p = api.list(token);
+      page = p.items().iterator();
+      token = p.nextPageToken();
+      last = token == null;
+    }
+    return page.hasNext();
+  }
+}
+for (Invoice i : api.invoices()) process(i);</code></pre></div></div>
+  <figure class="fig gof" id="f-iterator"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Wiedza o stronicowaniu jest w jednym miejscu. Kod biznesowy pisze zwykłą pętlę
+    <code>for</code>, a następna strona jest pobierana dopiero wtedy, gdy jest potrzebna (leniwie).</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Dla zwykłych kolekcji iterator już masz — nie pisz własnego. Uważaj na modyfikację kolekcji w trakcie przechodzenia:
+      iteratory kolekcji z <code>java.util</code> typu fail-fast rzucają wtedy <code>ConcurrentModificationException</code>.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>Iterator</code> i <code>Iterable</code> (każda pętla
+    for-each), paginatory w AWS SDK for Java 2.x, generatory w Pythonie i JavaScripcie.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Klient ręcznie zarządza indeksami, kursorami lub tokenami stron.</li>
+      <li>Ta sama pętla przechodzenia jest skopiowana w wielu miejscach.</li>
+      <li>Chcesz ukryć, czy dane są w pamięci, w bazie, czy w zdalnym API.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="mediator" data-title="Mediator">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Mediator</h2><span class="tag">wszyscy rozmawiają przez jednego koordynatora</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Zamknąć w osobnym obiekcie sposób, w jaki współpracuje grupa obiektów. Obiekty nie
+    odwołują się do siebie bezpośrednio, więc są luźno powiązane.</p>
+  <p class="reveal"><b>Sytuacja.</b> Formularz rezerwacji w restauracji. Data zmienia dostępne godziny. Liczba gości zmienia
+    stoliki i godziny (duże grupy tylko wieczorem). Kod promocyjny zmienia cenę.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>date.onChange(d -&gt; {
+  slots.reload(d);
+  tables.reload(d, guests.count());
+});
+guests.onChange(n -&gt; {
+  tables.reload(date.value(), n);
+  slots.filterForGroup(n);
+});
+// każdy komponent zna pozostałe</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>class BookingForm {     // mediator
+  void changed(Component c) {
+    if (c == date || c == guests) {
+      slots.reload(date.value(),
+                   guests.count());
+      tables.reload(date.value(),
+                    guests.count());
+    }
+    if (c == promo) price.recalculate();
+  }
+}
+date.onChange(v -&gt; form.changed(date));</code></pre></div></div>
+  <figure class="fig gof" id="f-mediator"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Sieć zależności „każdy z każdym” (do N·(N−1) połączeń) zamienia się w gwiazdę
+    (N połączeń). Komponenty są wielokrotnego użytku, bo nie znają sąsiadów. Reguły współpracy czytasz w jednej klasie.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>GoF ostrzega, że mediator może stać się monolitem trudnym w utrzymaniu: cała złożoność przenosi się do niego.
+      Przy dwóch–trzech komponentach bezpośrednie wywołania są czytelniejsze.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> kontroler formularza w UI, wieża kontroli lotów (samoloty nie
+    rozmawiają ze sobą, tylko z wieżą), czat grupowy.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Komponenty mają referencje do wielu sąsiadów i nawzajem się aktualizują.</li>
+      <li>Nie da się użyć komponentu w innym formularzu, bo „zna” konkretnych sąsiadów.</li>
+      <li>Reguły interakcji są rozsiane po handlerach zdarzeń.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="memento" data-title="Memento">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Memento</h2><span class="tag">migawka stanu bez łamania enkapsulacji</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Bez naruszania enkapsulacji uchwycić i zapisać wewnętrzny stan obiektu, tak by
+    później można było go przywrócić. Role: <b>originator</b> (obiekt ze stanem), <b>memento</b> (migawka),
+    <b>caretaker</b> (przechowuje migawki, nie zagląda do środka).</p>
+  <p class="reveal"><b>Sytuacja.</b> Konfigurator komputera w sklepie: procesor, RAM, karta graficzna, zasilacz. Klient
+    zmienia kartę, zasilacz dopasowuje się automatycznie, a klient chce „Cofnij”.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>// ConfiguratorUI
+var cpu = config.getCpu();
+var ram = config.getRam();
+var gpu = config.getGpu();
+config.setGpu(choice);
+// Cofnij:
+config.setCpu(cpu);
+config.setRam(ram);
+config.setGpu(gpu);  // a zasilacz?</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>class PcConfig {
+  Snapshot save() {
+    return new Snapshot(cpu, ram, gpu, psu);
+  }
+  void restore(Snapshot s) {
+    cpu = s.cpu; ram = s.ram;
+    gpu = s.gpu; psu = s.psu;
+  }
+  static final class Snapshot { // pola private
+    private final Cpu cpu; …
+  }
+}
+undo.push(config.save());</code></pre></div></div>
+  <figure class="fig gof" id="f-memento"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Tylko <code>PcConfig</code> wie, z czego składa się jego stan. UI przechowuje
+    nieprzezroczyste migawki. Nowe pole nie wymaga zmian w UI. W Javie klasa zewnętrzna widzi prywatne pola swojej
+    klasy zagnieżdżonej, więc <code>Snapshot</code> jest czytelny tylko dla <code>PcConfig</code>.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Duży stan i częste migawki to dużo pamięci. Wtedy lepiej zapisywać zmiany (Command z <code>undo()</code>) zamiast
+      całych migawek. Migawka zawierająca referencje do obiektów zmiennych nie jest prawdziwą migawką — kopiuj albo
+      używaj obiektów niezmiennych.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> cofanie w edytorach, zapis stanu gry, migawki (snapshoty)
+    agregatów w event sourcingu.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>„Cofnij” albo „przywróć wersję” w wymaganiach.</li>
+      <li>Kod spoza klasy czyta i zapisuje jej pola tylko po to, żeby zrobić kopię zapasową.</li>
+      <li>Klasa dostała gettery i settery wyłącznie na potrzeby zapisu stanu.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="observer" data-title="Observer">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Observer</h2><span class="tag">ogłoś zmianę, nie wiedząc, kto słucha</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Zależność jeden-do-wielu: gdy obiekt zmienia stan, wszyscy zarejestrowani obserwatorzy
+    są automatycznie powiadamiani.</p>
+  <p class="reveal"><b>Sytuacja.</b> Zamówienie zostaje opłacone. Mail z potwierdzeniem, SMS, start kompletacji w
+    magazynie, a za miesiąc dział analityki chce też dostawać to zdarzenie.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>void markPaid() {
+  status = PAID;
+  mailer.sendReceipt(this);
+  sms.notifyPaid(this);
+  warehouse.startPicking(this);
+  // analytics? edytuj Order
+}</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>void markPaid() {
+  status = PAID;
+  bus.publish(new OrderPaid(id));
+}
+// przy składaniu aplikacji:
+bus.subscribe(OrderPaid.class,
+              mailer::onPaid);
+bus.subscribe(OrderPaid.class,
+              warehouse::onPaid);</code></pre></div></div>
+  <figure class="fig gof" id="f-observer"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Klasa domenowa nie zależy od maili, SMS-ów ani magazynu. Nowy odbiorca to nowa
+    klasa plus jedna linia rejestracji. Odbiorców można włączać i wyłączać bez zmiany źródła zdarzeń.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie / pułapki</span>
+    <p>Przepływ staje się niejawny: z kodu <code>markPaid()</code> nie widać, co się wydarzy. Kolejność powiadomień zwykle
+      nie jest gwarantowana. Wyjątek w jednym obserwatorze może zatrzymać pozostałych. Zapomniane wyrejestrowanie trzyma
+      obiekt w pamięci (tzw. lapsed listener). Jeśli kroki muszą wykonać się razem i w kolejności, wywołaj je jawnie.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>java.util.Observer</code> (oznaczony jako
+    <code>@Deprecated</code> od Javy 9), <code>PropertyChangeListener</code>, <code>@EventListener</code> w Springu,
+    <code>addEventListener</code> w przeglądarce, Reactive Streams.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Klasa domenowa woła wprost usługi, które nie należą do jej odpowiedzialności.</li>
+      <li>Lista „po X zrób jeszcze Y” rośnie z każdym sprintem.</li>
+      <li>Kilka widoków musi pokazywać ten sam, zmieniający się stan.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="state" data-title="State">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>State</h2><span class="tag">obiekt zmienia zachowanie razem ze stanem</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Pozwolić obiektowi zmieniać zachowanie, gdy zmienia się jego wewnętrzny stan — z
+    zewnątrz wygląda to, jakby obiekt zmienił klasę.</p>
+  <p class="reveal"><b>Sytuacja.</b> Cykl życia zamówienia: nowe → opłacone → wysłane, w każdej chwili do pewnego momentu
+    anulowane. Metody <code>pay()</code>, <code>ship()</code>, <code>cancel()</code> robią w każdym stanie co innego albo
+    są zabronione.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>void ship() {
+  switch (status) {
+    case NEW -&gt; throw new
+        IllegalStateException("nieopłacone");
+    case PAID -&gt; {
+      carrier.book(this); status = SHIPPED;
+    }
+    case SHIPPED, CANCELLED -&gt;
+      throw new IllegalStateException();
+  }
+}  // pay(), cancel(): ten sam switch</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>interface OrderState {
+  default OrderState ship(Order o) {
+    throw new IllegalStateException();
+  }
+}
+class PaidState implements OrderState {
+  public OrderState ship(Order o) {
+    o.carrier().book(o);
+    return new ShippedState();
+  }
+}
+// Order:
+void ship() { state = state.ship(this); }</code></pre></div></div>
+  <figure class="fig gof" id="f-state"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Reguły jednego stanu są w jednej klasie, a nie rozsmarowane po wszystkich
+    metodach. Przejścia są jawne. Nowy stan to nowa klasa plus zmiana w stanach, z których się do niego przechodzi.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Dwa–trzy stany i jedna metoda, która od nich zależy — enum ze switchem jest czytelniejszy. Przy wielu stanach i
+      przejściach z warunkami rozważ bibliotekę maszyny stanów (np. Spring Statemachine) albo tabelę przejść.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> GoF ilustruje ten wzorzec połączeniem TCP
+    (<code>TCPConnection</code> ze stanami Established, Listen, Closed). Workflow dokumentów, odtwarzacz multimediów.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Ten sam <code>switch (status)</code> w wielu metodach jednej klasy.</li>
+      <li>Błędy typu „dało się wysłać nieopłacone zamówienie”.</li>
+      <li>Diagram stanów z wymagań nie ma odpowiednika w kodzie.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="strategy" data-title="Strategy">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Strategy</h2><span class="tag">wymienny algorytm za jednym interfejsem</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Zdefiniować rodzinę algorytmów, zamknąć każdy w osobnej klasie i uczynić je
+    wymiennymi. Algorytm zmienia się niezależnie od klientów, którzy go używają.</p>
+  <p class="reveal"><b>Sytuacja.</b> Koszt dostawy w sklepie. Paczkomat: cena zależy od gabarytu. Kurier: od wagi i strefy.
+    Odbiór osobisty: zero. Do tego promocje, które dotyczą tylko niektórych przewoźników.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>Money shipping(Cart c, Carrier k) {
+  return switch (k) {
+    case LOCKER  -&gt; lockerSize(c).price();
+    case COURIER -&gt; zoneRate(c.address())
+                      .times(c.weightKg());
+    case PICKUP  -&gt; Money.ZERO;
+  };
+}</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>interface ShippingStrategy {
+  Money cost(Cart c);
+}
+class Courier implements ShippingStrategy {
+  public Money cost(Cart c) {
+    return zoneRate(c.address())
+        .times(c.weightKg());
+  }
+}
+// Checkout:
+c.subtotal().plus(shipping.cost(c));</code></pre></div></div>
+  <figure class="fig gof" id="f-strategy"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Każdy algorytm testujesz osobno. Nowy przewoźnik nie dotyka istniejących.
+    Strategię wybiera klient (tu: kupujący w koszyku) albo konfiguracja.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Gdy algorytmy są dwa i się nie zmieniają, switch jest prostszy. W nowoczesnej Javie strategia często jest po prostu
+      lambdą (<code>Function&lt;Cart, Money&gt;</code>) — klasa jest potrzebna dopiero, gdy algorytm ma stan albo kilka metod.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>Comparator</code> przekazany do
+    <code>List.sort()</code>, <code>RetryPolicy</code> i <code>BackoffPolicy</code> w bibliotekach do ponawiania.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Switch po „sposobie liczenia”, który rośnie z każdym nowym wariantem.</li>
+      <li>Warianty trzeba wybierać w czasie działania (konfiguracja, wybór użytkownika, test A/B).</li>
+      <li>Chcesz testować każdy wariant w izolacji.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="template-method" data-title="Template Method">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Template Method</h2><span class="tag">szkielet w klasie bazowej, kroki w podklasach</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Zdefiniować szkielet algorytmu w metodzie klasy bazowej, a niektóre kroki zostawić
+    podklasom. Podklasy zmieniają kroki, ale nie strukturę algorytmu.</p>
+  <p class="reveal"><b>Sytuacja.</b> Import wyciągów bankowych do księgowości. Bank A wysyła CSV, bank B XML. Poza
+    parsowaniem wszystko jest wspólne: odczyt, walidacja (np. duplikaty transakcji), zapis, raport.</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>class BankACsvImport {
+  void run(Path f) {
+    var rows = parseCsv(read(f));
+    validate(rows);     // skopiowane
+    ledger.save(rows);  // skopiowane
+    report(rows);       // skopiowane
+  }
+}
+class BankBXmlImport { /* to samo */ }</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>abstract class BankImport {
+  public final void run(Path f) {
+    var rows = parse(read(f));
+    validate(rows);
+    ledger.save(rows);
+    report(rows);
+  }
+  protected abstract List&lt;Txn&gt; parse(
+      byte[] raw);
+}
+class CsvImport extends BankImport { … }</code></pre></div></div>
+  <figure class="fig gof" id="f-template-method"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Wspólny przepływ i poprawki błędów są w jednym miejscu. <code>final</code> na
+    metodzie szablonowej pilnuje, żeby podklasa nie zmieniła kolejności kroków.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Wzorzec opiera się na dziedziczeniu, więc dziedziczy jego wady: jedna klasa bazowa, ścisłe powiązanie, trudność w
+      łączeniu wariantów. Gdy kroków do podmiany jest kilka i niezależnych, przekaż je jako strategie (kompozycja).</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>AbstractList</code> (dla listy tylko do odczytu
+    wystarczy zaimplementować <code>get(int)</code> i <code>size()</code>), <code>HttpServlet.service()</code> wywołujący
+    <code>doGet()</code> lub <code>doPost()</code>, <code>setUp()</code>/<code>tearDown()</code> w JUnit 3
+    (<code>TestCase.runBare()</code>).</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Dwie lub więcej klas z prawie identyczną metodą, różniącą się jednym–dwoma krokami.</li>
+      <li>Poprawka błędu trzeba nanosić w kilku kopiach.</li>
+      <li>Kolejność kroków jest regułą, której nikt nie powinien zmieniać.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="visitor" data-title="Visitor">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Visitor</h2><span class="tag">nowe operacje bez dotykania klas</span></div></div>
+  <p class="reveal"><b>Intencja.</b> Reprezentować operację wykonywaną na elementach struktury obiektów jako osobną klasę.
+    Nowe operacje dodajesz bez zmiany klas elementów. Mechanizm: <b>podwójna dyspozycja</b> (double dispatch) —
+    <code>element.accept(v)</code> woła <code>v.visit(this)</code>, więc wybór metody zależy od typu elementu i typu
+    wizytatora.</p>
+  <p class="reveal"><b>Sytuacja.</b> Edytor dokumentów z elementami: akapit, obraz, tabela. Operacje: eksport do HTML, do
+    PDF, liczenie słów, a za chwilę eksport do Markdown i sprawdzanie dostępności (alt-teksty).</p>
+  <div class="gof-code reveal"><div><b class="gof-bad">✗ Bez wzorca</b><pre><code>class Paragraph {
+  String toHtml(); byte[] toPdf();
+  int words();
+}
+class Image { /* to samo */ }
+class Table { /* to samo */ }
+// Markdown = edycja wszystkich trzech</code></pre></div><div><b class="gof-ok">✓ Z wzorcem</b><pre><code>interface Visitor&lt;R&gt; {
+  R visit(Paragraph p);
+  R visit(Image i);
+  R visit(Table t);
+}
+class Paragraph implements Element {
+  public &lt;R&gt; R accept(Visitor&lt;R&gt; v) {
+    return v.visit(this);
+  }
+}
+class MarkdownVisitor
+    implements Visitor&lt;String&gt; { … }</code></pre></div></div>
+  <figure class="fig gof" id="f-visitor"><figcaption></figcaption></figure>
+  <p class="reveal"><b>Co to poprawia.</b> Cała logika jednej operacji (np. HTML) jest w jednej klasie, a klasy elementów
+    nie znają formatów eksportu. Nowa operacja to nowa klasa.</p>
+  <div class="box watch reveal"><span class="lbl">⚠️ Kiedy nie</span>
+    <p>Visitor zamienia jedną trudność na drugą: nowe <em>operacje</em> są tanie, ale nowy <em>typ elementu</em> wymaga
+      zmiany każdego wizytatora. Używaj go, gdy hierarchia elementów jest stabilna. W Javie 21 alternatywą jest
+      <code>sealed interface</code> + <code>switch</code> z dopasowaniem wzorców: kompilator sprawdza, czy obsłużyłeś
+      wszystkie typy, a klasy elementów nie potrzebują <code>accept()</code>.</p>
+  </div>
+  <p class="gof-seen reveal"><b>Gdzie już to widziałeś:</b> <code>FileVisitor</code> w
+    <code>Files.walkFileTree()</code>, <code>ElementVisitor</code> w API procesorów adnotacji, kompilatory i lintery
+    przechodzące po AST.</p>
+  <div class="box bullets reveal"><span class="lbl">🔎 Po czym poznać</span>
+    <ul><li>Każda nowa funkcja (eksport, walidacja, statystyka) to nowa metoda w każdej klasie hierarchii.</li>
+      <li>Hierarchia typów prawie się nie zmienia, a operacji ciągle przybywa.</li>
+      <li>Kod pełen <code>instanceof</code> po elementach struktury.</li></ul>
+  </div>
+</section>
+
+<section class="chapter" id="final" data-title="Egzamin + ściąga">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Egzamin + ściąga</h2><span class="tag">sprawdź, co zostało w głowie</span></div></div>
+  <div id="quiz"></div>
+  <div class="score" id="score">Wynik: 0 / 0</div>
+  <h3 class="reveal">Ściąga: wzorzec → sygnał</h3>
+  <div class="scroll-x reveal">
+  <table class="mini cheat">
+    <thead><tr><th>Wzorzec</th><th>Co robi</th><th>Sygnał w kodzie</th></tr></thead>
+    <tbody>
+      <tr><td>Factory Method</td><td>podklasa decyduje, jaki obiekt powstaje</td><td>if/switch po typie tuż przed <code>new</code></td></tr>
+      <tr><td>Abstract Factory</td><td>tworzy spójną rodzinę obiektów</td><td>ten sam <code>if (provider)</code> w wielu klasach</td></tr>
+      <tr><td>Builder</td><td>buduje złożony obiekt krok po kroku</td><td>konstruktor z wieloma <code>null</code>/<code>true</code></td></tr>
+      <tr><td>Prototype</td><td>obiekt sam tworzy swoją kopię</td><td>kopiowanie pole po polu poza klasą</td></tr>
+      <tr><td>Singleton</td><td>jedna instancja, globalny dostęp</td><td>wiele <code>new</code> zasobu, który ma być jeden</td></tr>
+      <tr><td>Adapter</td><td>dopasowuje cudzy interfejs do twojego</td><td>typy SDK w klasach domenowych</td></tr>
+      <tr><td>Bridge</td><td>rozdziela dwie osie zmian</td><td>klasy <code>AlertSms</code>, <code>ReportSms</code>…</td></tr>
+      <tr><td>Composite</td><td>liść i grupa z tym samym interfejsem</td><td>rekurencja z <code>instanceof</code> po drzewie</td></tr>
+      <tr><td>Decorator</td><td>dokłada zachowanie warstwami</td><td>klasy-sklejki <code>LoggingRetrying…</code></td></tr>
+      <tr><td>Facade</td><td>jedno wejście do podsystemu</td><td>ta sama orkiestracja w kilku wejściach</td></tr>
+      <tr><td>Flyweight</td><td>współdzieli ciężki, niezmienny stan</td><td>tysiące obiektów z tymi samymi danymi</td></tr>
+      <tr><td>Proxy</td><td>zastępca kontrolujący dostęp</td><td>to samo sprawdzenie przed każdym użyciem</td></tr>
+      <tr><td>Chain of Resp.</td><td>żądanie przez łańcuch ogniw</td><td>seria <code>if … return</code> na wejściu</td></tr>
+      <tr><td>Command</td><td>operacja jako obiekt</td><td>„cofnij”, kolejka, audyt</td></tr>
+      <tr><td>Interpreter</td><td>mały język jako drzewo obiektów</td><td>reguły zmieniane bez wdrożenia</td></tr>
+      <tr><td>Iterator</td><td>przechodzenie bez znajomości struktury</td><td>ręczne tokeny stron i indeksy</td></tr>
+      <tr><td>Mediator</td><td>koordynuje współpracę grupy</td><td>komponenty znają wszystkich sąsiadów</td></tr>
+      <tr><td>Memento</td><td>migawka stanu do przywrócenia</td><td>gettery/settery tylko dla „cofnij”</td></tr>
+      <tr><td>Observer</td><td>powiadamia subskrybentów o zmianie</td><td>klasa domenowa woła maile, SMS-y…</td></tr>
+      <tr><td>State</td><td>zachowanie zależne od stanu</td><td><code>switch (status)</code> w wielu metodach</td></tr>
+      <tr><td>Strategy</td><td>wymienny algorytm</td><td>switch po „sposobie liczenia”</td></tr>
+      <tr><td>Template Method</td><td>szkielet + kroki w podklasach</td><td>skopiowany przepływ z jedną różnicą</td></tr>
+      <tr><td>Visitor</td><td>nowe operacje na stabilnej hierarchii</td><td>każda funkcja = metoda w każdej klasie</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box relax reveal"><span class="lbl">🎓 Odpowiedź na zagadkę</span>
+    <p>Strategy i State różnią się <b>intencją i tym, kto decyduje o zmianie</b>. W Strategy implementację wybiera klient
+      (kupujący wybiera kuriera), a strategie zwykle nic o sobie nie wiedzą. W State stany znają przejścia i same
+      podmieniają stan kontekstu (<code>PaidState.ship()</code> zwraca <code>ShippedState</code>). Ta sama lekcja wraca
+      przy Decorator vs Proxy i Adapter vs Bridge: wzorzec to nie kształt diagramu, tylko <em>problem, który rozwiązuje</em>.</p>
+    <p>Następny krok: weź moduł ze swojego projektu, który najczęściej zmieniasz, i przejrzyj go z listą symptomów z
+      rozdziału 2.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  Przewodnik edukacyjny w jednym pliku HTML — bez frameworków, bez kroku budowania, bez zależności sieciowych.
+  Źródła: E. Gamma, R. Helm, R. Johnson, J. Vlissides, <em>Design Patterns: Elements of Reusable Object-Oriented
+  Software</em>, Addison-Wesley 1994; J. Bloch, <em>Effective Java</em>, wyd. 3; dokumentacja API Java SE 21 i Java
+  Language Specification. Przykłady kodu są uproszczone do ilustracji (pominięte importy, pola i obsługa błędów).
+  Stan na październik 2026. Java jest znakiem towarowym Oracle; Spring — Broadcom.
+</footer>
+
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sleep = ms => new Promise(r => setTimeout(r, REDUCE ? 0 : ms));
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, text, attrs = {}) {
+  const t = S('text', Object.assign({ x, y, 'text-anchor': 'middle' }, attrs), parent);
+  t.textContent = text;
+  return t;
+}
+function H(tag, cls, html, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const ease = k => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (REDUCE || ms <= 0) { fn(1); return res(); }
+    const t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / ms);
+      fn(ease(k));
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+function flyDot(parent, x0, y0, x1, y1, { ms = 600, color, r = 5 } = {}) {
+  const c = S('circle', { cx: x0, cy: y0, r, class: 'fly' }, parent);
+  c.style.fill = color || C.accent;
+  return tween(ms, k => { c.setAttribute('cx', x0 + (x1 - x0) * k); c.setAttribute('cy', y0 + (y1 - y0) * k); }).then(() => c.remove());
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function readColors() { for (const k of ['ink', 'paper', 'paper2', 'mut', 'line', 'accent', 'accent2', 'ok', 'bad', 'warn', 'dim', 'card']) C[k] = cssVar('--' + k); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function ringXY(cx, cy, r, f) { const a = f * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+
+/* ---------- structure: auto numbering, TOC, course map, level chips, depth switch ---------- */
+const LEVELS = ['Essentials', 'Practitioner', 'Expert'];   // {{level names}}; data-level = index + 1
+const lvlOf = el => +(el.dataset.level || 1);
+const levelled = (root = document) => $$('main [data-level]', root).filter(e => !e.closest('#map'));   // content, not the map's own links
+const DEPTH_KEY = 'akp-depth:' + location.pathname;
+const blocks = $$('main > section.part, main > section.chapter');
+const chapters = blocks.filter(b => b.classList.contains('chapter'));
+chapters.forEach((s, i) => { const n = $('.chap-num', s); if (n && !n.textContent.trim()) n.textContent = i; });
+const titleOf = s => s.dataset.title || $('h2', s).textContent.trim();
+(() => {
+  const toc = $('#toc'), map = $('#map');
+  if (toc) toc.innerHTML = '<b>Spis treści</b>';
+  let grp = null;
+  for (const b of blocks) {
+    const lv = lvlOf(b);
+    if (b.classList.contains('part')) {
+      const name = `${$('.part-no', b)?.textContent || ''} · ${$('h2', b).textContent}`;
+      if (toc) H('div', 'toc-part', null, toc).textContent = name;
+      if (map) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = name; grp.dataset.level = lv; }
+      continue;
+    }
+    const num = $('.chap-num', b)?.textContent || '';
+    if (toc) { const a = H('a', '', null, toc); a.href = '#' + b.id; a.textContent = `${num} · ${titleOf(b)}`; a.dataset.level = lv; }
+    if (map) {
+      if (!grp) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = 'Start'; }
+      const a = H('a', 'map-ch l' + lv, `<i>${num}</i><span></span>`, grp); a.href = '#' + b.id; a.dataset.level = lv;
+      $('span', a).textContent = titleOf(b);
+    }
+  }
+  const multi = levelled().some(e => lvlOf(e) > 1);
+  // level chips on chapter headings and "go deeper" summaries
+  chapters.forEach(s => { if (multi && s.dataset.level) { const h = $('.chap-head h2', s); if (h) H('span', 'lvl-chip l' + lvlOf(s), `L${lvlOf(s)} · ${LEVELS[lvlOf(s) - 1] || ''}`, h); } });
+  $$('details.deeper').forEach(d => { const sm = $('summary', d); if (sm) sm.insertAdjacentHTML('afterbegin', `<span class="lvl-chip l${lvlOf(d)}">L${lvlOf(d)}</span>`); });
+  // jumping to a chapter deeper than the current depth raises the depth first
+  $$('#toc a, #map a').forEach(a => a.addEventListener('click', () => { if (+a.dataset.level > depth) setDepth(+a.dataset.level); }));
+  const dEl = $('#depth');
+  if (!multi || !dEl) { if (dEl) dEl.remove(); return; }
+  dEl.innerHTML = '<span>Depth</span>';
+  LEVELS.forEach((n, i) => { const b = H('button', '', `${i + 1}<span class="nm"> ${n}</span>`, dEl); b.title = n; b.onclick = () => setDepth(i + 1); });
+})();
+let depth = LEVELS.length;
+try { const d = +localStorage.getItem(DEPTH_KEY); if (d >= 1 && d <= LEVELS.length) depth = d; } catch (e) { }
+function setDepth(d) {
+  depth = d;
+  try { localStorage.setItem(DEPTH_KEY, d); } catch (e) { }
+  levelled().forEach(el => el.classList.toggle('lvl-off', lvlOf(el) > depth));
+  $$('#toc a, #map a, .map-part').forEach(a => a.classList.toggle('dim', lvlOf(a) > depth));
+  $$('#depth button').forEach((b, i) => b.classList.toggle('on', i + 1 === depth));
+  $$('.lvl-hint').forEach(h => h.remove());
+  chapters.forEach(s => {
+    if (s.classList.contains('lvl-off')) return;
+    const hid = levelled(s).filter(e => e.classList.contains('lvl-off'));
+    if (!hid.length) return;
+    const need = Math.min(...hid.map(lvlOf));
+    const b = H('button', 'lvl-hint', `＋ ${hid.length} deeper block${hid.length > 1 ? 's' : ''} hidden here — show level ${need} (${LEVELS[need - 1] || ''})`, s);
+    b.onclick = () => setDepth(need);
+  });
+}
+setDepth(depth);
+
+/* ---------- scroll machinery ---------- */
+const bar = $('#progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+    document.body.classList.toggle('past-cover', scrollY > innerHeight * .8);
+    ticking = false;
+  });
+}, { passive: true });
+
+const revealIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('shown'); revealIO.unobserve(e.target); }
+}), { threshold: 0.12 });
+$$('.reveal').forEach(el => revealIO.observe(el));
+
+const tocLinks = new Map($$('#toc a').map(a => [a.getAttribute('href').slice(1), a]));
+const tocIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove('active'));
+  const a = tocLinks.get(e.target.id); if (a) a.classList.add('active');
+  $$('#map a').forEach(m => { const on = m.getAttribute('href') === '#' + e.target.id; m.classList.toggle('here', on); if (on) m.classList.add('seen'); });
+}), { rootMargin: '-35% 0px -60% 0px' });
+$$('section.chapter').forEach(s => tocIO.observe(s));
+
+const figIO = new IntersectionObserver(es => es.forEach(e => {
+  const f = e.target._fig; if (!f) return;
+  if (e.isIntersecting) {
+    if (f.visible) return;
+    f.visible = true;
+    if (!f.seen) { f.seen = true; f.first && f.first(); }
+    f.enter && f.enter();
+  } else if (f.visible) {
+    f.visible = false; f.leave && f.leave();
+  }
+}), { threshold: 0.25 });
+function registerFig(el, api) { el._fig = api; figIO.observe(el); return api; }
+
+/* enqueue helper: serialize animation runs, drop excess clicks */
+function makeQueue() {
+  let queue = Promise.resolve(), pending = 0;
+  return fn => { if (pending >= 3) return; pending++; queue = queue.then(fn).catch(e => console.error(e)).finally(() => pending--); };
+}
+
+
+/* ---------- generic helpers ---------- */
+function paintBar(el, segs, cap) {           // stacked bar: segs = [{k, v, c, t}], widths as % of cap
+  for (const s of segs) {
+    let d = el.querySelector(`[data-k="${s.k}"]`);
+    if (!d) { d = H('div', 'seg', null, el); d.dataset.k = s.k; }
+    d.style.width = Math.min(100, 100 * s.v / cap) + '%';
+    d.style.background = s.c;
+    d.textContent = s.v >= cap * 0.07 ? s.t : '';
+  }
+}
+function logLine(box, text, cls = '') {      // append a fading-in line to a .log box (textContent: safe)
+  const d = H('div', cls, null, box); d.textContent = text;
+  requestAnimationFrame(() => d.classList.add('shown'));
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+function say(el, html, cls = '') { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = html; }
+const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase labels wrap between words, not mid-word
+
+/* ---------- cover ---------- */
+(() => {
+  const g = $('#cover-nodes');
+  const icons = ['🏭', '🧱', '🔌', '🌳', '🧅', '📨', '🔁', '🧭'];
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = ringXY(200, 200, 150, i / 8);
+    const c = S('circle', { cx: x, cy: y, r: 17 }, g);
+    c.style.fill = C.paper2; c.style.stroke = C.ink; c.style.strokeWidth = 3;
+    T(g, x, y + 6, icons[i], { 'font-size': 16 });
+  }
+})();
+
+/* ---------- pattern data: node = [id, col, row, label, sub, smell]; step = [from, to, narration] ---------- */
+const GOF = [
+{ id: 'factory-method', name: 'Factory Method', cat: 1,
+  bez: { n: [['c',0,1,'Client'],['d',1.5,1,'Document','generate(format)',1],['p',3,0,'PdfRenderer'],['k',3,1,'KsefXmlRenderer'],['h',3,2,'HtmlRenderer']],
+    s: [['c','d','Klient woła generate("pdf") — format to zwykły String.'],['d','p','Document robi if/switch po formacie i sam tworzy new PdfRenderer().'],['d','k','Ta sama klasa zna też KsefXmlRenderer…'],['d','h','…i HtmlRenderer. Każdy nowy format oznacza edycję Document.']],
+    ch: { t: 'Nowy format: EPUB. Document dostaje nową gałąź w switchu — tak samo każde inne miejsce z takim switchem.', edit: ['d'], add: [['e',3,3,'EpubRenderer']], links: [['d','e']] } },
+  z: { n: [['c',0,1,'Client'],['d',1.5,0,'Document','generate()'],['pi',1.5,2,'PdfInvoice','createRenderer()'],['ki',3,2,'KsefInvoice','createRenderer()'],['r',3,0,'«Renderer»']],
+    s: [['c','pi','Klient dostaje gotowy obiekt PdfInvoice (np. z konfiguracji).'],['pi','d','Wspólny algorytm generate() żyje w klasie bazowej Document.'],['d','pi','W jednym kroku generate() woła createRenderer() — metodę wytwórczą nadpisaną w podklasie.'],['d','r','Dalej Document pracuje tylko z interfejsem Renderer. Nie wie, czy to PDF, czy XML.']],
+    ch: { t: 'Nowy format: EPUB. Dodajesz podklasę EpubInvoice z własnym createRenderer(). Document i istniejące podklasy zostają nietknięte.', add: [['e',0,2.6,'EpubInvoice','createRenderer()']], links: [['e','d']] } } },
+{ id: 'abstract-factory', name: 'Abstract Factory', cat: 1,
+  bez: { n: [['a',0,0,'UploadService','if (cloud == …)',1],['b',0,1,'ReportJob','if (cloud == …)',1],['c',0,2,'Notifier','if (cloud == …)',1],['s3',2,0,'S3Storage'],['sq',2,1,'SqsQueue'],['as',2,2,'AwsSecrets'],['gs',3,0,'GcsStorage'],['gq',3,1,'PubSubQueue'],['gx',3,2,'GcpSecrets']],
+    s: [['a','s3','UploadService sprawdza if (cloud == AWS) i sam tworzy S3Storage.'],['b','sq','ReportJob robi ten sam if i tworzy SqsQueue.'],['c','gx','Notifier ma pomyloną gałąź: bierze sekrety z GCP, a reszta działa na AWS. Nic tego nie pilnuje.']],
+    ch: { t: 'Nowa chmura: Azure. Każda z trzech klas dostaje nową gałąź if — trzy nowe miejsca na pomyłkę (plus 3 klasy produktów).', edit: ['a','b','c'], add: [['az',1.5,3,'Azure…','3 produkty',0,3]] } },
+  z: { n: [['a',0,0,'UploadService'],['b',0,1,'ReportJob'],['c',0,2,'Notifier'],['f',1.5,1,'«CloudFactory»','storage() queue() …'],['aw',3,0.5,'AwsFactory','S3, SQS, Secrets'],['gc',3,1.6,'GcpFactory','GCS, Pub/Sub, …']],
+    s: [['aw','f','Przy starcie aplikacji wybierasz jedną fabrykę: AwsFactory. Raz.'],['a','f','UploadService prosi fabrykę o storage() — nie wie, która to chmura.'],['b','f','ReportJob prosi o queue() z tej samej fabryki…'],['c','f','…a Notifier o secrets(). Wszystkie produkty pochodzą z jednej rodziny, więc do siebie pasują.']],
+    ch: { t: 'Nowa chmura: Azure. Dopisujesz AzureFactory z jej trzema produktami. Klasy biznesowe zostają nietknięte.', add: [['az',3,2.7,'AzureFactory','+3 produkty',0,4]], links: [['az','f']] } } },
+{ id: 'builder', name: 'Builder', cat: 1,
+  bez: { n: [['a',0,0,'SearchPage'],['b',0,1,'MobileApi'],['c',0,2,'SavedSearchJob'],['q',2.5,1,'SearchQuery','new(…8 parametrów)',1]],
+    s: [['a','q','new SearchQuery("buty", null, null, 100, 300, true, null, 2) — co znaczy to true?'],['b','q','MobileApi woła ten sam konstruktor z innym zestawem nulli.'],['c','q','Zamiana miejscami ceny min i max kompiluje się bez błędu — oba to int.']],
+    ch: { t: 'Nowy parametr: waluta. Zmienia się sygnatura konstruktora, więc trzeba poprawić każde wywołanie (albo dopisać kolejny konstruktor).', edit: ['a','b','c','q'] } },
+  z: { n: [['a',0,0,'SearchPage'],['b',0,1,'MobileApi'],['c',0,2,'SavedSearchJob'],['bd',1.6,1,'SearchQuery.Builder','phrase() price() …'],['q',3,1,'SearchQuery','niezmienny']],
+    s: [['a','bd','SearchPage ustawia tylko to, czego potrzebuje: phrase("buty").price(100, 300).'],['b','bd','MobileApi ustawia inny podzbiór. Nazwy metod mówią, co jest czym.'],['bd','q','build() sprawdza reguły (np. min ≤ max) i zwraca niezmienny SearchQuery.']],
+    ch: { t: 'Nowy parametr: waluta. Builder dostaje metodę currency(…) z wartością domyślną. Istniejące wywołania kompilują się bez zmian.', edit: ['bd'] } } },
+{ id: 'prototype', name: 'Prototype', cat: 1,
+  bez: { n: [['ui',0,1,'OfferController','duplicate()',1],['o',2.5,0,'B2BOffer','gettery + settery'],['o2',2.5,2,'B2COffer','gettery + settery']],
+    s: [['ui','o','Kontroler sprawdza instanceof B2BOffer i przepisuje pole po polu do nowego obiektu.'],['ui','o2','Dla B2COffer: druga, prawie identyczna kopia tego kodu.'],['ui','ui','Pola prywatne? Klasa oferty musiała wystawić gettery i settery tylko po to, żeby ktoś z zewnątrz mógł ją skopiować.']],
+    ch: { t: 'Nowe pole w B2BOffer: harmonogram płatności. Kontroler o nim nie wie, więc kopia oferty po cichu je gubi.', edit: ['ui','o'] } },
+  z: { n: [['ui',0,1,'OfferController'],['p',1.5,1,'«Offer»','copy()'],['o',3,0,'B2BOffer','copy()'],['o2',3,2,'B2COffer','copy()']],
+    s: [['ui','p','Kontroler woła offer.copy(). Nie musi znać konkretnej klasy.'],['p','o','B2BOffer kopiuje się sama: zna swoje pola, także prywatne.'],['o','ui','Wraca głęboka kopia: nowe pozycje, nowe rabaty, żadnych list wspólnych z oryginałem.']],
+    ch: { t: 'Nowe pole w B2BOffer: harmonogram płatności. Uzupełniasz copy() w tej samej klasie, obok nowego pola.', edit: ['o'] } } },
+{ id: 'singleton', name: 'Singleton', cat: 1,
+  bez: { n: [['r1',0,0,'OrderRepo'],['r2',0,1,'UserRepo'],['r3',0,2,'StockRepo'],['p1',2.5,0,'ConnectionPool','10 połączeń',1],['p2',2.5,1,'ConnectionPool','10 połączeń',1],['p3',2.5,2,'ConnectionPool','10 połączeń',1]],
+    s: [['r1','p1','OrderRepo robi new ConnectionPool(10) — 10 połączeń do bazy.'],['r2','p2','UserRepo robi to samo: kolejne 10.'],['r3','p3','StockRepo: razem 30 połączeń z jednej instancji aplikacji. Przy kilku instancjach limit bazy szybko się kończy (liczby przykładowe).']],
+    ch: { t: 'Czwarte repozytorium = czwarta pula. Każde nowe miejsce z new mnoży połączenia.', add: [['r4',0,3,'PaymentRepo'],['p4',2.5,3,'ConnectionPool','10 połączeń']], links: [['r4','p4']] } },
+  z: { n: [['r1',0,0,'OrderRepo'],['r2',0,1,'UserRepo'],['r3',0,2,'StockRepo'],['p',2.5,1,'ConnectionPool','jedna instancja']],
+    s: [['r1','p','OrderRepo dostaje jedyną pulę: z getInstance() albo — lepiej — z kontenera DI.'],['r2','p','UserRepo dostaje tę samą instancję.'],['r3','p','Jedna pula, jeden limit, jedno miejsce do strojenia.']],
+    ch: { t: 'Czwarte repozytorium korzysta z tej samej puli. Połączeń nie przybywa.', add: [['r4',0,3,'PaymentRepo']], links: [['r4','p']] } } },
+{ id: 'adapter', name: 'Adapter', cat: 2,
+  bez: { n: [['co',0,0,'CheckoutService','if (NEWPAY) …',1],['rf',0,1,'RefundService','if (NEWPAY) …',1],['sb',0,2,'SubscriptionJob'],['old',2.6,0.4,'PayCoGateway','charge(Money)'],['sdk',2.6,1.8,'NewPaySdk','createCharge(cents)']],
+    s: [['co','sdk','CheckoutService: if (provider == NEWPAY) przelicza kwotę na grosze i woła createCharge.'],['rf','sdk','RefundService powtarza przeliczenie — i własną obsługę wyjątków SDK.'],['sb','old','SubscriptionJob nie wie o nowym dostawcy i woła starego.']],
+    ch: { t: 'NewPaySdk w wersji 3 zmienia nazwy metod. Poprawiasz każdy serwis, który woła SDK bezpośrednio.', edit: ['co','rf'] } },
+  z: { n: [['co',0,0,'CheckoutService'],['rf',0,1,'RefundService'],['sb',0,2,'SubscriptionJob'],['g',1.5,1,'«PaymentGateway»','charge(Money)'],['ad',3,0.4,'NewPayAdapter','grosze, wyjątki'],['sdk',3,1.8,'NewPaySdk','createCharge(cents)']],
+    s: [['co','g','Serwisy znają tylko twój interfejs PaymentGateway.charge(Money).'],['g','ad','Pod spodem jest NewPayAdapter, który implementuje PaymentGateway…'],['ad','sdk','…i tłumaczy: Money na grosze, wyjątki SDK na twoje błędy domenowe.']],
+    ch: { t: 'NewPaySdk w wersji 3 zmienia nazwy metod. Poprawiasz jeden plik: adapter.', edit: ['ad'] } } },
+{ id: 'bridge', name: 'Bridge', cat: 2,
+  bez: { n: [['n',1,0,'Notification','abstract'],['ae',0,1,'AlertEmail'],['as',1,1,'AlertSms'],['ak',2,1,'AlertSlack'],['re',0,2,'ReportEmail'],['rs',1,2,'ReportSms'],['rk',2,2,'ReportSlack'],['me',0,3,'ReminderEmail'],['ms',1,3,'ReminderSms'],['mk',2,3,'ReminderSlack']],
+    s: [['ae','n','AlertEmail dziedziczy po Notification i ma w sobie kod wysyłki maila.'],['re','re','ReportEmail też dziedziczy po Notification i ma kod wysyłki maila — skopiowany.'],['mk','mk','3 rodzaje × 3 kanały = 9 klas. Logika każdego kanału powtarza się trzy razy.']],
+    e: [['as','n'],['ak','n']],
+    ch: { t: 'Nowy kanał: Push. Dochodzą 3 klasy: AlertPush, ReportPush, ReminderPush.', add: [['x',3,1,'AlertPush'],['y',3,2,'ReportPush'],['w',3,3,'ReminderPush']] } },
+  z: { n: [['a',0,0,'Alert'],['r',0,1,'Report'],['m',0,2,'Reminder'],['n',1,1,'Notification','pole channel'],['ch',2,1,'«Channel»','deliver()'],['e',3,0,'EmailChannel'],['s',3,1,'SmsChannel'],['k',3,2,'SlackChannel']],
+    s: [['a','n','Alert dziedziczy po Notification: wie, CO wysłać (treść, priorytet).'],['n','ch','Notification ma referencję do Channel — to jest „most”.'],['ch','e','Channel wie, JAK wysłać. Tu: EmailChannel.'],['m','n','Reminder dostaje w konstruktorze SmsChannel. Kombinację wybierasz w czasie działania.']],
+    ch: { t: 'Nowy kanał: Push. Jedna klasa PushChannel działa od razu z każdym rodzajem powiadomienia.', add: [['pu',3,3,'PushChannel']], links: [['ch','pu']] } } },
+{ id: 'composite', name: 'Composite', cat: 2,
+  bez: { n: [['c',0,1,'CartService','price() weight() …',1],['p',2.5,0,'Product'],['b',2.5,2,'Bundle','List<Object>']],
+    s: [['c','p','price(): jeśli item instanceof Product — dodaj cenę.'],['c','b','Jeśli instanceof Bundle — rekurencja po zawartości, która też może zawierać Bundle.'],['c','c','Ten sam if/instanceof jest w weight() i inStock(). Trzy kopie tej samej rekurencji.']],
+    ch: { t: 'Nowy typ pozycji: karta podarunkowa wewnątrz zestawów. Trzy metody CartService dostają nową gałąź.', edit: ['c'], add: [['g',2.5,3,'GiftCard']], links: [['c','g']] } },
+  z: { n: [['c',0,1,'CartService'],['i',1.5,1,'«Item»','price() grams()'],['p',3,0,'Product','liść'],['b',3,2,'Bundle','List<Item>']],
+    s: [['c','i','CartService woła item.price(). Nie wie, czy to produkt, czy zestaw.'],['i','b','Bundle sumuje price() swoich dzieci…'],['b','i','…a każde dziecko to znów Item: produkt albo kolejny zestaw. Rekurencja jest w jednym miejscu.']],
+    ch: { t: 'Nowy typ: GiftCard implementuje Item. CartService i Bundle bez zmian.', add: [['g',1.5,3,'GiftCard','liść']], links: [['g','i']] } } },
+{ id: 'decorator', name: 'Decorator', cat: 2,
+  bez: { n: [['s',0,1,'PriceService'],['k1',1.5,0,'RetryingClient'],['k2',1.5,1,'RetryingCachingClient'],['k3',1.5,2,'LoggingRetryingCaching…'],['h',3,1,'HttpClient']],
+    s: [['s','k2','PriceService potrzebuje retry + cache, więc używa RetryingCachingClient.'],['k2','h','Ta klasa dziedziczy (pośrednio) po HttpClient i ma retry i cache wbudowane na sztywno.'],['k3','h','Inny serwis chce jeszcze logowania: kolejna podklasa. Przy n dodatkach wariantów może być do 2ⁿ.']],
+    e: [['k1','h']],
+    ch: { t: 'Nowy dodatek: metryki. Każda kombinacja, która ich potrzebuje, dostaje własną podklasę „…WithMetrics”.', add: [['m',1.5,3,'…MetricsClient','×3 warianty',0,3]] } },
+  z: { n: [['s',0,0,'PriceService'],['l',1,0,'Logging','«Client»'],['r',2,0,'Retry','«Client»'],['c',3,0,'Cache','«Client»'],['h',3,1.4,'Http','«Client»']],
+    s: [['s','l','PriceService widzi tylko interfejs Client. Wywołanie trafia do Logging…'],['l','r','…który loguje i przekazuje dalej do Retry…'],['r','c','…Retry ponawia przy błędzie, wołając Cache…'],['c','h','…a Cache idzie do sieci tylko przy braku w cache. Każda warstwa to mała, osobna klasa.']],
+    ch: { t: 'Nowy dodatek: metryki. Jedna klasa Metrics implements Client, wkładana w łańcuch tam, gdzie trzeba.', add: [['mt',1,1.4,'Metrics','«Client»']], links: [['s','mt']] } } },
+{ id: 'facade', name: 'Facade', cat: 2,
+  bez: { n: [['w',0,0.5,'WebController','4 kroki + błędy',1],['m',0,1.5,'MobileApi','4 kroki + błędy',1],['b',0,2.5,'B2bImport','4 kroki + błędy',1],['st',3,0,'Stock'],['pa',3,1,'Payments'],['in',3,2,'Invoices'],['sh',3,3,'Shipping']],
+    s: [['w','st','WebController rezerwuje towar…'],['w','pa','…pobiera płatność (i cofa rezerwację przy błędzie)…'],['m','in','MobileApi ma własną kopię tej orkiestracji…'],['b','sh','…B2bImport też. Trzy kopie kolejności i kompensacji błędów.']],
+    ch: { t: 'Nowa reguła: przy płatności odroczonej faktura przed pobraniem płatności. Zmiana w trzech miejscach — i trzy szanse na niespójność.', edit: ['w','m','b'] } },
+  z: { n: [['w',0,0.5,'WebController'],['m',0,1.5,'MobileApi'],['b',0,2.5,'B2bImport'],['f',1.5,1.5,'OrderPlacement','place(cart)'],['st',3,0,'Stock'],['pa',3,1,'Payments'],['in',3,2,'Invoices'],['sh',3,3,'Shipping']],
+    s: [['w','f','Wszystkie wejścia wołają jedno: OrderPlacement.place(cart).'],['f','st','Fasada rezerwuje towar…'],['f','pa','…pobiera płatność…'],['f','in','…wystawia fakturę…'],['f','sh','…i zleca wysyłkę. Kolejność i kompensacje są w jednym miejscu.']],
+    ch: { t: 'Nowa reguła kolejności — zmiana tylko w OrderPlacement.', edit: ['f'] } } },
+{ id: 'flyweight', name: 'Flyweight', cat: 2,
+  bez: { n: [['m1',0,0,'Marker #1','x, y + bitmapa'],['m2',0,1,'Marker #2','x, y + bitmapa'],['m3',0,2,'Marker #20000','x, y + bitmapa'],['i1',2.5,0,'Bitmap paczkomat','40 KB',1],['i2',2.5,1,'Bitmap paczkomat','40 KB',1],['i3',2.5,2,'Bitmap paczkomat','40 KB',1]],
+    s: [['m1','i1','Każdy znacznik ładuje własną kopię bitmapy ikony.'],['m2','i2','Drugi też — ta sama ikona, osobna kopia w pamięci.'],['m3','i3','20 000 znaczników × 40 KB ≈ 800 MB, choć różnych ikon są 4 (liczby przykładowe).']],
+    ch: { t: 'Klient chce 3× więcej punktów na mapie. Pamięć rośnie proporcjonalnie: każdy nowy znacznik niesie bitmapę.', add: [['m4',0,3,'Marker #60000','x, y + bitmapa'],['i4',2.5,3,'Bitmap paczkomat','40 KB']], links: [['m4','i4']] } },
+  z: { n: [['m1',0,0,'Marker #1','x, y, typ'],['m2',0,1,'Marker #2','x, y, typ'],['m3',0,2,'Marker #20000','x, y, typ'],['f',1.5,1,'IconFactory','cache po typie'],['i',3,1,'Icon paczkomat','współdzielona']],
+    s: [['m1','f','Znacznik trzyma tylko x, y i typ. Ikonę bierze z IconFactory.'],['f','i','Fabryka ładuje ikonę danego typu tylko za pierwszym razem…'],['m2','f','…kolejne znaczniki dostają tę samą instancję.'],['m3','f','Stan wewnętrzny (bitmapa) jest współdzielony, zewnętrzny (pozycja) — nie.']],
+    ch: { t: '3× więcej punktów: przybywa tylko lekkich znaczników (x, y, typ). Ikon nadal są 4.', add: [['m4',0,3,'Marker #60000','x, y, typ']], links: [['m4','f']] } } },
+{ id: 'proxy', name: 'Proxy', cat: 2,
+  bez: { n: [['c',0,0,'DocController','if (canRead) …',1],['a',0,1,'ExportJob','inny if',1],['s',0,2,'SearchApi','brak sprawdzenia',1],['r',2.5,1,'DocumentRepo','load(id)']],
+    s: [['c','r','DocController sprawdza uprawnienia, potem woła load(id).'],['a','r','ExportJob ma własną, trochę inną kopię sprawdzania.'],['s','r','SearchApi zapomniał. Dokumenty jednego klienta wyciekają do drugiego.']],
+    ch: { t: 'Nowa reguła: dokumenty „poufne” tylko dla działu prawnego. Trzeba ją dopisać wszędzie, gdzie ktoś woła repozytorium.', edit: ['c','a','s'] } },
+  z: { n: [['c',0,0,'DocController'],['a',0,1,'ExportJob'],['s',0,2,'SearchApi'],['p',1.5,1,'SecuredDocRepo','proxy'],['r',3,1,'DocumentRepo','prawdziwe']],
+    s: [['c','p','Klienci dostają obiekt o tym samym interfejsie — to proxy.'],['p','p','Proxy sprawdza uprawnienia i zapisuje dostęp w audycie…'],['p','r','…i dopiero wtedy deleguje do prawdziwego repozytorium.'],['s','p','SearchApi nie ominie kontroli: nie ma referencji do prawdziwego obiektu.']],
+    ch: { t: 'Reguła „poufne” — zmiana w jednym miejscu: w proxy.', edit: ['p'] } } },
+{ id: 'chain', name: 'Chain of Responsibility', cat: 3,
+  bez: { n: [['rq',0,1,'HTTP request'],['h',1.5,1,'OrderEndpoint','60 linii if-ów',1],['o',3,1,'logika zamówienia'],['h2',1.5,2.3,'CartEndpoint','ta sama kopia',1]],
+    s: [['rq','h','Żądanie trafia do jednej metody handle().'],['h','h','Na początku seria if-ów: token? limit zapytań? poprawny JSON? Dopiero potem właściwa logika.'],['h','o','Logika zamówienia dostaje żądanie po przejściu wszystkich if-ów.'],['rq','h2','Inny endpoint ma skopiowany ten sam blok if-ów, z drobnymi różnicami.']],
+    ch: { t: 'Nowy krok: blokada IP z czarnej listy. Dopisujesz if w każdym endpoincie i musisz trafić w dobrą kolejność.', edit: ['h','h2'] } },
+  z: { n: [['rq',0,0,'HTTP request'],['a',1,0,'Auth'],['rl',2,0,'RateLimit'],['v',3,0,'Validation'],['h',3,1.4,'OrderEndpoint','tylko logika']],
+    s: [['rq','a','Auth sprawdza token. Jest OK, więc next.handle(req).'],['a','rl','RateLimit liczy zapytania. Może przerwać łańcuch odpowiedzią 429.'],['rl','v','Validation sprawdza JSON…'],['v','h','…i endpoint dostaje tylko poprawne, uwierzytelnione żądania.']],
+    ch: { t: 'Blokada IP: nowy handler IpBlocklist wpięty na początek łańcucha. Endpointy bez zmian.', add: [['ip',0.6,1.4,'IpBlocklist']], links: [['rq','ip']] } } },
+{ id: 'command', name: 'Command', cat: 3,
+  bez: { n: [['ui',0,1,'AdminPanel','onClick ×12',1],['ps',2.5,0,'PriceService'],['cs',2.5,2,'CatalogService']],
+    s: [['ui','ps','Kliknięcie woła priceService.change(…) wprost.'],['ui','cs','Inny przycisk woła catalogService.move(…). Operacja się wykonuje i znika.'],['ui','ui','Cofnąć? Ponowić po błędzie? Zapisać, kto co zrobił? Nie ma czego — operacja nie jest obiektem.']],
+    ch: { t: 'Wymaganie: „Cofnij” dla operacji masowych i dziennik audytu. Trzeba przerobić każdy handler i serwisy pod nimi.', edit: ['ui','ps','cs'] } },
+  z: { n: [['ui',0,1,'AdminPanel'],['cmd',1.5,0,'ChangePrice','execute() undo()'],['h',1.5,2,'History','stos poleceń'],['ps',3,0,'PriceService'],['q',3,2,'AuditLog']],
+    s: [['ui','cmd','Kliknięcie tworzy obiekt ChangePrice(produkty, nowaCena).'],['cmd','ps','execute() zapamiętuje stare ceny i zmienia je przez PriceService.'],['ui','h','Polecenie trafia na stos History…'],['h','q','…i do dziennika audytu. „Cofnij” = zdejmij polecenie ze stosu i wywołaj undo().']],
+    ch: { t: 'Nowa operacja masowa = nowa klasa polecenia. Historia, cofanie i audyt działają dla niej od razu.', add: [['mv',0,3,'MoveToCategory','execute() undo()']], links: [['mv','h']] } } },
+{ id: 'interpreter', name: 'Interpreter', cat: 3,
+  bez: { n: [['ck',0,1,'Checkout'],['dr',2,1,'DiscountRules','if (total > 200 && …)',1],['dp',3,2.2,'deploy','co tydzień']],
+    s: [['ck','dr','Checkout pyta o rabat. Reguły są zaszyte w kodzie jako if-y.'],['dr','dr','Marketing chce „książki powyżej 200 zł albo klient VIP”. To zadanie dla programisty…'],['dr','dp','…i nowe wdrożenie.']],
+    ch: { t: 'Nowa reguła co tydzień. Każda to zmiana w DiscountRules, review i deploy.', edit: ['dr'] } },
+  z: { n: [['ck',3,0,'Checkout'],['or',1.5,0,'Or'],['and',0.6,1,'And'],['vip',2.4,1,'IsVip'],['gt',0,2,'Gt(total, 200)'],['cat',1.2,2,'CategoryIs','„książki”']],
+    s: [['ck','or','Reguła przychodzi z konfiguracji jako tekst i jest parsowana do drzewa obiektów. Checkout woła korzeń.'],['or','and','Or.eval(cart) pyta lewe dziecko: And…'],['and','gt','…And pyta Gt(total, 200). Koszyk ma 150 zł, więc false — And kończy od razu.'],['or','vip','Or pyta prawe dziecko: IsVip. Klient jest VIP-em, więc cała reguła daje true.']],
+    e: [['and','cat']],
+    ch: { t: 'Nowa reguła tygodnia: zmienia się tylko tekst w konfiguracji. Nowy rodzaj warunku (np. dzień tygodnia) to jedna nowa klasa węzła.', add: [['dw',3,2,'DayOfWeek','nowy węzeł']] } } },
+{ id: 'iterator', name: 'Iterator', cat: 3,
+  bez: { n: [['r',0,0,'MonthlyReport','pętla po tokenach',1],['s',0,2,'SyncJob','pętla po tokenach',1],['api',2.5,1,'InvoicesApi','?pageToken=…']],
+    s: [['r','api','MonthlyReport pobiera stronę 1 i wyciąga nextPageToken…'],['api','r','…pętla while ręcznie pobiera kolejne strony.'],['s','api','SyncJob ma własną kopię tej pętli. Ktoś kiedyś zgubi ostatnią stronę.']],
+    ch: { t: 'API zmienia stronicowanie z tokena w treści na kursor w nagłówku. Poprawiasz każdą pętlę.', edit: ['r','s'] } },
+  z: { n: [['r',0,0,'MonthlyReport'],['s',0,2,'SyncJob'],['it',1.5,1,'InvoiceIterator','hasNext() next()'],['api',3,1,'InvoicesApi']],
+    s: [['r','it','MonthlyReport pisze zwykłe for (Invoice i : api.invoices()).'],['it','api','Iterator dociąga następną stronę dopiero wtedy, gdy bieżąca się skończy.'],['s','it','SyncJob używa tego samego iteratora. Wiedza o stronicowaniu jest w jednym miejscu.']],
+    ch: { t: 'Nowy format stronicowania: zmiana tylko w InvoiceIterator.', edit: ['it'] } } },
+{ id: 'mediator', name: 'Mediator', cat: 3,
+  bez: { n: [['d',0,0,'DatePicker'],['t',3,0,'TimeSlots'],['g',0,2,'GuestCount'],['tp',3,2,'TablePicker'],['pr',1.5,1,'PromoCode']],
+    s: [['d','t','Zmiana daty: DatePicker sam odświeża TimeSlots…'],['d','tp','…i TablePicker.'],['g','tp','GuestCount też zna TablePicker…'],['g','t','…i TimeSlots (duże grupy tylko wieczorem). Każdy zna każdego: przy N komponentach do N·(N−1) zależności.']],
+    ch: { t: 'Nowe pole: sala dla dzieci. Musi znać datę, godziny i stoliki — a one muszą znać je.', edit: ['d','t','g','tp'], add: [['k',1.5,3,'KidsRoom']], links: [['k','d'],['k','tp']] } },
+  z: { n: [['d',0,0,'DatePicker'],['t',3,0,'TimeSlots'],['g',0,2,'GuestCount'],['tp',3,2,'TablePicker'],['m',1.5,1,'BookingForm','mediator']],
+    s: [['d','m','DatePicker zgłasza tylko: „zmieniłem się”.'],['m','t','Mediator decyduje: odśwież TimeSlots…'],['m','tp','…i TablePicker. Reguły współpracy są w jednym miejscu.'],['g','m','Komponenty nie znają się nawzajem — tylko mediatora.']],
+    ch: { t: 'Nowe pole KidsRoom rozmawia tylko z mediatorem. Zmiana: mediator + nowa klasa.', edit: ['m'], add: [['k',1.5,2.6,'KidsRoom']], links: [['k','m']] } } },
+{ id: 'memento', name: 'Memento', cat: 3,
+  bez: { n: [['ui',0,1,'ConfiguratorUI','kopiuje pola',1],['c',2.5,1,'PcConfig','getX()/setX() dla UI']],
+    s: [['ui','c','Przed zmianą UI kopiuje stan: getCpu(), getRam(), getGpu()… Klasa musiała wystawić wszystko na zewnątrz.'],['c','ui','Cofnięcie: setCpu(…), setRam(…) — z pominięciem reguł, które pilnują spójności konfiguracji.'],['ui','ui','UI wie, z czego składa się PcConfig. Z enkapsulacji nic nie zostało.']],
+    ch: { t: 'Nowe pole w PcConfig: chłodzenie. UI zapomina je skopiować, więc „Cofnij” przywraca konfigurację tylko w połowie.', edit: ['ui','c'] } },
+  z: { n: [['ui',0,1,'ConfiguratorUI','caretaker'],['c',2.5,0,'PcConfig','originator'],['m',2.5,2,'Snapshot','memento']],
+    s: [['ui','c','Przed zmianą UI prosi: config.save().'],['c','m','PcConfig pakuje swój stan do nieprzezroczystego obiektu Snapshot…'],['m','ui','…a UI tylko go przechowuje na stosie, nie zaglądając do środka.'],['ui','c','Cofnij: config.restore(snapshot). Tylko PcConfig wie, jak go odczytać.']],
+    ch: { t: 'Nowe pole: chłodzenie. Zmieniają się PcConfig i jego Snapshot, które leżą obok siebie. UI bez zmian.', edit: ['c','m'] } } },
+{ id: 'observer', name: 'Observer', cat: 3,
+  bez: { n: [['o',0,1,'Order','markPaid()',1],['ml',2.5,0,'Mailer'],['sm',2.5,1,'SmsSender'],['wh',2.5,2,'Warehouse']],
+    s: [['o','ml','Order.markPaid() woła wprost Mailer…'],['o','sm','…SmsSender…'],['o','wh','…i Warehouse. Klasa domenowa zna trzy usługi, które nie należą do jej odpowiedzialności.']],
+    ch: { t: 'Analityka chce wiedzieć o płatnościach. Edytujesz Order — klasę domenową — dla nowego odbiorcy.', edit: ['o'], add: [['an',2.5,3,'Analytics']], links: [['o','an']] } },
+  z: { n: [['o',0,1,'Order','publish(OrderPaid)'],['bus',1.5,1,'EventBus','subskrybenci'],['ml',3,0,'Mailer'],['sm',3,1,'SmsSender'],['wh',3,2,'Warehouse']],
+    s: [['o','bus','Order publikuje zdarzenie OrderPaid. Nie wie, kto słucha.'],['bus','ml','EventBus przekazuje je każdemu zarejestrowanemu subskrybentowi…'],['bus','sm','…SmsSender…'],['bus','wh','…i Warehouse. Subskrypcje ustawia się przy składaniu aplikacji.']],
+    ch: { t: 'Analityka: nowa klasa Analytics subskrybuje OrderPaid. Order bez zmian (plus jedna linia rejestracji).', add: [['an',3,3,'Analytics','subskrybent']], links: [['bus','an']] } } },
+{ id: 'state', name: 'State', cat: 3,
+  bez: { n: [['o',0,1,'Order','status: enum'],['p',2.5,0,'pay()','switch (status)',1],['s',2.5,1,'ship()','switch (status)',1],['c',2.5,2,'cancel()','switch (status)',1]],
+    s: [['o','p','pay(): switch (status) — NEW: OK; PAID, SHIPPED, CANCELLED: błąd.'],['o','s','ship(): kolejny switch po tych samych stanach.'],['o','c','cancel(): i jeszcze jeden. Reguły jednego stanu są rozsmarowane po wszystkich metodach.']],
+    ch: { t: 'Nowy stan: RETURN_REQUESTED. Każda metoda dostaje nowy case — łatwo jeden pominąć.', edit: ['p','s','c'] } },
+  z: { n: [['o',0,1,'Order','pole state'],['st',1.5,1,'«OrderState»','pay() ship() …'],['n',3,0,'NewState'],['pd',3,1,'PaidState'],['sh',3,2,'ShippedState']],
+    s: [['o','st','Order deleguje: state = state.pay(this).'],['st','n','Bieżący stan to NewState: płatność jest dozwolona…'],['n','pd','…i NewState sam zwraca następny stan: PaidState.'],['pd','sh','Teraz ship() trafia do PaidState, który zamawia kuriera i zwraca ShippedState. Każdy stan zna tylko swoje reguły.']],
+    ch: { t: 'Nowy stan: ReturnRequestedState — nowa klasa plus przejście w ShippedState.', edit: ['sh'], add: [['rr',3,3,'ReturnRequestedState']], links: [['sh','rr']] } } },
+{ id: 'strategy', name: 'Strategy', cat: 3,
+  bez: { n: [['ck',0,1,'Checkout'],['sc',2.5,1,'ShippingCost','switch (carrier)',1]],
+    s: [['ck','sc','Checkout woła shipping(cart, carrier).'],['sc','sc','W środku switch: paczkomat — gabaryt; kurier — waga i strefa; odbiór osobisty — 0 zł.'],['sc','ck','Reguły wszystkich przewoźników żyją w jednej rosnącej metodzie, testowanej jako całość.']],
+    ch: { t: 'Nowy przewoźnik i promocja „darmowa dostawa od 200 zł tylko kurierem”. Edytujesz ten sam switch, ryzykując pozostałe gałęzie.', edit: ['sc'] } },
+  z: { n: [['ck',0,1,'Checkout','pole shipping'],['i',1.5,1,'«ShippingStrategy»','cost(cart)'],['p',3,0,'ParcelLocker'],['c',3,1,'Courier'],['pk',3,2,'Pickup']],
+    s: [['ck','i','Checkout trzyma ShippingStrategy i woła cost(cart).'],['i','c','Kupujący wybrał kuriera, więc pod interfejsem jest Courier.'],['c','ck','Courier liczy wagę i strefę. Każdą strategię testujesz osobno.']],
+    ch: { t: 'Nowy przewoźnik = nowa klasa strategii. Istniejące strategie i Checkout bez zmian.', add: [['nc',3,3,'NewCarrier']], links: [['i','nc']] } } },
+{ id: 'template-method', name: 'Template Method', cat: 3,
+  bez: { n: [['a',0,0.5,'BankACsvImport','kopia przepływu',1],['b',0,2,'BankBXmlImport','kopia przepływu',1],['l',2.8,1.25,'Ledger']],
+    s: [['a','a','BankACsvImport: odczyt, parsowanie CSV, walidacja, zapis, raport.'],['b','b','BankBXmlImport: to samo, tylko parsowanie XML. Reszta skopiowana.'],['a','l','Obie klasy zapisują do księgi tym samym, zduplikowanym kodem.'],['b','l','Dwie kopie walidacji, dwie kopie zapisu.']],
+    ch: { t: 'Błąd w walidacji (duplikaty transakcji). Poprawka w obu kopiach — a łatwo poprawić tylko jedną.', edit: ['a','b'] } },
+  z: { n: [['base',1.5,0,'BankImport','final run()'],['a',0.5,1.6,'CsvImport','parse()'],['b',2.5,1.6,'XmlImport','parse()'],['l',3,0,'Ledger']],
+    s: [['a','base','Wywołanie run() trafia do klasy bazowej: tam jest ustalona kolejność kroków.'],['base','a','W kroku parse() klasa bazowa woła metodę abstrakcyjną — wykonuje się wersja z CsvImport.'],['base','l','Walidacja i zapis są wspólne, w jednym miejscu.']],
+    ch: { t: 'Błąd w walidacji: poprawka w jednym miejscu — BankImport.', edit: ['base'] } } },
+{ id: 'visitor', name: 'Visitor', cat: 3,
+  bez: { n: [['p',0,0,'Paragraph','toHtml toPdf words',1],['im',0,1,'Image','toHtml toPdf words',1],['t',0,2,'Table','toHtml toPdf words',1],['ex',2.5,1,'Exporter']],
+    s: [['ex','p','Exporter woła paragraph.toHtml()…'],['ex','im','…image.toHtml()…'],['ex','t','…table.toHtml(). Każda klasa elementu zna HTML, PDF i liczenie słów naraz.']],
+    ch: { t: 'Nowa operacja: eksport do Markdown. Edytujesz wszystkie trzy klasy elementów.', edit: ['p','im','t'] } },
+  z: { n: [['p',0,0,'Paragraph','accept(v)'],['im',0,1,'Image','accept(v)'],['t',0,2,'Table','accept(v)'],['v',1.5,1,'«Visitor»','visit(…) ×3'],['h',3,0,'HtmlVisitor'],['w',3,2,'WordCountVisitor']],
+    s: [['p','v','paragraph.accept(v) woła v.visit(this) — podwójna dyspozycja wybiera visit(Paragraph).'],['v','h','Tu v to HtmlVisitor: cała logika HTML dla wszystkich elementów w jednej klasie.'],['t','v','Table.accept(v) robi to samo. Elementy nie wiedzą nic o HTML.']],
+    ch: { t: 'Nowa operacja Markdown: jedna nowa klasa MarkdownVisitor. Ale uwaga: nowy typ elementu wymusiłby zmianę każdego wizytatora.', add: [['md',3,3,'MarkdownVisitor']], links: [['v','md']] } } }
+];
+
+/* ---------- pattern figures: one engine for all 23 ---------- */
+const GX = c => 62 + c * 118, GY = r => 30 + r * 62, NW = 108, NH = 40;
+function gofFig(D) {
+  const root = $('#f-' + D.id); if (!root) return;
+  const cap = $('figcaption', root);
+  cap.textContent = 'Uproszczenie: prostokąty to klasy, strzałki to wywołania lub zależności. Licznik liczy klasy do edycji i nowe klasy; pomija linię w miejscu składania aplikacji (main, konfiguracja DI), która wybiera implementację.';
+  const head = H('div', '', `<div class="ftitle">▶ ${D.name} w akcji <span>tryb, ▶ Uruchom, potem 💥</span></div>
+<div class="ctrl"><button class="btn on" data-act="bez">✗ Bez wzorca</button><button class="btn" data-act="z">✓ Z wzorcem</button>
+<button class="btn primary" data-act="run">▶ Uruchom</button><button class="btn bad" data-act="change">💥 Nowe wymaganie</button><button class="btn" data-act="reset">↺ Reset</button></div>`);
+  root.insertBefore(head, cap);
+  const sx = H('div', 'scroll-x gof-sx'); root.insertBefore(sx, cap);
+  const svg = S('svg', { role: 'img', 'aria-label': D.name + ': bez wzorca i z wzorcem' }, sx);
+  const cnt = H('div', 'gof-cnt'); root.insertBefore(cnt, cap);
+  const st = H('div', 'status'); root.insertBefore(st, cap);
+  let mode = 'bez', run = 0, demo = 0, pos = {}, score = {}, gE, gN;
+  const enqueue = makeQueue();
+  const rows = Math.max(...['bez', 'z'].flatMap(m => [...D[m].n, ...(D[m].ch.add || [])].map(n => n[2])));
+  svg.setAttribute('viewBox', `0 0 480 ${GY(rows) + 28}`);
+  const clip = (a, b) => { const dx = b.x - a.x, dy = b.y - a.y; const t = Math.min(dx ? (NW / 2 + 3) / Math.abs(dx) : 1e9, dy ? (NH / 2 + 3) / Math.abs(dy) : 1e9); return [a.x + dx * t, a.y + dy * t]; };
+  function node(g, [id, c, r, label, sub, smell], cls = '') {
+    const x = GX(c), y = GY(r), el = S('g', { class: 'nd gn ' + cls + (smell ? ' smell' : '') }, g);
+    S('rect', { x: x - NW / 2, y: y - NH / 2, width: NW, height: NH, rx: 6 }, el);
+    const ts = [T(el, x, sub ? y - 3 : y + 4, label, { 'font-size': label.length > 14 ? 10.5 : 12 })];
+    if (sub) ts.push(T(el, x, y + 12, sub, { class: 'gn-sub' }));
+    ts.forEach(t => { const w = t.getComputedTextLength ? t.getComputedTextLength() : 0; if (w > NW - 8) { t.setAttribute('textLength', NW - 8); t.setAttribute('lengthAdjust', 'spacingAndGlyphs'); } });
+    pos[id] = { x, y, el };
+  }
+  function edge(a, b, cls = '') {
+    const A = pos[a], B = pos[b]; if (!A || !B || a === b) return;
+    const [x1, y1] = clip(A, B), [x2, y2] = clip(B, A);
+    S('line', { x1, y1, x2, y2, class: 'gn-edge ' + cls, 'marker-end': `url(#ar-${D.id})` }, gE);
+  }
+  function draw() {
+    svg.innerHTML = ''; pos = {};
+    const mk = S('marker', { id: 'ar-' + D.id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, S('defs', {}, svg));
+    S('path', { d: 'M0 0L10 5L0 10z', class: 'gn-arrow' }, mk);
+    gE = S('g', {}, svg); gN = S('g', {}, svg);
+    D[mode].n.forEach(n => node(gN, n));
+    const seen = new Set();
+    [...D[mode].s, ...(D[mode].e || [])].forEach(([a, b]) => { if (!seen.has(a + '>' + b) && !seen.has(b + '>' + a)) { seen.add(a + '>' + b); edge(a, b); } });
+    $$('[data-act=bez],[data-act=z]', root).forEach(b => b.classList.toggle('on', b.dataset.act === mode));
+  }
+  const pulse = el => { el.classList.remove('pulse'); void el.getBoundingClientRect(); el.classList.add('pulse'); };
+  function paintCnt() {
+    cnt.innerHTML = ['bez', 'z'].map(m => `<span class="gof-pill ${m}">${m === 'bez' ? '✗ Bez wzorca' : '✓ Z wzorcem'}: ${score[m] ? `✎ edytowane: <b>${score[m].e}</b> · ＋ nowe: <b>${score[m].a}</b>` : '—'}</span>`).join('');
+  }
+  async function play() {
+    const my = ++run; draw();
+    for (const [a, b, txt] of D[mode].s) {
+      if (my !== run) return;
+      say(st, txt, mode === 'bez' ? 'warn' : 'ok');
+      pulse(pos[a].el);
+      if (a !== b) {
+        const [x1, y1] = clip(pos[a], pos[b]), [x2, y2] = clip(pos[b], pos[a]);
+        await flyDot(svg, x1, y1, x2, y2, { ms: 700, color: mode === 'bez' ? C.bad : C.ok });
+        if (my !== run) return;
+        pulse(pos[b].el);
+      }
+      await sleep(1500);
+    }
+  }
+  async function change() {
+    const my = ++run; draw();
+    const ch = D[mode].ch;
+    await sleep(250); if (my !== run) return;
+    (ch.edit || []).forEach(id => { const n = pos[id]; n.el.classList.add('edit'); T(n.el, n.x + NW / 2 - 9, n.y - NH / 2 + 13, '✎', { class: 'gn-badge' }); pulse(n.el); });
+    (ch.add || []).forEach(n => node(gN, n, 'add pop'));
+    (ch.links || []).forEach(([a, b]) => edge(a, b, 'add'));
+    score[mode] = { e: (ch.edit || []).length, a: (ch.add || []).reduce((s, n) => s + (n[6] || 1), 0) };
+    paintCnt();
+    say(st, '<b>💥 Nowe wymaganie.</b> ' + ch.t, mode === 'bez' ? 'bad' : 'ok');
+  }
+  function setMode(m) { demo++; run++; mode = m; draw(); say(st, m === 'bez' ? 'Tryb: bez wzorca. Naciśnij ▶ Uruchom albo 💥 Nowe wymaganie.' : 'Tryb: z wzorcem. Naciśnij ▶ Uruchom albo 💥 Nowe wymaganie.'); }
+  function reset() { demo++; run++; mode = 'bez'; score = {}; draw(); paintCnt(); say(st, 'Najpierw ▶ Uruchom bez wzorca, potem 💥 Nowe wymaganie. Powtórz z wzorcem i porównaj licznik.'); }
+  $('[data-act=bez]', root).onclick = () => setMode('bez');
+  $('[data-act=z]', root).onclick = () => setMode('z');
+  $('[data-act=run]', root).onclick = () => { demo++; enqueue(play); };
+  $('[data-act=change]', root).onclick = () => { demo++; enqueue(change); };
+  $('[data-act=reset]', root).onclick = reset;
+  reset();
+  registerFig(root, { first() {
+    const d = ++demo;
+    enqueue(async () => {
+      for (const m of ['bez', 'z']) {
+        if (d !== demo) return;
+        mode = m; await play(); if (d !== demo) return;
+        await sleep(500); await change(); if (d !== demo) return;
+        await sleep(2600);
+      }
+    });
+  } });
+}
+GOF.forEach(gofFig);
+
+/* ---------- 2. symptom → pattern ---------- */
+(() => {
+  const root = $('#fig-sym'), list = $('.sym-list', root), grid = $('.sym-grid', root), st = $('#sym-status');
+  const SYM = [
+    ['Ten sam switch/if po typie w wielu miejscach', ['strategy', 'state', 'factory-method']],
+    ['switch (status) w każdej metodzie klasy', ['state']],
+    ['Jedna zmiana = edycja wielu klas naraz', ['observer', 'facade', 'mediator']],
+    ['Klasy mnożą się jak iloczyn (A×B)', ['bridge', 'decorator']],
+    ['Konstruktor z 8 parametrami i nullami', ['builder']],
+    ['Cudze API nie pasuje do twojego interfejsu', ['adapter', 'facade']],
+    ['Drzewo: element i grupa traktowane tak samo', ['composite']],
+    ['Potrzebne „cofnij”, kolejka, historia', ['command', 'memento']],
+    ['Skopiowany przepływ z drobną różnicą', ['template-method', 'strategy']],
+    ['To samo sprawdzenie przed każdym użyciem obiektu', ['proxy']],
+    ['Tysiące obiektów z tymi samymi danymi', ['flyweight']],
+    ['Obiekty muszą do siebie pasować (rodzina)', ['abstract-factory']],
+    ['Komponenty znają wszystkich sąsiadów', ['mediator']],
+    ['Seria if … return na wejściu żądania', ['chain']],
+    ['Biznes chce zmieniać reguły bez wdrożenia', ['interpreter']],
+    ['Ręczne tokeny stron i indeksy w pętlach', ['iterator']],
+    ['Każda nowa funkcja = metoda w każdej klasie', ['visitor']],
+    ['Kopiowanie obiektu pole po polu z zewnątrz', ['prototype']],
+    ['Zasób, którego druga kopia to błąd', ['singleton']]
+  ];
+  const CAT = ['Kreacyjne', 'Strukturalne', 'Behawioralne'];
+  CAT.forEach((n, i) => {
+    const col = H('div', 'sym-col', `<b>${n}</b>`, grid);
+    GOF.filter(p => p.cat === i + 1).forEach(p => { const a = H('a', 'sym-chip', null, col); a.href = '#' + p.id; a.textContent = p.name; a.dataset.id = p.id; });
+  });
+  const name = id => GOF.find(p => p.id === id).name;
+  SYM.forEach(([t, ids]) => {
+    const b = H('button', 'btn sym-btn', null, list); b.textContent = t;
+    b.onclick = () => {
+      $$('.sym-btn', root).forEach(x => x.classList.toggle('on', x === b));
+      $$('.sym-chip', root).forEach(c => c.classList.toggle('hit', ids.includes(c.dataset.id)));
+      say(st, `<b>Kandydaci:</b> ${ids.map(name).join(', ')}. Kliknij nazwę, by przejść do rozdziału — i sprawdź sekcję „Kiedy nie”.`, 'ok');
+    };
+  });
+  function reset() { $$('.sym-btn', root).forEach(x => x.classList.remove('on')); $$('.sym-chip', root).forEach(c => c.classList.remove('hit')); say(st, 'Wybierz symptom.'); }
+  $('[data-act=reset]', root).onclick = reset;
+  registerFig(root, { first() { $$('.sym-btn', root)[0].click(); } });
+})();
+
+/* ---------- quiz ---------- */
+(() => {
+  const Q = [
+    ['Co jest główną miarą, że wzorzec się opłacił?', ['Liczba interfejsów w projekcie', 'Nowe wymaganie dodaje kod zamiast przepisywać istniejące klasy', 'Diagram klas zgadza się z książką GoF'], 1, 'Wzorce izolują miejsce zmiany. Gdy zmiana przychodzi, dopisujesz klasę zamiast edytować pięć starych.'],
+    ['Document.generate() woła createRenderer(), który nadpisują podklasy. To:', ['Factory Method', 'Abstract Factory', 'Builder'], 0, 'Podklasa decyduje, jaki obiekt powstaje w środku wspólnego algorytmu — to Factory Method.'],
+    ['Aplikacja na AWS lub GCP potrzebuje pasujących do siebie storage, kolejki i sekretów. Który wzorzec?', ['Singleton', 'Prototype', 'Abstract Factory'], 2, 'Abstract Factory tworzy spójną rodzinę produktów. Jej wada: nowy rodzaj produktu zmienia wszystkie fabryki.'],
+    ['Kiedy Builder to przesada?', ['Konstruktor ma trzy obowiązkowe pola', 'Jest 8 opcjonalnych parametrów', 'Między polami są reguły (min ≤ max)'], 0, 'Trzy obowiązkowe pola obsłuży konstruktor albo record.'],
+    ['c.setItems(b.getItems()) w kodzie kopiującym ofertę powoduje, że:', ['Kopia jest głęboka', 'Oryginał i kopia dzielą jedną listę pozycji', 'Java rzuci CloneNotSupportedException'], 1, 'To kopia płytka. Edycja pozycji w kopii zmieni ofertę klienta.'],
+    ['Jak dziś najczęściej zapewnia się „jedną instancję” w aplikacji Spring?', ['Prywatny konstruktor i getInstance()', 'Bean w kontenerze — domyślny zakres to singleton', 'Pole static w każdej klasie'], 1, 'Kontener DI zapewnia jedną instancję bez globalnego stanu, a zależność widać w konstruktorze.'],
+    ['Typy i wyjątki zewnętrznego SDK są w klasach domenowych. Co pomoże?', ['Adapter', 'Flyweight', 'Visitor'], 0, 'Adapter tłumaczy cudzy interfejs na twój. Zmiana SDK dotyka jednego pliku.'],
+    ['Klasy AlertEmail, AlertSms, ReportEmail, ReportSms… to sygnał dla:', ['Composite', 'Bridge', 'Memento'], 1, 'Dwie osie zmian dziedziczone razem dają iloczyn klas. Bridge zamienia go w sumę.'],
+    ['Zestaw może zawierać produkty i inne zestawy. Który wzorzec usuwa instanceof z koszyka?', ['Composite', 'Iterator', 'Proxy'], 0, 'Produkt i zestaw implementują wspólny Item; rekurencja jest w Bundle.'],
+    ['Czy Retry(Cache(http)) działa tak samo jak Cache(Retry(http))?', ['Tak, dekoratory są przemienne', 'Nie, kolejność warstw zmienia zachowanie', 'Tylko w Javie 21'], 1, 'Warstwa zewnętrzna widzi wynik wewnętrznej. Kolejność dekoratorów to część projektu.'],
+    ['Fasada OrderPlacement…', ['zabrania dostępu do podsystemów', 'upraszcza dostęp, ale nie blokuje bezpośredniego użycia podsystemów', 'musi zawierać wszystkie reguły biznesowe'], 1, 'Fasada daje proste wejście. Kto potrzebuje szczegółów, nadal może użyć podsystemu.'],
+    ['Dlaczego współdzielony stan we Flyweight musi być niezmienny?', ['Bo inaczej nie skompiluje się', 'Bo zmiana „swojej” ikony zmieniłaby ją wszystkim obiektom', 'Bo GC nie usuwa obiektów zmiennych'], 1, 'Wszystkie obiekty wskazują na tę samą instancję stanu wewnętrznego.'],
+    ['Metoda @Transactional wywołana przez this.save() z tej samej klasy:', ['zawsze działa', 'omija proxy, więc transakcja z adnotacji nie jest stosowana', 'tworzy dwie transakcje'], 1, 'Spring nakłada @Transactional przez proxy; wywołanie wewnętrzne idzie obok niego.'],
+    ['Co różni Proxy od Decorator?', ['Struktura klas', 'Intencja: kontrola dostępu vs dodawanie zachowania', 'Proxy nie implementuje interfejsu'], 1, 'Struktura jest prawie identyczna; różni je cel.'],
+    ['Jakie ryzyko GoF wymienia dla Chain of Responsibility?', ['Żądanie może nie zostać obsłużone przez nikogo', 'Łańcuch zawsze jest wolniejszy niż if', 'Ogniwa muszą znać się nawzajem'], 0, 'Brak gwarancji obsługi — dodaj ogniwo końcowe albo test łańcucha.'],
+    ['„Cofnij” dla operacji masowych i dziennik audytu. Który wzorzec jako pierwszy?', ['Command', 'Iterator', 'Adapter'], 0, 'Operacja jako obiekt: można ją odłożyć na stos, zapisać i cofnąć.'],
+    ['Kiedy Interpreter to zły wybór?', ['Gramatyka jest prosta', 'Język jest złożony — lepszy generator parserów albo gotowy język wyrażeń', 'Reguły są zapisane w bazie'], 1, 'GoF zaleca Interpreter dla prostych gramatyk.'],
+    ['Co daje iterator po stronicowanym API?', ['Pobiera wszystkie strony od razu do pamięci', 'Ukrywa tokeny stron i dociąga strony leniwie', 'Wymusza sortowanie'], 1, 'Kod biznesowy pisze zwykłą pętlę, a wiedza o stronicowaniu jest w jednym miejscu.'],
+    ['Główna wada Mediatora według GoF?', ['Komponenty znają się nawzajem', 'Mediator może urosnąć w trudny w utrzymaniu monolit', 'Nie działa z UI'], 1, 'Złożoność przenosi się do mediatora — pilnuj jego rozmiaru.'],
+    ['Kto w Memento zagląda do środka migawki?', ['Caretaker (np. UI)', 'Tylko originator (obiekt, którego stan zapisano)', 'Każdy, kto ma referencję'], 1, 'Caretaker tylko przechowuje migawki. Odczytuje je wyłącznie originator.'],
+    ['Pułapka Observera:', ['Zbyt silne powiązanie źródła z odbiorcami', 'Niejawny przepływ i niegwarantowana kolejność powiadomień', 'Nie da się dodać nowego odbiorcy'], 1, 'Z kodu źródła nie widać, co się wydarzy, a kolejność zwykle nie jest gwarantowana.'],
+    ['switch (status) powtarza się w pay(), ship() i cancel(). Który wzorzec?', ['State', 'Builder', 'Flyweight'], 0, 'Każdy stan jako klasa ze swoimi regułami i przejściami.'],
+    ['Kiedy Strategy jako osobna klasa to przesada w nowoczesnej Javie?', ['Gdy wystarczy lambda, bo algorytm nie ma stanu i ma jedną metodę', 'Gdy wariantów jest dziesięć', 'Gdy trzeba je testować osobno'], 0, 'Function<Cart, Money> to też strategia.'],
+    ['Template Method opiera się na:', ['kompozycji', 'dziedziczeniu — szkielet w klasie bazowej, kroki w podklasach', 'refleksji'], 1, 'Stąd jego wady: jedna klasa bazowa i ścisłe powiązanie. Alternatywa: strategie.'],
+    ['Visitor: co jest tanie, a co drogie?', ['Tanie nowe operacje, drogie nowe typy elementów', 'Tanie nowe typy elementów, drogie nowe operacje', 'Wszystko jest tanie'], 0, 'Nowy typ elementu wymaga nowej metody w każdym wizytatorze.'],
+    ['Strategy i State mają ten sam diagram klas. Czym się różnią?', ['Niczym, to synonimy', 'Kto decyduje o zmianie: klient wybiera strategię, a stany same przełączają kontekst', 'State nie używa interfejsu'], 1, 'Intencja i odpowiedzialność za przejścia — nie kształt diagramu.']
+  ];
+  const box = $('#quiz'); let answered = 0, good = 0; const scoreEl = $('#score');
+  function upd() { scoreEl.textContent = `Wynik: ${good} / ${answered}`; }
+  Q.forEach(([q, opts, ok, why], n) => {
+    const d = H('div', 'quiz-q reveal', `<h4>${n + 1}. </h4><div class="opts"></div><div class="why">💡 </div>`, box);
+    $('h4', d).append(q); $('.why', d).append(why);
+    opts.forEach((t, i) => {
+      const b = H('button', '', null, $('.opts', d)); b.textContent = t;
+      b.onclick = () => {
+        if (d.classList.contains('done')) return;
+        d.classList.add('done'); answered++;
+        if (i === ok) good++; else b.classList.add('wrong');
+        $('.opts', d).children[ok].classList.add('right');
+        $$('button', d).forEach(x => x.disabled = true);
+        upd();
+      };
+    });
+    revealIO.observe(d);
+  });
+})();
+</script>
+</body>
+</html>
