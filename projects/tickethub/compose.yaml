@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: 'postgres:18'
+    environment:
+      - 'POSTGRES_DB=tickethub'
+      - 'POSTGRES_USER=tickethub'
+      - 'POSTGRES_PASSWORD=secret'
+    ports:
+      - '5432:5432'
