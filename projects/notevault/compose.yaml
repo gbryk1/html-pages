@@ -1,0 +1,25 @@
+# Zależności do pracy lokalnej. `./mvnw spring-boot:run` podnosi je sam (spring-boot-docker-compose).
+# Hasła tutaj są tylko deweloperskie; produkcyjny wariant z sekretami: compose.full.yaml
+services:
+  postgres:
+    image: 'postgres:18'
+    environment:
+      - 'POSTGRES_DB=notevault'
+      - 'POSTGRES_USER=notevault'
+      - 'POSTGRES_PASSWORD=dev-only'
+    ports:
+      - '5432'
+  redis:
+    image: 'redis:8'
+    ports:
+      - '6379'
+  keycloak:
+    image: 'quay.io/keycloak/keycloak:26.8'
+    command: ['start-dev', '--import-realm']
+    environment:
+      - 'KC_BOOTSTRAP_ADMIN_USERNAME=admin'
+      - 'KC_BOOTSTRAP_ADMIN_PASSWORD=admin'
+    volumes:
+      - './keycloak:/opt/keycloak/data/import:ro'
+    ports:
+      - '8180:8080'

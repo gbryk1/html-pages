@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoteVault: projekt Spring Security</title>
+<meta name="description" content="Projekt ćwiczeniowy do kursu Spring Security: aplikacja Spring Boot 4 z PostgreSQL, Redisem i Keycloakiem w Dockerze, zabezpieczana zadanie po zadaniu, z testami i hasłami w Docker secrets.">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper:#fbf8f1; --paper2:#ffffff; --ink:#1c1c22; --mut:#5d5f6b; --line:#d9d3c4; --shadow:#1c1c22;
+  --accent:#1b6fa8; --accent2:#e39b2d; --ok:#2f9e63; --bad:#d64545; --warn:#c98a00;
+  --pen:#b8431f; --note:#fff4c2; --card:#f1ece0; --code:#f3efe6; --dim:#9aa0ab;
+  --hand:"Segoe Print","Bradley Hand","Comic Neue","Comic Sans MS","Chalkboard SE","Marker Felt",cursive;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,"Palatino Linotype",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#15171c; --paper2:#1d2027; --ink:#e7e5df; --mut:#a3a6b1; --line:#383c49; --shadow:#000;
+          --accent:#5aa9e6; --accent2:#f0b34f; --ok:#4cc38a; --bad:#f06b6b; --warn:#f0c040;
+          --pen:#ff9a6b; --note:#3a3420; --card:#232730; --code:#22262e; --dim:#5d6270; }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.68 var(--serif); }
+a { color:var(--accent); }
+code, kbd { font:.86em var(--mono); background:var(--code); padding:.08em .35em; border-radius:4px; }
+pre { font:14px/1.5 var(--mono); background:var(--code); border-left:4px solid var(--accent); padding:.9rem 1rem; overflow:auto; border-radius:4px; }
+pre code { background:none; padding:0; font-size:inherit; }
+h1,h2,h3,h4 { font-family:var(--sans); line-height:1.2; }
+h3 { font-size:1.28rem; margin:2.2rem 0 .6rem; }
+strong, b { font-weight:700; }
+.hand { font-family:var(--hand); color:var(--pen); }
+.mut { color:var(--mut); }
+
+/* progress + toc */
+#progress { position:fixed; inset:0 0 auto 0; height:5px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform-origin:0 50%; transform:scaleX(0); z-index:50; }
+#toc { position:fixed; top:1.4rem; left:1rem; width:205px; font:13.5px/1.35 var(--sans); z-index:40; display:none; opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #toc { opacity:1; pointer-events:auto; }
+#toc b { display:block; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.5rem; }
+#toc a { display:block; padding:.28rem .55rem; border-left:3px solid var(--line); color:var(--mut); text-decoration:none; }
+#toc a:hover { color:var(--ink); }
+#toc a.active { border-color:var(--accent2); color:var(--ink); font-weight:700; background:var(--card); }
+@media (min-width:1440px) { #toc { display:block; } }
+
+/* cover */
+.cover { min-height:96vh; display:grid; place-items:center; padding:3rem 1.2rem; position:relative; overflow:hidden;
+         background:radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 55%), var(--paper); }
+.cover-inner { max-width:1040px; width:100%; display:grid; gap:2rem; grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px) { .cover-inner { grid-template-columns:1.1fr .9fr; } }
+.cover .kicker { font:700 .85rem var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); }
+.cover h1 { font-size:clamp(2.4rem,5.6vw,4.2rem); margin:.3rem 0 .6rem; letter-spacing:-.02em; }
+.cover h1 span { display:inline-block; background:var(--ink); color:var(--paper); padding:0 .25em; transform:rotate(-1.5deg); }
+.cover .sub { font-size:1.2rem; color:var(--mut); max-width:34em; }
+.cover .stamp { display:inline-block; margin-top:1.2rem; font:700 1rem var(--hand); color:var(--pen); border:3px solid var(--pen); padding:.3rem .8rem; border-radius:8px; transform:rotate(-4deg); }
+.cover svg { width:100%; max-width:400px; justify-self:center; overflow:visible; }
+.spin { animation:spin 50s linear infinite; transform-origin:200px 200px; }
+.spin-rev { animation:spin 34s linear infinite reverse; transform-origin:200px 200px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.cover .scroll-hint { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); font:1rem var(--hand); color:var(--mut); animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob { 50% { transform:translate(-50%,8px); } }
+
+/* layout */
+main { max-width:800px; margin:0 auto; padding:0 1.2rem 6rem; }
+.chapter { padding-top:4.5rem; }
+.chap-head { display:flex; gap:1.1rem; align-items:center; margin-bottom:1rem; }
+.chap-num { flex:none; width:4.2rem; height:4.2rem; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font:800 1.7rem var(--sans); transform:rotate(-6deg); box-shadow:4px 4px 0 var(--accent2); }
+.chap-head h2 { font-size:clamp(1.6rem,3.8vw,2.2rem); margin:0; }
+.chap-head .tag { font:1.02rem var(--hand); color:var(--pen); display:block; margin-top:.3rem; }
+
+/* reveal */
+.js .reveal { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.js .reveal.shown { opacity:1; transform:none; }
+
+/* head-first boxes */
+.box { position:relative; margin:2rem 0; padding:1.1rem 1.25rem 1rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper2); box-shadow:5px 5px 0 var(--shadow); }
+.box > .lbl { position:absolute; top:-1rem; left:1rem; font:800 .82rem var(--sans); letter-spacing:.06em; text-transform:uppercase; background:var(--ink); color:var(--paper); padding:.25rem .65rem; border-radius:4px; transform:rotate(-2deg); }
+.box.brain { border-style:dashed; background:color-mix(in srgb, var(--accent) 8%, var(--paper2)); }
+.box.brain > .lbl { background:var(--accent); color:#fff; }
+.box.pencil { background:color-mix(in srgb, var(--accent2) 10%, var(--paper2)); }
+.box.pencil > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.watch { border-color:var(--bad); box-shadow:5px 5px 0 var(--bad); }
+.box.watch > .lbl { background:var(--bad); color:#fff; }
+.box.geek { background:var(--card); font-size:.95em; }
+.box.geek > .lbl { background:var(--mut); }
+.box.relax { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); }
+.box.relax > .lbl { background:var(--ok); color:#fff; }
+.box.bullets { background:var(--note); transform:rotate(-.4deg); }
+.box.bullets ul { margin:.3rem 0 0; padding-left:1.2rem; }
+.box.bullets li { margin:.35rem 0; }
+.box.bullets li::marker { content:"▸ "; color:var(--pen); }
+.box.usecase { border-color:var(--accent); box-shadow:5px 5px 0 var(--accent); }
+.box.usecase > .lbl { background:var(--accent); color:#fff; }
+.box.usecase ol { margin:.5rem 0 .3rem; padding-left:1.3rem; }
+.box.usecase li { margin:.4rem 0; }
+.box p:first-of-type { margin-top:.4rem; }
+.box p:last-child { margin-bottom:0; }
+.qa { display:grid; grid-template-columns:auto 1fr; gap:.4rem .8rem; margin:.8rem 0 1rem; }
+.qa .q, .qa .a { font:800 1.15rem var(--sans); }
+.qa .q { color:var(--accent); } .qa .a { color:var(--pen); }
+.qa div { margin:0; }
+details { margin-top:.8rem; }
+summary { cursor:pointer; font:700 .95rem var(--sans); color:var(--pen); }
+.fire { display:grid; gap:.7rem; margin-top:.5rem; }
+.fire .who { font:800 .85rem var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.fire .line { display:grid; grid-template-columns:7.5rem 1fr; gap:.8rem; }
+.fire .line.l2 .who { color:var(--accent); } .fire .line.l1 .who { color:var(--pen); }
+@media (max-width:560px) { .fire .line { grid-template-columns:1fr; gap:.1rem; } }
+.anno { font:1.05rem/1.35 var(--hand); color:var(--pen); display:block; margin:.4rem 0 .4rem 1.2rem; transform:rotate(-1.2deg); }
+.anno::before { content:"↖ "; }
+.pull { font:italic 1.35rem/1.45 var(--serif); border-left:6px solid var(--accent2); padding:.2rem 0 .2rem 1rem; margin:1.6rem 0; }
+.prompt-ex { font:13.5px/1.5 var(--mono); background:var(--code); border:1.5px dashed var(--line); border-radius:6px; padding:.7rem .85rem; margin-top:.7rem; white-space:pre-wrap; }
+.prompt-ex b { font-family:var(--sans); color:var(--pen); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+
+/* figures (generic) */
+.fig { margin:2.2rem -1rem; padding:1rem 1rem .9rem; background:var(--paper2); border:2px solid var(--ink); border-radius:8px; box-shadow:6px 6px 0 var(--shadow); position:relative; }
+@media (min-width:1000px) { .fig.wide { margin-left:-6rem; margin-right:-6rem; } }
+.fig .ftitle { font:800 .95rem var(--sans); margin:0 0 .6rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.fig .ftitle span { font:400 .85rem var(--sans); color:var(--mut); }
+.fig figcaption, .fig .cap { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.6rem; }
+.fig svg { display:block; width:100%; height:auto; }
+.fig svg text { fill:var(--ink); font-family:var(--sans); }
+.ctrl { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.4rem 0 .6rem; font:14px var(--sans); }
+.btn { font:700 13.5px var(--sans); color:var(--ink); background:var(--paper2); border:2px solid var(--ink); border-radius:999px; padding:.33rem .85rem; box-shadow:2px 2px 0 var(--shadow); cursor:pointer; transition:transform .08s; }
+.btn:hover { background:var(--card); }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.on { background:var(--ink); color:var(--paper); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.ctrl input[type=text], .ctrl select, .calc input { font:14px var(--mono); padding:.3rem .5rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); }
+.ctrl input[type=text] { width:9rem; }
+.ctrl label { display:inline-flex; gap:.35rem; align-items:center; }
+.scroll-x { overflow-x:auto; }
+.scroll-x > svg { min-width:620px; }
+.two { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:720px) { .two { grid-template-columns:1.2fr 1fr; align-items:start; } }
+table.mini { width:100%; border-collapse:collapse; font:13.5px var(--sans); }
+table.mini th, table.mini td { text-align:left; padding:.28rem .4rem; border-bottom:1px solid var(--line); }
+table.mini th { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+table.mini tr.flash td { animation:flashbg 1.2s ease; }
+@keyframes flashbg { 0%{ background:color-mix(in srgb, var(--accent2) 45%, transparent);} 100%{ background:transparent;} }
+.chip { display:inline-block; min-width:1.6em; text-align:center; font:800 12px var(--sans); color:#fff; padding:.1rem .4rem; border-radius:999px; }
+.status { font:14px/1.45 var(--sans); padding:.55rem .75rem; border-radius:6px; background:var(--card); margin-top:.5rem; min-height:2.2rem; }
+.status.ok { background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.status.bad { background:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.status.warn { background:color-mix(in srgb, var(--warn) 20%, var(--paper2)); }
+.fly { pointer-events:none; }
+.small { font-size:11px; }
+.tiny { font-size:9.5px; }
+.edge { stroke:var(--line); stroke-width:2; }
+.nd circle, .nd rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2.2; transition:fill .3s, opacity .3s; }
+.nd text { font-weight:800; font-size:12px; pointer-events:none; }
+.nd.off circle, .nd.off rect { fill:var(--dim); opacity:.5; stroke-dasharray:4 3; }
+.nd.hot circle, .nd.hot rect { fill:var(--accent2); }
+.nd.pulse circle, .nd.pulse rect, .pop { animation:pulse .6s ease; transform-box:fill-box; transform-origin:center; }
+@keyframes pulse { 40% { transform:scale(1.3); } }
+
+
+/* ---- generic extras: meters, legends, logs, stacked token bars ---- */
+main, footer { overflow-wrap:break-word; }   /* long URLs / identifiers in prose must not widen the page */
+.two > * { min-width:0; }
+.ctrl label { flex-wrap:wrap; max-width:100%; }
+.ctrl select { max-width:100%; min-width:0; }
+.meter { height:12px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.meter > i { display:block; height:100%; width:0; background:var(--ok); transition:width .6s ease, background .4s; }
+.legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.3rem; background:var(--c); vertical-align:-1px; }
+.log { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; height:190px; overflow-y:auto; }
+.log div { opacity:0; transform:translateX(-6px); transition:opacity .3s, transform .3s; white-space:pre-wrap; }
+.log div.shown { opacity:1; transform:none; }
+.log .u { color:var(--accent); font-weight:700; } .log .e { color:var(--bad); } .log .g { color:var(--ok); }
+.stack { position:relative; height:34px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:var(--paper); display:flex; }
+.stack .seg { height:100%; transition:width .7s ease; overflow:hidden; white-space:nowrap; font:700 10.5px/34px var(--sans); color:#fff; text-indent:4px; }
+
+/* ---- multi-level structure: parts, level chips, depth switch, "go deeper", course map ---- */
+.part { margin:5rem 0 0; padding:1.4rem 1.3rem 1.2rem; border-radius:10px; background:var(--ink); color:var(--paper); box-shadow:6px 6px 0 var(--accent2); }
+.part .part-no { font:800 .8rem var(--sans); letter-spacing:.18em; text-transform:uppercase; color:var(--accent2); }
+.part h2 { margin:.2rem 0 .35rem; font-size:clamp(1.7rem,4vw,2.4rem); }
+.part p { margin:0; font-size:1rem; opacity:.85; }
+.lvl-chip { display:inline-block; vertical-align:middle; margin-left:.5rem; font:800 10.5px/1.5 var(--sans); letter-spacing:.06em; text-transform:uppercase; padding:.08rem .5rem; border-radius:999px; color:#fff; background:var(--ok); }
+.lvl-chip.l2 { background:var(--accent); } .lvl-chip.l3 { background:#8e44ad; } .lvl-chip.l4 { background:var(--bad); }
+.lvl-off { display:none !important; }
+details.deeper { border:2px dashed #8e44ad; border-radius:8px; padding:.6rem .9rem; margin:1.8rem 0; background:color-mix(in srgb, #8e44ad 6%, var(--paper2)); }
+details.deeper > summary { font:700 1rem var(--sans); color:var(--ink); }
+details.deeper > summary .lvl-chip { margin:0 .4rem 0 0; }
+details.deeper[open] > summary { margin-bottom:.5rem; }
+.lvl-hint { display:block; width:100%; text-align:left; margin:1.4rem 0 0; font:700 13px var(--sans); color:var(--accent); background:none; border:2px dashed var(--accent); border-radius:8px; padding:.45rem .8rem; cursor:pointer; }
+#depth { position:fixed; left:1rem; bottom:1rem; z-index:45; display:flex; gap:.2rem; align-items:center; font:700 12px var(--sans); background:var(--paper2); color:var(--ink); border:2px solid var(--ink); border-radius:999px; padding:.22rem .3rem .22rem .75rem; box-shadow:3px 3px 0 var(--shadow); opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #depth { opacity:1; pointer-events:auto; }
+#depth button { font:700 12px var(--sans); border:0; border-radius:999px; padding:.25rem .6rem; background:transparent; color:var(--ink); cursor:pointer; }
+#depth button.on { background:var(--ink); color:var(--paper); }
+@media (max-width:640px) { #depth .nm { display:none; } }
+#toc { max-height:calc(100vh - 5.5rem); overflow-y:auto; }
+.toc-part { font:800 .7rem var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:.8rem 0 .2rem .2rem; }
+#map { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.7rem; margin:1.5rem 0; }
+.map-part { border:2px solid var(--line); border-radius:10px; padding:.55rem .6rem; background:var(--paper2); }
+.map-part > b { display:block; font:800 11.5px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin-bottom:.35rem; }
+.map-ch { display:flex; gap:.45rem; align-items:baseline; font:13px/1.3 var(--sans); color:var(--ink); text-decoration:none; padding:.22rem .4rem; border-radius:6px; border-left:4px solid var(--ok); margin:.15rem 0; transition:background .3s; }
+.map-ch.l2 { border-left-color:var(--accent); } .map-ch.l3 { border-left-color:#8e44ad; } .map-ch.l4 { border-left-color:var(--bad); }
+.map-ch i { font:800 11px var(--mono); font-style:normal; color:var(--mut); min-width:1.4em; }
+.map-ch:hover { background:var(--card); }
+.map-ch.here { background:var(--accent2); color:#1c1c22; font-weight:700; }
+.map-ch.seen::after { content:"✓"; margin-left:auto; color:var(--ok); font-weight:800; }
+.map-ch.dim, #toc a.dim { opacity:.4; }
+
+/* ==== task anatomy ==== */
+.tk-meta { display:flex; flex-wrap:wrap; gap:.4rem .6rem; align-items:center; font:13px var(--sans); margin:.2rem 0 1rem; }
+.tk-meta a.tk-course { font-weight:700; text-decoration:none; border:2px solid var(--accent); border-radius:999px; padding:.15rem .7rem; }
+.tk-meta a.tk-course:hover { background:var(--card); }
+.tk-tables { display:flex; flex-wrap:wrap; gap:.3rem; align-items:center; font:12px var(--mono); }
+.tk-tables::before { content:"tabele:"; font:700 11px var(--sans); color:var(--mut); text-transform:uppercase; letter-spacing:.05em; margin-right:.2rem; }
+.tk-t { border:1.5px solid var(--line); border-radius:4px; padding:.05rem .4rem; background:var(--paper2); cursor:pointer; }
+.tk-t.new { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 14%, var(--paper2)); }
+.tk-t.new::after { content:" +"; color:var(--ok); font-weight:800; }
+.box.task { border-color:var(--accent2); box-shadow:5px 5px 0 var(--accent2); }
+.box.task > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.task ol { padding-left:1.3rem; margin:.5rem 0 .2rem; }
+.box.task li { margin:.45rem 0; }
+.box.verify { border-color:var(--ok); }
+.box.verify > .lbl { background:var(--ok); color:#fff; }
+.box.why > .lbl { background:var(--accent); color:#fff; }
+.box.why { border-style:dotted; }
+details.sol { border:2px solid var(--ink); border-radius:8px; padding:.55rem .9rem; margin:1.6rem 0; background:var(--paper2); }
+details.sol > summary { font:800 1rem var(--sans); color:var(--ink); }
+details.sol[open] > summary { margin-bottom:.4rem; }
+.file { font:700 12px var(--mono); color:var(--mut); margin:1rem 0 -.6rem; }
+.file::before { content:"📄 "; }
+pre.sql { border-left-color:var(--ok); }
+pre.log { border-left-color:var(--mut); font-size:12.5px; }
+pre.bad { border-left-color:var(--bad); }
+.ok-t { color:var(--ok); font-weight:700; } .bad-t { color:var(--bad); font-weight:700; }
+
+/* quiz */
+.quiz-q { margin:1.2rem 0; padding:.9rem 1rem; border:2px solid var(--ink); border-radius:8px; background:var(--paper2); }
+.quiz-q h4 { margin:0 0 .6rem; font-size:1rem; }
+.quiz-q .opts { display:grid; gap:.4rem; }
+.quiz-q button { text-align:left; font:14px/1.4 var(--sans); color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:6px; padding:.45rem .7rem; cursor:pointer; }
+.quiz-q button:hover:not(:disabled) { border-color:var(--ink); }
+.quiz-q button.right { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+.quiz-q button.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); }
+.quiz-q .why { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.5rem; display:none; }
+.quiz-q.done .why { display:block; }
+.score { position:sticky; bottom:1rem; margin-left:auto; width:max-content; font:800 1rem var(--sans); background:var(--ink); color:var(--paper); padding:.45rem .9rem; border-radius:999px; box-shadow:3px 3px 0 var(--accent2); }
+.cheat td:first-child { font-family:var(--mono); font-size:12.5px; white-space:nowrap; }
+footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var(--sans); color:var(--mut); border-top:2px solid var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+  html { scroll-behavior:auto; }
+}
+/* ==== new component box ==== */
+.box.comp { border-color:var(--pen); box-shadow:5px 5px 0 var(--pen); background:color-mix(in srgb, var(--pen) 7%, var(--paper2)); }
+.box.comp > .lbl { background:var(--pen); color:#fff; }
+.box.comp dl { display:grid; grid-template-columns:auto 1fr; gap:.3rem .8rem; margin:.6rem 0 0; }
+.box.comp dt { font:700 .85rem var(--sans); color:var(--mut); text-transform:uppercase; letter-spacing:.04em; }
+.box.comp dd { margin:0; min-width:0; overflow-wrap:anywhere; }
+@media (max-width:560px) { .box.comp dl { grid-template-columns:1fr; } .box.comp dd { margin-bottom:.4rem; } }
+.tk-comps { display:flex; flex-wrap:wrap; gap:.3rem; align-items:center; font:12px var(--mono); }
+.tk-comps::before { content:"kontenery:"; font:700 11px var(--sans); color:var(--mut); text-transform:uppercase; letter-spacing:.05em; margin-right:.2rem; }
+.tk-c { border:1.5px solid var(--line); border-radius:4px; padding:.05rem .4rem; background:var(--paper2); cursor:pointer; }
+.tk-c.new { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 14%, var(--paper2)); }
+.tk-c.new::after { content:" +"; color:var(--ok); font-weight:800; }
+
+/* ==== fig: architecture ==== */
+.ar-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:.7rem; margin:.4rem 0; }
+.ar-node { border:2px solid var(--line); border-radius:8px; padding:.55rem .6rem; background:var(--paper2); text-align:center; cursor:pointer; min-width:0; transition:opacity .3s, border-color .3s, transform .3s; }
+.ar-node .ic { font-size:1.5rem; display:block; }
+.ar-node b { font:700 .9rem var(--sans); display:block; overflow-wrap:anywhere; }
+.ar-node small { font:12px var(--mono); color:var(--mut); display:block; overflow-wrap:anywhere; }
+.ar-node.off { opacity:.25; filter:grayscale(1); }
+.ar-node.new { border-color:var(--ok); transform:translateY(-3px); box-shadow:3px 3px 0 var(--ok); }
+.ar-node.sel { border-color:var(--accent); box-shadow:3px 3px 0 var(--accent); }
+.ar-node.down { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 12%, var(--paper2)); }
+.ar-info { font-size:.95rem; min-height:3.2em; border-top:1.5px dashed var(--line); padding-top:.5rem; margin-top:.4rem; }
+@media (max-width:560px) { .ar-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+
+/* ==== fig: request through filter chains ==== */
+.fc-wrap { display:grid; gap:.5rem; }
+.fc-chain { display:flex; flex-wrap:wrap; gap:.35rem; align-items:center; }
+.fc-chain > .nm { font:700 12px var(--sans); color:var(--mut); text-transform:uppercase; letter-spacing:.04em; width:100%; }
+.fc-f { font:12px var(--mono); border:1.5px solid var(--line); border-radius:4px; padding:.2rem .4rem; background:var(--paper2); transition:background .25s, border-color .25s; min-width:0; overflow-wrap:anywhere; }
+.fc-f.pass { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 15%, var(--paper2)); }
+.fc-f.stop { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 18%, var(--paper2)); font-weight:700; }
+.fc-f.skip { opacity:.35; }
+.fc-chain.unused { opacity:.35; }
+.fc-res { font:800 1.5rem var(--sans); }
+.fc-res.ok { color:var(--ok); } .fc-res.bad { color:var(--bad); }
+.fc-req { font:13px var(--mono); background:var(--code); border-radius:6px; padding:.4rem .6rem; overflow-wrap:anywhere; }
+
+/* ==== fig: IDOR ==== */
+.id-row { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:.8rem; }
+.id-card { border:2px solid var(--line); border-radius:8px; padding:.6rem; background:var(--paper2); min-width:0; }
+.id-card h5 { margin:0 0 .4rem; font:800 .95rem var(--sans); }
+.id-note { font:12.5px var(--mono); border:1.5px dashed var(--line); border-radius:4px; padding:.25rem .4rem; margin:.25rem 0; overflow-wrap:anywhere; transition:background .3s; }
+.id-note.leak { background:color-mix(in srgb, var(--bad) 20%, var(--paper2)); border-color:var(--bad); }
+.id-note.safe { background:color-mix(in srgb, var(--ok) 15%, var(--paper2)); border-color:var(--ok); }
+.id-url { font:13px var(--mono); background:var(--code); padding:.35rem .5rem; border-radius:6px; margin:.5rem 0; overflow-wrap:anywhere; }
+@media (max-width:560px) { .id-row { grid-template-columns:1fr; } }
+
+/* ==== fig: JWT ==== */
+.jw-steps { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:.4rem; margin:.5rem 0; }
+.jw-s { border:2px solid var(--line); border-radius:6px; padding:.4rem .3rem; text-align:center; font:12px var(--sans); background:var(--paper2); min-width:0; overflow-wrap:anywhere; transition:background .25s, border-color .25s; }
+.jw-s b { display:block; font-size:12.5px; }
+.jw-s.pass { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 15%, var(--paper2)); }
+.jw-s.stop { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 18%, var(--paper2)); }
+.jw-tok { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; white-space:pre-wrap; overflow-wrap:anywhere; }
+.jw-tok .hl { background:color-mix(in srgb, var(--bad) 30%, transparent); border-radius:3px; }
+@media (max-width:560px) { .jw-steps { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+
+/* ==== fig: where secrets live ==== */
+.sc-ladder { display:grid; gap:.4rem; }
+.sc-step { display:grid; grid-template-columns:2.2rem minmax(0,1fr) auto; gap:.5rem; align-items:center; border:2px solid var(--line); border-radius:8px; padding:.4rem .6rem; background:var(--paper2); cursor:pointer; transition:border-color .25s, background .25s; }
+.sc-step .n { font:800 1.1rem var(--sans); text-align:center; }
+.sc-step .t { min-width:0; overflow-wrap:anywhere; }
+.sc-step .t small { display:block; color:var(--mut); font:12px var(--mono); }
+.sc-step .v { font:800 .8rem var(--sans); padding:.1rem .45rem; border-radius:999px; white-space:nowrap; }
+.sc-step.sel { border-color:var(--accent); box-shadow:3px 3px 0 var(--accent); }
+.sc-step.leak { background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); border-color:var(--bad); }
+.sc-step.held { background:color-mix(in srgb, var(--ok) 12%, var(--paper2)); }
+.sc-info { margin-top:.5rem; font-size:.95rem; }
+.sc-info table { margin-top:.4rem; }
+
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<nav id="toc" aria-label="Zadania"></nav>
+<div id="depth" role="group" aria-label="Głębokość"></div>
+
+<header class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="kicker">Projekt ćwiczeniowy · Spring Security 7</div>
+      <h1>NoteVault: <span>zabezpiecz krok po kroku</span></h1>
+      <p class="sub">Jedna aplikacja Spring Boot 4 do prywatnych notatek, którą zabezpieczasz w 14 zadaniach. Kolejność idzie za kursem <a href="spring-security-course.html">„Spring Security: obrona i atak”</a>: czytasz rozdział, od razu wpinasz go w kod i sprawdzasz testem albo <code>curl</code>. Po drodze dochodzą PostgreSQL, Redis i Keycloak, wszystko w Dockerze. Na końcu hasła wychodzą z kodu do Docker secrets.</p>
+      <div class="stamp">14 zadań · 1 projekt 🔐</div>
+    </div>
+    <svg viewBox="0 0 400 400" aria-hidden="true">
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <g id="cover-nodes"></g>
+      </g>
+      <g class="spin-rev">
+        <circle cx="200" cy="200" r="95" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 10"/>
+      </g>
+      <circle cx="200" cy="200" r="46" fill="var(--accent)" stroke="var(--ink)" stroke-width="4"/>
+      <text x="200" y="212" text-anchor="middle" font-size="34">🔐</text>
+    </svg>
+  </div>
+  <div class="scroll-hint">przewiń ↓</div>
+</header>
+
+<main>
+
+<section class="chapter" id="intro" data-title="Jak pracować">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Jak pracować z tym projektem</h2><span class="tag">rozdział kursu → kod → test albo curl</span></div></div>
+  <p class="reveal">Kurs pokazuje ataki i mechanizmy obrony. Tutaj masz <em>jeden</em> projekt, który zabezpieczasz warstwa po warstwie. Każde zadanie zaczyna się od linku do rozdziału kursu. Potem dopisujesz kod i sprawdzasz efekt: kodem odpowiedzi HTTP, nagłówkiem, logiem albo testem, który przechodzi.</p>
+  <p class="reveal">Domena to <b>NoteVault</b>: prywatne notatki. Użytkownik zakłada konto, loguje się w przeglądarce i widzi tylko swoje notatki. Administrator widzi listę kont i może usunąć każdą notatkę. Od zadania 10 te same notatki czyta też klient zewnętrzny (aplikacja mobilna, integracja) z tokenem z Keycloaka. Prosta domena, a ma prawie wszystko, co da się zepsuć: hasła, sesje, CSRF, cudze dane pod zgadniętym ID i tokeny.</p>
+
+  <div class="box usecase reveal"><span class="lbl">🧰 Anatomia zadania</span>
+    <ol>
+      <li><b>📖 link do rozdziału kursu</b> i chipy kontenerów, których zadanie potrzebuje (zielony z „+” to kontener nowy w tym zadaniu; kliknij chip, a podświetli się na schemacie).</li>
+      <li><b>🧭 Po co to NoteVault</b>: zagrożenie albo potrzeba, którą zadanie rozwiązuje.</li>
+      <li><b>🧩 Nowy komponent</b>: gdy dochodzi kontener albo biblioteka, dowiesz się, czym jest i dlaczego jest potrzebny.</li>
+      <li><b>🎯 Zadanie</b>: numerowane kroki. Część zaczyna od <b>💣 dziury</b>: najpierw ją wykorzystujesz, potem łatasz.</li>
+      <li><b>✅ Jak sprawdzić</b>: <code>curl</code>, log albo test, który ma przejść.</li>
+      <li><b>🔑 Rozwiązanie</b>: zwinięte. Otwórz je, gdy twój kod działa albo gdy utkniesz.</li>
+    </ol>
+  </div>
+
+  <p class="reveal">Zadania mają poziomy: <span class="lvl-chip">L1</span> podstawy, <span class="lvl-chip l2">L2</span> praktyk, <span class="lvl-chip l3">L3</span> produkcja. Przełącznik w lewym dolnym rogu ukrywa głębsze poziomy. Na poziomie 1 pomijasz zadanie 10 (Keycloak i API na tokenach) oraz test z Keycloakiem w zadaniu 11. Aplikacja dla przeglądarki działa wtedy od początku do końca.</p>
+  <div id="map" class="reveal"></div>
+
+  <div class="box brain reveal"><span class="lbl">🧠 Zagadka na start</span>
+    <p>Dodajesz do pustej aplikacji samą zależność <code>spring-boot-starter-security</code>. Nie piszesz ani linijki konfiguracji. Wołasz <code>GET /api/notes</code> dwa razy: raz z <code>curl</code>, raz z przeglądarki. Czy obie odpowiedzi będą takie same? Zapisz swoją odpowiedź. Sprawdzisz ją w zadaniu 1.</p>
+  </div>
+</section>
+
+<section class="chapter" id="start" data-level="1" data-title="Start: Docker i szkielet">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Start: szkielet aplikacji i pierwszy kontener</h2><span class="tag">zanim cokolwiek zabezpieczysz</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#defaults">📖 Kurs: Co daje starter</a><div class="tk-comps" data-new="app,postgres"></div></div>
+  <p class="reveal">Wszystkie wersje sprawdziłem 31 października 2026 na projekcie referencyjnym: Spring Boot 4.1.1 ściąga Spring Security 7.1.1, Spring Framework 7.0.9 i Spring Session 4.1.1. Testy używają Testcontainers 2.0.5. Potrzebujesz tylko JDK 21 i Dockera. Bazy, Redisa ani Keycloaka nie instalujesz.</p>
+
+  <h3 class="reveal">Dokąd zmierzasz: system po ostatnim zadaniu</h3>
+  <p class="reveal">Tak wygląda NoteVault na końcu. Przełączaj etapy, a zobaczysz, kiedy dochodzi każdy kontener. Kliknij kontener, żeby przeczytać, czym jest i po co tu jest.</p>
+
+  <figure class="fig wide" id="fig-arch">
+    <div class="ftitle">▶ NoteVault rośnie, kontener po kontenerze <span>kliknij etap, potem kontener</span></div>
+    <div class="ctrl" id="ar-ctrl">
+      <button class="btn" data-stage="0">0 start</button>
+      <button class="btn" data-stage="1">7 sesje</button>
+      <button class="btn" data-stage="2">10 tokeny</button>
+      <button class="btn" data-stage="3">12 produkcja</button>
+      <button class="btn bad" data-act="down">💥 Redis pada</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="ar-grid" id="ar-grid"></div>
+    <div class="ar-info" id="ar-info">Kliknij etap albo kontener.</div>
+    <div class="status" id="ar-status">Etap 0: aplikacja i baza danych.</div>
+    <figcaption>Uproszczenie: pokazuję tylko kontenery z <code>compose.full.yaml</code> i porty widziane z twojego komputera. Przeglądarka i klient zewnętrzny nie są kontenerami. Scenariusz „Redis pada” opisuje wynik sprawdzony na projekcie referencyjnym.</figcaption>
+  </figure>
+
+  <div class="box comp reveal"><span class="lbl">🧩 Nowy komponent: Docker Compose i PostgreSQL</span>
+    <dl>
+      <dt>Co to</dt><dd><b>Docker Compose</b> czyta plik <code>compose.yaml</code> i podnosi opisane w nim kontenery jedną komendą. <b>PostgreSQL 18</b> to relacyjna baza danych. Trzyma konta, role i notatki.</dd>
+      <dt>Po co</dt><dd>Spring Security sam nie przechowuje użytkowników. Potrzebuje źródła kont, a w zadaniu 3 będzie nim tabela w bazie.</dd>
+      <dt>Jak łączy</dt><dd>Moduł <code>spring-boot-docker-compose</code> przy <code>./mvnw spring-boot:run</code> sam uruchamia <code>compose.yaml</code> i ustawia URL, login oraz hasło bazy na podstawie kontenera. Nie wpisujesz ich do <code>application.properties</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 0</span>
+    <ol>
+      <li>Wygeneruj projekt Maven w Spring Initializr: Java 21, Spring Boot 4.1.1, pakiet <code>dev.notevault</code>, zależności <b>Spring Web</b>, <b>JDBC API</b>, <b>Flyway Migration</b>, <b>PostgreSQL Driver</b>, <b>Validation</b>, <b>Docker Compose Support</b>, <b>Actuator</b> i <b>Testcontainers</b>. Spring Security dodasz w zadaniu 1, żeby zobaczyć różnicę.</li>
+      <li>Ustaw <code>compose.yaml</code> z przypiętym <code>postgres:18</code> (niżej). Hasło w tym pliku jest wyłącznie deweloperskie. Jak trzymać prawdziwe, zobaczysz w zadaniu 12.</li>
+      <li>Dodaj pusty kontroler <code>GET /api/notes</code>, który zwraca pustą listę.</li>
+    </ol>
+  </div>
+<pre class="log"><code>curl -G https://start.spring.io/starter.zip \
+  -d type=maven-project -d bootVersion=4.1.1 -d javaVersion=21 \
+  -d groupId=dev.notevault -d artifactId=notevault -d packageName=dev.notevault \
+  -d dependencies=web,jdbc,flyway,postgresql,validation,docker-compose,actuator,testcontainers \
+  -o notevault.zip</code></pre>
+  <div class="file">compose.yaml (wersja z zadania 0)</div>
+<pre><code>services:
+  postgres:
+    image: 'postgres:18'
+    environment:
+      - 'POSTGRES_DB=notevault'
+      - 'POSTGRES_USER=notevault'
+      - 'POSTGRES_PASSWORD=dev-only'
+    ports:
+      - '5432'</code></pre>
+  <p class="reveal"><code>'5432'</code> bez portu hosta to celowy wybór. Docker wybiera wolny port na twoim komputerze, a <code>spring-boot-docker-compose</code> sam go odczytuje. Dzięki temu projekt wstaje także wtedy, gdy masz już inną bazę na 5432. Przy budowie projektu referencyjnego zdarzyło się to naprawdę: <code>Bind for 0.0.0.0:5432 failed: port is already allocated</code>.</p>
+
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p><code>./mvnw spring-boot:run</code> startuje, a w logu widać uruchamianie kontenera <code>postgres</code>. <code>curl -i localhost:8080/api/notes</code> zwraca <code>200</code> i <code>[]</code>. Na razie każdy może tu wejść, i to jest punkt wyjścia.</p>
+  </div>
+</section>
+
+<section class="part" id="part-1" data-level="1">
+  <div class="part-head reveal"><div class="part-num">Część I</div><h2>Fundamenty: łańcuch filtrów i konta</h2><p>Co daje starter, jak ustawić własny łańcuch i skąd Spring bierze użytkowników.</p></div>
+</section>
+
+<section class="chapter" id="t-starter" data-level="1" data-title="Starter bez konfiguracji">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Starter: co dostajesz za darmo</h2><span class="tag">jedna zależność, zero konfiguracji</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#defaults">📖 Kurs: Co daje starter</a><div class="tk-comps" data-used="app"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Zanim napiszesz własną konfigurację, zobacz, co Spring Boot włącza sam. Wtedy wiesz, co wyłączasz albo zmieniasz, gdy w zadaniu 2 dodasz własny <code>SecurityFilterChain</code>.</p>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 1</span>
+    <ol>
+      <li>Dodaj <code>spring-boot-starter-security</code> do <code>pom.xml</code> i uruchom aplikację.</li>
+      <li>Znajdź w logu wygenerowane hasło.</li>
+      <li>Zawołaj <code>/api/notes</code> trzy razy: bez danych logowania, z nagłówkiem <code>Accept: text/html</code> (tak pyta przeglądarka) i z <code>-u user:&lt;hasło&gt;</code>.</li>
+      <li>Ustaw <code>logging.level.org.springframework.security=DEBUG</code> i policz filtry w linii <code>Will secure any request with filters</code>.</li>
+    </ol>
+  </div>
+<pre class="log"><code>Using generated security password: 2fd179e6-b6fb-457a-9739-e65c14986525
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.</code></pre>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+<pre class="log"><code>$ curl -i localhost:8080/api/notes
+HTTP/1.1 401
+WWW-Authenticate: Basic realm="Realm", charset="UTF-8"
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+
+$ curl -i -H 'Accept: text/html' localhost:8080/api/notes
+HTTP/1.1 302
+Location: http://localhost:8080/login
+
+$ curl -s -o /dev/null -w '%{http_code}\n' -u user:2fd179e6-… localhost:8080/api/notes
+200</code></pre>
+    <p>Ta sama ścieżka daje dwie różne odpowiedzi. Spring Boot włącza naraz logowanie formularzem i HTTP Basic, a sposób odpowiedzi wybiera po nagłówkach żądania: przeglądarka dostaje przekierowanie na stronę logowania, a <code>curl</code> dostaje 401 z wyzwaniem Basic. W logu DEBUG jest 16 filtrów, od <code>DisableEncodeUrlFilter</code> do <code>AuthorizationFilter</code>.</p>
+  </div>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Skoro jest hasło i formularz, to może tak zostawić?</div>
+      <div class="a">O:</div><div>Nie. Sam log mówi, że hasło jest tylko do developmentu. Jest jeden użytkownik w pamięci, a hasło zmienia się przy każdym starcie. Starter to bezpieczny punkt startowy („domyślnie zamknięte”), a nie konfiguracja produkcyjna.</div>
+    </div>
+  </div>
+</section>
+<section class="chapter" id="t-chain" data-level="1" data-title="Własny łańcuch filtrów">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Własny SecurityFilterChain i zagadka 401 zamiast 403</h2><span class="tag">API odpowiada kodem, a nie przekierowaniem</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#chain">📖 Kurs: Łańcuch filtrów</a><a class="tk-course" href="spring-security-course.html#entry">📖 401 vs 403</a><div class="tk-comps" data-used="app"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>NoteVault to API dla własnego frontendu. Przekierowanie 302 na HTML-ową stronę logowania nic frontendowi nie da: <code>fetch</code> pójdzie za przekierowaniem i dostanie HTML zamiast JSON-a. API ma odpowiadać 401, gdy nie wie, kim jesteś, i 403, gdy wie, ale nie wolno ci.</p>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 2</span>
+    <ol>
+      <li>Utwórz <code>SecurityConfig</code> z beanem <code>SecurityFilterChain</code>. Sam fakt, że taki bean istnieje, wyłącza domyślny łańcuch Boota.</li>
+      <li>Publiczny ma być tylko <code>/actuator/health</code>. Reszta wymaga logowania.</li>
+      <li>Zostaw HTTP Basic (do testów z <code>curl</code>), ale jako entry point ustaw <code>HttpStatusEntryPoint(UNAUTHORIZED)</code>.</li>
+      <li>💣 Wyślij <code>curl -u user:pw -X POST localhost:8080/api/notes</code>. Spodziewasz się 403 (brak tokenu CSRF, o tym w zadaniu 6), a dostajesz 401. Znajdź przyczynę i ją napraw.</li>
+    </ol>
+  </div>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p>Bez logowania: <code>401</code>, bez przekierowania i bez nagłówka <code>WWW-Authenticate</code>. <code>/actuator/health</code>: <code>200</code>. POST z Basic, ale bez tokenu CSRF: <code>403</code>, gdy <code>/error</code> jest publiczne, i <code>401</code>, gdy nie jest. Tak to wyszło na projekcie referencyjnym.</p>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie</summary>
+  <div class="file">src/main/java/dev/notevault/security/SecurityConfig.java (wersja z zadania 2)</div>
+<pre><code>@Configuration
+class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain web(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -&gt; auth
+                .requestMatchers("/actuator/health", "/error").permitAll()
+                .anyRequest().authenticated())
+            .httpBasic(Customizer.withDefaults())
+            .exceptionHandling(ex -&gt; ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+        return http.build();
+    }
+}</code></pre>
+    <p><b>Dlaczego 401?</b> <code>CsrfFilter</code> stoi w łańcuchu przed <code>BasicAuthenticationFilter</code>. Odrzuca żądanie, zanim ktokolwiek sprawdzi hasło, i ustawia błąd 403. Kontener servletów przekazuje wtedy żądanie do <code>/error</code>. Spring Security autoryzuje także ten przekazany request, a ty jesteś na nim wciąż anonimowy. <code>/error</code> wymaga logowania, więc entry point zamienia 403 na 401. Gdy <code>/error</code> jest publiczne, widzisz prawdziwy kod.</p>
+  </details>
+  <div class="box watch reveal"><span class="lbl">⚠️ Uwaga</span>
+    <p>Tę pułapkę zobaczysz jeszcze raz: błąd CSRF (403) bez publicznego <code>/error</code> wygląda jak „nie zalogowany”, bo <code>CsrfFilter</code> odrzuca żądanie, zanim użytkownik zostanie uwierzytelniony. Gdy kod odpowiedzi nie ma sensu, włącz <code>DEBUG</code> dla <code>org.springframework.security</code> i szukaj w logu drugiego przejścia przez łańcuch, tego dla <code>/error</code>.</p>
+  </div>
+</section>
+
+<section class="chapter" id="t-users" data-level="1" data-title="Konta w bazie i hasła">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Konta w PostgreSQL, hasła w bcrypt</h2><span class="tag">JdbcUserDetailsManager + DelegatingPasswordEncoder</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#passwords">📖 Kurs: Hasła</a><a class="tk-course" href="spring-security-course.html#authn">📖 Jak Spring sprawdza hasło</a><div class="tk-comps" data-used="app,postgres"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Jeden użytkownik w pamięci z hasłem z logu nie wystarczy. Ludzie mają się rejestrować, a hasła muszą leżeć w bazie jako wolne, solone hashe. Wtedy wyciek tabeli nie zdradza haseł od razu.</p>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 3</span>
+    <ol>
+      <li>Dodaj migrację <code>V1__users.sql</code> ze schematem, którego oczekuje <code>JdbcUserDetailsManager</code>: tabele <code>users</code> i <code>authorities</code>.</li>
+      <li>Zdefiniuj bean <code>PasswordEncoder</code> z <code>PasswordEncoderFactories.createDelegatingPasswordEncoder()</code>.</li>
+      <li>Napisz <code>UserAccounts</code>: jedyny <code>UserDetailsService</code> w aplikacji. W środku trzyma <code>JdbcUserDetailsManager</code> i wystawia <code>register()</code> oraz <code>exists()</code>.</li>
+      <li>Dodaj <code>POST /api/register</code> (publiczny) z walidacją: login <code>[a-z0-9_]{3,50}</code>, hasło od 12 do 128 znaków. Zajęty login: <code>409</code>.</li>
+      <li>Konto <code>admin</code> zakłada <code>AdminBootstrap</code> przy pierwszym starcie. Hasło bierze z właściwości <code>notevault.admin.password</code>. Gdy właściwość jest pusta, nie zakłada nic.</li>
+    </ol>
+  </div>
+  <div class="file">src/main/resources/db/migration/V1__users.sql</div>
+<pre class="sql"><code>-- Schemat, którego oczekuje JdbcUserDetailsManager (users + authorities)
+create table users (
+    username varchar(50)  primary key,
+    password varchar(500) not null,
+    enabled  boolean      not null
+);
+
+create table authorities (
+    username  varchar(50) not null references users (username),
+    authority varchar(50) not null
+);
+create unique index ix_auth_username on authorities (username, authority);</code></pre>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p>Rejestracja z hasłem <code>short</code> daje <code>400</code> (test <code>registrationRejectsShortPassword</code>). Po poprawnej rejestracji w bazie widać hash z prefiksem algorytmu:</p>
+<pre class="log"><code>$ docker compose exec postgres psql -U notevault -c 'select username, left(password, 12) from users'
+ username |     left
+----------+--------------
+ alice    | {bcrypt}$2a$</code></pre>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie</summary>
+  <div class="file">src/main/java/dev/notevault/account/UserAccounts.java (wersja z zadania 3)</div>
+<pre><code>@Service
+public class UserAccounts implements UserDetailsService, UserDetailsPasswordService {
+
+    private final JdbcUserDetailsManager users;
+    private final PasswordEncoder encoder;
+
+    UserAccounts(DataSource dataSource, PasswordEncoder encoder) {
+        this.users = new JdbcUserDetailsManager(dataSource);
+        this.encoder = encoder;
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) {
+        return users.loadUserByUsername(username);
+    }
+
+    @Override
+    public UserDetails updatePassword(UserDetails user, String newPassword) {
+        return users.updatePassword(user, newPassword);
+    }
+
+    public boolean exists(String username) {
+        return users.userExists(username);
+    }
+
+    public void register(String username, String rawPassword, String... roles) {
+        users.createUser(User.withUsername(username)
+            .password(encoder.encode(rawPassword))
+            .roles(roles)
+            .build());
+    }
+}</code></pre>
+  <div class="file">src/main/java/dev/notevault/account/AccountController.java (fragment)</div>
+<pre><code>record Registration(@NotBlank @Pattern(regexp = "[a-z0-9_]{3,50}") String username,
+        @NotBlank @Size(min = 12, max = 128) String password) {
+}
+
+@PostMapping("/api/register")
+ResponseEntity&lt;Void&gt; register(@Valid @RequestBody Registration registration) {
+    if (accounts.exists(registration.username())) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
+    }
+    accounts.register(registration.username(), registration.password(), "USER");
+    return ResponseEntity.status(HttpStatus.CREATED).build();
+}</code></pre>
+    <p>W <code>SecurityConfig</code> dopisz <code>.requestMatchers(HttpMethod.POST, "/api/register").permitAll()</code>. <code>AdminBootstrap</code> jest w projekcie referencyjnym. To <code>ApplicationRunner</code>, który wywołuje <code>register("admin", hasło, "USER", "ADMIN")</code>, gdy konta jeszcze nie ma.</p>
+  </details>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Po co <code>UserAccounts</code>, skoro <code>JdbcUserDetailsManager</code> mógłby być beanem?</div>
+      <div class="a">O:</div><div>Bo w zadaniu 8 dołożysz do <code>loadUserByUsername</code> blokadę konta. Spring Security sam podpina do logowania <code>UserDetailsService</code> tylko wtedy, gdy taki bean jest dokładnie jeden. Przy dwóch beanach tego typu nie wybiera żadnego. Jedna klasa-fasada omija ten problem.</div>
+      <div class="q">P:</div><div>Po co <code>UserDetailsPasswordService</code>?</div>
+      <div class="a">O:</div><div>Pozwala Springowi po udanym logowaniu przepisać hash na mocniejszy, gdy <code>DelegatingPasswordEncoder</code> uzna stary za przestarzały, na przykład <code>{noop}</code> albo <code>{sha256}</code>. <code>JdbcUserDetailsManager</code> już implementuje ten interfejs. Fasada tylko przekazuje wywołanie.</div>
+    </div>
+  </div>
+</section>
+
+<section class="chapter" id="t-idor" data-level="1" data-title="Notatki i IDOR">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Notatki: cudza notatka pod zgadniętym ID</h2><span class="tag">zalogowany to nie znaczy uprawniony</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#idor">📖 Kurs: IDOR</a><div class="tk-comps" data-used="app,postgres"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Notatka ma właściciela. Uwierzytelnienie mówi tylko, <em>kim</em> jest użytkownik. Nie mówi, czy wolno mu przeczytać notatkę numer 17. IDOR (Insecure Direct Object Reference) to sytuacja, w której wystarczy podmienić liczbę w URL, żeby czytać cudze dane.</p>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 4</span>
+    <ol>
+      <li>Dodaj migrację <code>V2__notes.sql</code> i <code>NoteRepository</code> na <code>JdbcClient</code>.</li>
+      <li>💣 Napisz <code>GET /api/notes/{id}</code> naiwnie, przez <code>notes.findById(id)</code>. Zarejestruj <code>alice</code> i <code>bob</code>, dodaj notatkę Alice (na razie przez <code>psql</code> albo test) i przeczytaj ją jako Bob.</li>
+      <li>Napraw: właściciel ma być częścią zapytania (<code>findByIdAndOwner</code>). Cudza notatka ma wyglądać jak nieistniejąca: <code>404</code>, nie <code>403</code>.</li>
+      <li>Lista <code>GET /api/notes</code> zwraca tylko notatki zalogowanego. Właściciela bierzesz z <code>Authentication</code>, nigdy z parametru żądania.</li>
+    </ol>
+  </div>
+
+  <figure class="fig" id="fig-idor">
+    <div class="ftitle">▶ Bob zmienia liczbę w URL <span>przełącz zapytanie i puść atak</span></div>
+    <div class="ctrl">
+      <button class="btn" data-act="naive">findById(id)</button>
+      <button class="btn" data-act="owner">findByIdAndOwner(id, me)</button>
+      <button class="btn bad" data-act="attack">🏴‍☠️ Bob pyta o id 1…4</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="id-row" id="id-row"></div>
+    <div class="id-url" id="id-url">GET /api/notes/…</div>
+    <div class="status" id="id-status">Zapytanie: findById(id). Puść atak.</div>
+    <figcaption>Dane poglądowe: dwie notatki Alice i dwie Boba, ID nadawane po kolei przez <code>bigserial</code>. Kody odpowiedzi takie jak w testach <code>ownerReadsOwnNote</code> i <code>idorSomeoneElsesNoteLooksMissing</code>.</figcaption>
+  </figure>
+
+  <div class="file">src/main/resources/db/migration/V2__notes.sql</div>
+<pre class="sql"><code>create table note (
+    id         bigserial    primary key,
+    owner      varchar(50)  not null references users (username),
+    title      varchar(120) not null,
+    body       text         not null,
+    created_at timestamptz  not null default now()
+);
+create index ix_note_owner on note (owner);</code></pre>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p>Wersja naiwna: Bob dostaje <code>200</code> z treścią notatki Alice. Po poprawce: <code>404</code>, a Alice nadal dostaje <code>200</code>. Testy: <code>ownerReadsOwnNote</code>, <code>idorSomeoneElsesNoteLooksMissing</code>. Zepsutą wersję trzyma test <code>BrokenIdorTest</code>.</p>
+    <p><code>POST /api/notes</code> przez <code>curl</code> z Basic na razie zwraca <code>403</code>: brakuje tokenu CSRF. To zamierzone, wrócisz do tego w zadaniu 6.</p>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie</summary>
+  <div class="file">src/main/java/dev/notevault/notes/NoteRepository.java (fragment)</div>
+<pre><code>private static final String COLUMNS = "select id, owner, title, body, created_at from note ";
+
+public List&lt;Note&gt; findByOwner(String owner) {
+    return jdbc.sql(COLUMNS + "where owner = ? order by id").param(owner).query(Note.class).list();
+}
+
+public Optional&lt;Note&gt; findByIdAndOwner(long id, String owner) {
+    return jdbc.sql(COLUMNS + "where id = ? and owner = ?").params(id, owner).query(Note.class).optional();
+}</code></pre>
+  <div class="file">src/main/java/dev/notevault/notes/NoteController.java (fragment)</div>
+<pre><code>@GetMapping
+List&lt;Note&gt; mine(Authentication authentication) {
+    return notes.findByOwner(authentication.getName());
+}
+
+@GetMapping("/{id}")
+ResponseEntity&lt;Note&gt; one(@PathVariable long id, Authentication authentication) {
+    // Właściciel jest w zapytaniu: cudza notatka wygląda jak nieistniejąca (404, nie 403)
+    return ResponseEntity.of(notes.findByIdAndOwner(id, authentication.getName()));
+}</code></pre>
+  </details>
+  <div class="box brain reveal"><span class="lbl">🧠 Pomyśl</span>
+    <p>Czemu 404, a nie 403? 403 potwierdza, że notatka 17 istnieje i należy do kogoś innego. Przy kolejnych ID napastnik może tak policzyć notatki albo konta. 404 nie zdradza nic ponad to, że <em>ty</em> takiej notatki nie masz.</p>
+  </div>
+</section>
+
+<section class="chapter" id="t-rules" data-level="1" data-title="Role i method security">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Admin: reguły URL i @PreAuthorize</h2><span class="tag">dwie warstwy autoryzacji</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#urlrules">📖 Kurs: Reguły URL</a><a class="tk-course" href="spring-security-course.html#method">📖 Method security</a><a class="tk-course" href="spring-security-course.html#authorities">📖 Role i authorities</a><div class="tk-comps" data-used="app,postgres"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Admin ma widzieć listę kont i usuwać dowolne notatki, na przykład po zgłoszeniu nadużycia. Zwykły użytkownik usuwa tylko swoje. Pierwszą regułę da się wyrazić samym URL-em. Druga zależy od danych (kto jest właścicielem), więc należy do metody.</p>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 5</span>
+    <ol>
+      <li>W łańcuchu dodaj <code>.requestMatchers("/api/admin/**").hasRole("ADMIN")</code>, przed <code>anyRequest()</code>. Kolejność ma znaczenie: wygrywa pierwsza pasująca reguła.</li>
+      <li>Dodaj <code>GET /api/admin/users</code> z dodatkowym <code>@PreAuthorize("hasRole('ADMIN')")</code> i włącz <code>@EnableMethodSecurity</code>.</li>
+      <li>Dodaj <code>DELETE /api/notes/{id}</code>, który woła <code>NoteService.delete</code>. Na metodzie serwisu ustaw regułę: admin albo właściciel.</li>
+    </ol>
+  </div>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p>Bob na <code>/api/admin/users</code>: <code>403</code>. Admin: <code>200</code>. Bob usuwa notatkę Alice: <code>403</code>. Admin: <code>204</code>. Testy: <code>userWithoutAdminRoleGets403</code>, <code>adminSeesUsers</code>, <code>methodSecurityStopsDeletingSomeoneElsesNote</code>, <code>adminMayDeleteAnyNote</code>.</p>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie</summary>
+  <div class="file">src/main/java/dev/notevault/notes/NoteService.java</div>
+<pre><code>@Service
+public class NoteService {
+
+    private final NoteRepository notes;
+
+    NoteService(NoteRepository notes) {
+        this.notes = notes;
+    }
+
+    /** Usunąć może właściciel albo admin. Reguła siedzi przy metodzie, więc obowiązuje każdego wołającego. */
+    @PreAuthorize("hasRole('ADMIN') or @noteRepository.isOwner(#id, authentication.name)")
+    public void delete(long id) {
+        notes.delete(id);
+    }
+}</code></pre>
+    <p><code>#id</code> działa, bo parent Spring Boota kompiluje z flagą <code>-parameters</code>, więc nazwy parametrów są w bajtkodzie. <code>@noteRepository</code> to odwołanie do beana po nazwie.</p>
+  </details>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Czemu kasowanie cudzej notatki daje tu 403, a czytanie 404?</div>
+      <div class="a">O:</div><div>To świadomy wybór, który da się obronić. Przy odczycie właściciel siedzi w zapytaniu, więc ukrywasz istnienie notatki. <code>@PreAuthorize</code> rzuca <code>AccessDeniedException</code>, a to daje 403. Jeśli chcesz 404 także tutaj, sprawdź właściciela w zapytaniu <code>DELETE … WHERE id = ? AND owner = ?</code>, a regułę zostaw tylko dla admina.</div>
+    </div>
+  </div>
+</section>
+<section class="part" id="part-2" data-level="1">
+  <div class="part-head reveal"><div class="part-num">Część II</div><h2>Przeglądarka: logowanie, CSRF, sesje</h2><p>Frontend loguje się formularzem, sesja trafia do Redisa, a bot zgadujący hasła trafia na blokadę.</p></div>
+</section>
+
+<section class="chapter" id="t-csrf" data-level="1" data-title="Logowanie SPA i CSRF">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Logowanie z SPA i token CSRF</h2><span class="tag">ciasteczko sesji wymaga ochrony przed CSRF</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#csrf">📖 Kurs: CSRF</a><a class="tk-course" href="spring-security-course.html#sessions">📖 Sesje</a><div class="tk-comps" data-used="app,postgres"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Frontend NoteVault (<code>index.html</code> + <code>app.js</code>) loguje się raz i dalej trzyma sesję w ciasteczku. Przeglądarka dołącza to ciasteczko do każdego żądania pod ten adres, także do żądania wysłanego z cudzej strony. Token CSRF dowodzi, że żądanie przyszło z twojego frontendu.</p>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 6</span>
+    <ol>
+      <li>Zamień HTTP Basic na <code>formLogin</code>: <code>loginProcessingUrl("/api/login")</code>, sukces <code>204</code>, porażka <code>401</code>, bez przekierowań. Strona logowania to <code>/</code>.</li>
+      <li>Dodaj <code>logout</code> pod <code>/api/logout</code> z <code>HttpStatusReturningLogoutSuccessHandler</code>.</li>
+      <li>Włącz <code>csrf(csrf -&gt; csrf.spa())</code>. Token trafia do ciasteczka <code>XSRF-TOKEN</code>, a frontend odsyła go w nagłówku <code>X-XSRF-TOKEN</code>.</li>
+      <li>Dodaj <code>GET /api/csrf</code> (publiczny). Zanim frontend wyśle <code>POST /api/login</code>, woła ten adres, żeby dostać pierwszy token.</li>
+      <li>Wrzuć <code>index.html</code> i <code>app.js</code> do <code>src/main/resources/static</code> i otwórz <code>http://localhost:8080</code>.</li>
+    </ol>
+  </div>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p>Logowanie bez nagłówka <code>X-XSRF-TOKEN</code>: <code>403</code> (test <code>loginWithoutCsrfTokenIsRejected</code>). Z tokenem: <code>204</code>, a <code>/api/me</code> zwraca twoją nazwę. Wylogowanie zwraca <code>200</code>, bo tyle domyślnie odsyła <code>HttpStatusReturningLogoutSuccessHandler</code>. Potem <code>/api/me</code> daje <code>401</code> (test <code>logoutEndsTheSession</code>). Ten sam przepływ w <code>curl</code>:</p>
+<pre class="log"><code>curl -s -c jar -b jar localhost:8080/api/csrf
+TOKEN=$(awk '$6=="XSRF-TOKEN"{print $7}' jar)
+curl -s -c jar -b jar -H "X-XSRF-TOKEN: $TOKEN" \
+     -d 'username=alice&amp;password=alice-password-123' localhost:8080/api/login -o /dev/null -w '%{http_code}\n'
+curl -s -b jar localhost:8080/api/me</code></pre>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie</summary>
+  <div class="file">SecurityConfig.java: łańcuch web (wersja z zadania 6)</div>
+<pre><code>http
+    .authorizeHttpRequests(auth -&gt; auth
+        .requestMatchers("/", "/index.html", "/app.js", "/api/csrf", "/actuator/health", "/error").permitAll()
+        .requestMatchers(HttpMethod.POST, "/api/register").permitAll()
+        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+        .anyRequest().authenticated())
+    .formLogin(login -&gt; login
+        .loginPage("/")
+        .loginProcessingUrl("/api/login")
+        .successHandler((request, response, authentication) -&gt; response.setStatus(204))
+        .failureHandler((request, response, exception) -&gt; response.setStatus(401)))
+    .logout(logout -&gt; logout
+        .logoutUrl("/api/logout")
+        .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler()))
+    .exceptionHandling(ex -&gt; ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+    .csrf(csrf -&gt; csrf.spa());</code></pre>
+  <div class="file">src/main/java/dev/notevault/account/AccountController.java (fragment)</div>
+<pre><code>/** Odczyt tokenu zapisuje go w ciasteczku XSRF-TOKEN, z którego czyta SPA. */
+@GetMapping("/api/csrf")
+Map&lt;String, String&gt; csrf(CsrfToken token) {
+    return Map.of("headerName", token.getHeaderName());
+}</code></pre>
+  <div class="file">src/main/resources/static/app.js (fragment)</div>
+<pre><code>// Spring Security (csrf.spa()) zapisuje token w ciasteczku XSRF-TOKEN; odsyłamy go w nagłówku X-XSRF-TOKEN.
+function csrfToken() {
+  const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+async function api(method, url, body, form) {
+  const headers = { 'X-XSRF-TOKEN': csrfToken() };
+  if (body &amp;&amp; !form) headers['Content-Type'] = 'application/json';
+  return fetch(url, { method, headers, body: form ? body : body &amp;&amp; JSON.stringify(body) });
+}</code></pre>
+    <p>Po co <code>/api/csrf</code>? Od Spring Security 6 token CSRF ładuje się leniwie. Ciasteczko powstaje dopiero wtedy, gdy coś po token sięgnie. Endpoint, który przyjmuje <code>CsrfToken</code> jako parametr, właśnie po niego sięga.</p>
+  </details>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Ciasteczko <code>XSRF-TOKEN</code> nie ma <code>HttpOnly</code>. Czy to nie dziura?</div>
+      <div class="a">O:</div><div>Tak ma być: JavaScript musi przeczytać token, żeby wpisać go do nagłówka. Obca strona i tak go nie przeczyta, bo nie ma dostępu do ciasteczek twojej domeny. Ciasteczko sesji ma <code>HttpOnly</code> i to ono jest cenne.</div>
+    </div>
+  </div>
+</section>
+
+<section class="chapter" id="t-redis" data-level="1" data-title="Sesje w Redisie">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Sesje w Redisie: fixation i limit sesji</h2><span class="tag">Spring Session + nowy kontener</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#sessions">📖 Kurs: Sesje</a><div class="tk-comps" data-used="app,postgres" data-new="redis"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Sesja w pamięci Tomcata znika przy restarcie i nie działa przy dwóch instancjach za load balancerem. Do tego NoteVault chce mieć jedną aktywną sesję na konto: logowanie na telefonie ma wylogować laptopa. Żeby to działało na wielu instancjach, rejestr sesji musi być wspólny.</p>
+  </div>
+  <div class="box comp reveal"><span class="lbl">🧩 Nowy komponent: Redis + Spring Session</span>
+    <dl>
+      <dt>Co to</dt><dd><b>Redis 8</b> to baza klucz–wartość trzymana w pamięci, z opcjonalnym zapisem na dysk. <b>Spring Session</b> podmienia <code>HttpSession</code> Tomcata na sesję trzymaną w Redisie.</dd>
+      <dt>Po co</dt><dd>Sesje przeżywają restart aplikacji i są wspólne dla wszystkich instancji. Indeks „sesje użytkownika X” pozwala liczyć i wygaszać sesje. Przyda się też w zadaniu 8 jako wspólny licznik nieudanych logowań.</dd>
+      <dt>Jak łączy</dt><dd>Starter <code>spring-boot-starter-session-data-redis</code>. W developmencie kontener <code>redis</code> w <code>compose.yaml</code> wykrywa <code>spring-boot-docker-compose</code>. W testach robi to <code>@ServiceConnection(name = "redis")</code>. Ciasteczko sesji nazywa się teraz <code>SESSION</code>, a nie <code>JSESSIONID</code>.</dd>
+    </dl>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 7</span>
+    <ol>
+      <li>Dodaj starter i usługę <code>redis:8</code> do <code>compose.yaml</code>.</li>
+      <li>Ustaw <code>spring.session.data.redis.repository-type=indexed</code>. Tylko repozytorium indeksowane umie znaleźć sesje po nazwie użytkownika.</li>
+      <li>Zarejestruj <code>SpringSessionBackedSessionRegistry</code> i ustaw <code>maximumSessions(1)</code>.</li>
+      <li>💣 Zaloguj się z dwóch „przeglądarek” (dwa pliki z ciasteczkami w <code>curl</code>) i zawołaj <code>/api/me</code> z pierwszej. Sprawdź kod odpowiedzi i treść. Potem to napraw.</li>
+      <li>Sprawdź session fixation: porównaj ciasteczko <code>SESSION</code> sprzed logowania i po nim.</li>
+    </ol>
+  </div>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p>Bez własnej strategii wygaszona sesja dostaje <code>200</code> z tekstem zamiast danych:</p>
+<pre class="log"><code>This session has been expired (possibly due to multiple concurrent logins being attempted as the same user).</code></pre>
+    <p>Dla frontendu to „sukces”. Po poprawce dostajesz <code>401</code> (test <code>secondLoginExpiresTheFirstSession</code>). Po zalogowaniu wartość <code>SESSION</code> jest inna niż przed nim (test <code>loginChangesSessionIdAndOpensApi</code>). To ochrona przed session fixation, którą Spring Security włącza domyślnie.</p>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie</summary>
+  <div class="file">SecurityConfig.java (fragmenty)</div>
+<pre><code>.sessionManagement(session -&gt; session
+    .maximumSessions(1)
+    .sessionRegistry(sessionRegistry)
+    .expiredSessionStrategy(event -&gt; event.getResponse().setStatus(401)))
+
+@Bean
+&lt;S extends Session&gt; SpringSessionBackedSessionRegistry&lt;S&gt; sessionRegistry(
+        FindByIndexNameSessionRepository&lt;S&gt; sessions) {
+    return new SpringSessionBackedSessionRegistry&lt;&gt;(sessions);
+}</code></pre>
+  <div class="file">application.properties (fragment)</div>
+<pre><code># Sesje w Redisie; "indexed" pozwala szukać sesji po użytkowniku (limit sesji)
+spring.session.data.redis.repository-type=indexed
+server.servlet.session.cookie.http-only=true
+server.servlet.session.cookie.same-site=lax</code></pre>
+  </details>
+  <div class="box watch reveal"><span class="lbl">⚠️ Redis to teraz zależność każdego żądania</span>
+    <p>Na pełnym stacku z zadania 12 zatrzymałem kontener <code>redis</code>. <code>GET /api/notes</code> bez logowania nie dostał odpowiedzi przez 120 sekund, po których <code>curl</code> się poddał. <code>/actuator/health</code> po 60 sekundach zwrócił <code>503</code>. Po ponownym starcie Redisa sesja admina nadal działała, bo <code>redis:8</code> zapisał dane na dysk przy zatrzymaniu. Wniosek: ustaw <code>spring.data.redis.timeout</code> na krótki czas i monitoruj Redisa jak bazę danych.</p>
+  </div>
+  <div class="box watch reveal"><span class="lbl">⚠️ Pułapka przy migracji ze starszego Boota</span>
+    <p>W starszych poradnikach znajdziesz <code>spring.session.redis.repository-type</code>. W Spring Boot 4.0.0 tę nazwę oznaczono jako przestarzałą na poziomie <code>error</code>, z zamiennikiem <code>spring.session.data.redis.repository-type</code>. Stara nazwa nie działa, a aplikacja nie wstaje z błędem <code>No qualifying bean of type 'org.springframework.session.FindByIndexNameSessionRepository&lt;?&gt;'</code>. Dokładnie to zdarzyło się przy budowie projektu referencyjnego.</p>
+  </div>
+</section>
+
+<section class="chapter" id="t-brute" data-level="1" data-title="Blokada po nieudanych próbach">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Brute force: licznik prób w Redisie</h2><span class="tag">Spring Security nie ma limitu prób; składasz go z klocków</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#bruteforce">📖 Kurs: Brute force</a><div class="tk-comps" data-used="app,postgres,redis"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Bez limitu bot może próbować haseł do woli. Spring Security daje zdarzenia logowania i flagę <code>accountNonLocked</code>. Politykę składasz sam. Licznik trzymasz w Redisie, bo zna go każda instancja aplikacji.</p>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 8</span>
+    <ol>
+      <li>Napisz <code>LoginAttempts</code>: nasłuchuje <code>AuthenticationFailureBadCredentialsEvent</code> i zwiększa licznik <code>login-failures:&lt;login&gt;</code> w Redisie. Klucz wygasa po 15 minutach. <code>AuthenticationSuccessEvent</code> zeruje licznik.</li>
+      <li>W <code>UserAccounts.loadUserByUsername</code> zwróć konto z <code>accountLocked(true)</code>, gdy licznik doszedł do 5.</li>
+      <li>Pięć razy podaj złe hasło, a potem dobre.</li>
+    </ol>
+  </div>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p>Szósta próba, już z dobrym hasłem, nadal daje <code>401</code> (test <code>fiveBadPasswordsLockTheAccount</code>). <code>DaoAuthenticationProvider</code> sprawdza blokadę przed porównaniem hasła i rzuca <code>LockedException</code>. Zdarzenia działają bez dodatkowej konfiguracji, bo Spring Boot rejestruje bean <code>DefaultAuthenticationEventPublisher</code>. W Redisie zobaczysz licznik:</p>
+<pre class="log"><code>$ docker compose exec redis redis-cli get login-failures:erin
+"5"</code></pre>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie</summary>
+  <div class="file">src/main/java/dev/notevault/account/LoginAttempts.java</div>
+<pre><code>@Component
+public class LoginAttempts {
+
+    static final int MAX_FAILURES = 5;
+    static final Duration LOCK_TIME = Duration.ofMinutes(15);
+
+    private final StringRedisTemplate redis;
+
+    LoginAttempts(StringRedisTemplate redis) {
+        this.redis = redis;
+    }
+
+    @EventListener
+    void onFailure(AuthenticationFailureBadCredentialsEvent event) {
+        String key = key(event.getAuthentication().getName());
+        Long failures = redis.opsForValue().increment(key);
+        if (failures != null &amp;&amp; failures == 1) {
+            redis.expire(key, LOCK_TIME);
+        }
+    }
+
+    @EventListener
+    void onSuccess(AuthenticationSuccessEvent event) {
+        redis.delete(key(event.getAuthentication().getName()));
+    }
+
+    public boolean isLocked(String username) {
+        String failures = redis.opsForValue().get(key(username));
+        return failures != null &amp;&amp; Integer.parseInt(failures) &gt;= MAX_FAILURES;
+    }
+
+    private static String key(String username) {
+        return "login-failures:" + username.toLowerCase();
+    }
+}</code></pre>
+  <div class="file">UserAccounts.java (zmieniona metoda)</div>
+<pre><code>@Override
+public UserDetails loadUserByUsername(String username) {
+    UserDetails user = users.loadUserByUsername(username);
+    if (!attempts.isLocked(username)) {
+        return user;
+    }
+    return User.withUserDetails(user).accountLocked(true).build();
+}</code></pre>
+  </details>
+  <div class="box usecase reveal"><span class="lbl">🏢 W prawdziwym systemie</span>
+    <p>Ta blokada jest czasowa, ale wciąż pozwala komuś zablokować cudze konto pięcioma próbami. Kurs w rozdziale o brute force opisuje mocniejsze warstwy: limit na bramce przed aplikacją, rosnące opóźnienia albo CAPTCHA zamiast twardej blokady, <code>CompromisedPasswordChecker</code> i MFA. Licznik jest per konto, a nie per IP, bo credential stuffing przychodzi z tysięcy adresów.</p>
+  </div>
+</section>
+
+<section class="chapter" id="t-headers" data-level="1" data-title="Nagłówki i CSP">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Nagłówki bezpieczeństwa i Content-Security-Policy</h2><span class="tag">przeglądarka jako sojusznik</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#headers">📖 Kurs: Nagłówki bezpieczeństwa</a><a class="tk-course" href="spring-security-course.html#https">📖 HTTPS, HSTS i proxy</a><div class="tk-comps" data-used="app"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Tytuł notatki wpisuje użytkownik. Jeśli frontend wstawi go przez <code>innerHTML</code>, notatka o tytule <code>&lt;img src=x onerror=…&gt;</code> wykona skrypt u każdego, kto ją wyświetli. CSP to druga linia obrony: przeglądarka nie uruchomi skryptu spoza listy dozwolonych źródeł.</p>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 9</span>
+    <ol>
+      <li>Dodaj CSP: <code>default-src 'self'; frame-ancestors 'none'</code>.</li>
+      <li>Sprawdź, że frontend nie ma skryptów inline, tylko <code>&lt;script src="/app.js"&gt;</code>. Taka polityka blokuje skrypty inline.</li>
+      <li>Upewnij się, że <code>app.js</code> wstawia tytuły przez <code>textContent</code>.</li>
+      <li>Obejrzyj nagłówki odpowiedzi na <code>GET /</code>.</li>
+    </ol>
+  </div>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p>Test <code>securityHeadersArePresent</code> sprawdza trzy nagłówki:</p>
+<pre class="log"><code>Content-Security-Policy: default-src 'self'; frame-ancestors 'none'
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY</code></pre>
+    <p>Nagłówka <code>Strict-Transport-Security</code> po zwykłym HTTP nie zobaczysz. Spring Security dodaje go tylko do odpowiedzi na żądania HTTPS. Za reverse proxy, które kończy TLS, aplikacja musi ufać nagłówkom <code>X-Forwarded-*</code>, żeby wiedzieć, że żądanie przyszło po HTTPS. Kurs omawia to w rozdziale o HTTPS.</p>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie</summary>
+<pre><code>.headers(headers -&gt; headers
+    .contentSecurityPolicy(csp -&gt; csp.policyDirectives("default-src 'self'; frame-ancestors 'none'")))</code></pre>
+    <p>Reszta nagłówków (<code>nosniff</code>, <code>DENY</code>, <code>Cache-Control</code>) jest domyślnie włączona. <code>frame-ancestors 'none'</code> to nowocześniejszy odpowiednik <code>X-Frame-Options: DENY</code>.</p>
+  </details>
+</section>
+<section class="part" id="part-3" data-level="1">
+  <div class="part-head reveal"><div class="part-num">Część III</div><h2>Tokeny i testy</h2><p>Drugi łańcuch dla klientów z tokenem z Keycloaka, a potem testy, które pilnują wszystkich reguł naraz.</p></div>
+</section>
+
+<section class="chapter" id="t-keycloak" data-level="2" data-title="Keycloak i resource server">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Keycloak i drugi łańcuch: API na tokenach JWT</h2><span class="tag">resource server, role z tokenu, audience, CORS</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#oauth">📖 Kurs: OAuth 2.0 / OIDC</a><a class="tk-course" href="spring-security-course.html#jwt">📖 Resource server JWT</a><a class="tk-course" href="spring-security-course.html#cors">📖 CORS</a><div class="tk-comps" data-used="app,postgres,redis" data-new="keycloak"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Aplikacja mobilna i partnerzy chcą czytać notatki przez API. Nie dostaną hasła użytkownika ani ciasteczka sesji. Dostaną token wydany przez dostawcę tożsamości. NoteVault tylko ten token sprawdza: podpis, wystawcę, odbiorcę i ważność. Tak działa <em>resource server</em>.</p>
+  </div>
+  <div class="box comp reveal"><span class="lbl">🧩 Nowy komponent: Keycloak</span>
+    <dl>
+      <dt>Co to</dt><dd>Otwartoźródłowy serwer tożsamości (identity provider). Mówi OAuth 2.0 i OpenID Connect, trzyma użytkowników, klientów i role, wydaje podpisane tokeny JWT.</dd>
+      <dt>Po co</dt><dd>Logowanie, MFA, reset hasła i rejestr klientów robi wyspecjalizowany serwer, a nie każda aplikacja osobno. Aplikacja zna tylko adres wystawcy i klucze publiczne z <code>…/protocol/openid-connect/certs</code> (JWKS).</dd>
+      <dt>Jak łączy</dt><dd>Kontener <code>quay.io/keycloak/keycloak:26.8</code> w trybie <code>start-dev</code> na porcie 8180. Przy starcie importuje realm z <code>keycloak/notevault-realm.json</code> (<code>--import-realm</code>). Realm ma role <code>user</code> i <code>admin</code>, klientów <code>notevault-cli</code> i <code>other-app</code> oraz deweloperskich użytkowników <code>alice</code> i <code>admin</code>. Panel: <code>http://localhost:8180</code>.</dd>
+    </dl>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 10</span>
+    <ol>
+      <li>Dodaj <code>spring-boot-starter-oauth2-resource-server</code>, usługę <code>keycloak</code> w <code>compose.yaml</code> i plik realmu.</li>
+      <li>Dodaj drugi <code>SecurityFilterChain</code> z <code>@Order(1)</code> i <code>securityMatcher("/ext/**")</code>. Ma być bezstanowy (<code>STATELESS</code>), bez CSRF (nie ma ciasteczek), z <code>oauth2ResourceServer(jwt)</code>. Łańcuch przeglądarki dostaje <code>@Order(2)</code>.</li>
+      <li>Ustaw <code>issuer-uri</code>, <code>jwk-set-uri</code> i <code>audiences=notevault-api</code>. Klient <code>notevault-cli</code> ma w realmie mapper, który dopisuje <code>notevault-api</code> do <code>aud</code>. Klient <code>other-app</code> takiego mappera nie ma.</li>
+      <li>Napisz konwerter: role z claimu <code>realm_access.roles</code> mają się zamienić w <code>ROLE_USER</code> i <code>ROLE_ADMIN</code>, a nazwą użytkownika ma być <code>preferred_username</code>.</li>
+      <li>Dodaj <code>GET /ext/notes</code> i <code>GET /ext/admin/stats</code> (tylko <code>ROLE_ADMIN</code>). CORS włącz tylko dla <code>/ext/**</code> i tylko dla originu <code>http://localhost:5173</code>.</li>
+    </ol>
+  </div>
+
+  <figure class="fig wide" id="fig-jwt">
+    <div class="ftitle">▶ Co resource server sprawdza w tokenie <span>wybierz token i wyślij</span></div>
+    <div class="ctrl">
+      <button class="btn" data-tok="alice">token alice (notevault-cli)</button>
+      <button class="btn" data-tok="admin">token admin</button>
+      <button class="btn bad" data-tok="aud">💥 token other-app</button>
+      <button class="btn bad" data-tok="sig">💥 zmieniony podpis</button>
+      <button class="btn bad" data-tok="iss">💥 zły issuer</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="ctrl"><label>Endpoint: <select id="jw-ep"><option value="/ext/notes">GET /ext/notes</option><option value="/ext/admin/stats">GET /ext/admin/stats</option></select></label></div>
+    <div class="jw-steps" id="jw-steps"></div>
+    <div class="jw-tok" id="jw-tok">Wybierz token.</div>
+    <div class="status" id="jw-status">Token jest podpisany kluczem Keycloaka. Aplikacja ma tylko klucz publiczny.</div>
+    <figcaption>Uproszczenie: claimy tokenu są skrócone, a kolejność kroków jest poglądowa (Spring najpierw weryfikuje podpis, potem uruchamia walidatory claimów). Wyniki dla alice, admina, other-app i zmienionego podpisu pochodzą z testu <code>KeycloakTokenTest</code> na prawdziwym Keycloaku 26.8. Scenariusz „zły issuer” opisuje błąd z zadania 12.</figcaption>
+  </figure>
+
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+<pre class="log"><code>TOKEN=$(curl -s -d grant_type=password -d client_id=notevault-cli \
+  -d username=alice -d password=alice-dev-password \
+  localhost:8180/realms/notevault/protocol/openid-connect/token | jq -r .access_token)
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOKEN" localhost:8080/ext/notes        # 200
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOKEN" localhost:8080/ext/admin/stats  # 403
+curl -s -i localhost:8080/ext/notes | grep WWW-Authenticate</code></pre>
+    <p>Bez tokenu dostajesz <code>401</code> z nagłówkiem <code>WWW-Authenticate: Bearer resource_metadata="http://localhost:8080/.well-known/oauth-protected-resource"</code> (host i port są z twojego żądania). Spring Security 7.1 wskazuje w nim metadane chronionego zasobu (RFC 9728). Token klienta <code>other-app</code> i token ze zmienionym podpisem: <code>401</code>. Wszystkie przypadki sprawdza <code>KeycloakTokenTest</code>.</p>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie</summary>
+  <div class="file">SecurityConfig.java: łańcuch extApi</div>
+<pre><code>/** Łańcuch 1: API dla klientów z tokenem JWT. Bez sesji i bez ciasteczek, więc bez CSRF. */
+@Bean
+@Order(1)
+SecurityFilterChain extApi(HttpSecurity http) throws Exception {
+    JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
+    jwtConverter.setPrincipalClaimName("preferred_username");
+    jwtConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRoles());
+
+    http
+        .securityMatcher("/ext/**")
+        .authorizeHttpRequests(auth -&gt; auth
+            .requestMatchers("/ext/admin/**").hasRole("ADMIN")
+            .anyRequest().authenticated())
+        .oauth2ResourceServer(rs -&gt; rs.jwt(jwt -&gt; jwt.jwtAuthenticationConverter(jwtConverter)))
+        .sessionManagement(session -&gt; session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .csrf(csrf -&gt; csrf.disable())
+        .cors(Customizer.withDefaults());
+    return http.build();
+}</code></pre>
+  <div class="file">src/main/java/dev/notevault/security/KeycloakRoles.java</div>
+<pre><code>/** Keycloak trzyma role realmu w claimie realm_access.roles; Spring chce je jako ROLE_*. */
+class KeycloakRoles implements Converter&lt;Jwt, Collection&lt;GrantedAuthority&gt;&gt; {
+
+    @Override
+    public Collection&lt;GrantedAuthority&gt; convert(Jwt jwt) {
+        Map&lt;String, Object&gt; realmAccess = jwt.getClaimAsMap("realm_access");
+        if (realmAccess == null || !(realmAccess.get("roles") instanceof List&lt;?&gt; roles)) {
+            return List.of();
+        }
+        return roles.stream()
+            .map(role -&gt; (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.toString().toUpperCase()))
+            .toList();
+    }
+}</code></pre>
+  <div class="file">application.properties (fragment)</div>
+<pre><code># Keycloak jako wystawca tokenów dla /ext/**
+spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:8180/realms/notevault
+spring.security.oauth2.resourceserver.jwt.jwk-set-uri=http://localhost:8180/realms/notevault/protocol/openid-connect/certs
+spring.security.oauth2.resourceserver.jwt.audiences=notevault-api
+notevault.cors.allowed-origins=http://localhost:5173</code></pre>
+  <div class="file">SecurityConfig.java: CORS</div>
+<pre><code>@Bean
+CorsConfigurationSource corsConfigurationSource(
+        @Value("${notevault.cors.allowed-origins}") List&lt;String&gt; allowedOrigins) {
+    CorsConfiguration config = new CorsConfiguration();
+    config.setAllowedOrigins(allowedOrigins);
+    config.setAllowedMethods(List.of("GET"));
+    config.setAllowedHeaders(List.of("Authorization"));
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/ext/**", config);
+    return source;
+}</code></pre>
+  </details>
+  <div class="box watch reveal"><span class="lbl">⚠️ Password grant tylko w terminalu</span>
+    <p><code>grant_type=password</code> (w Keycloaku „Direct access grants”) jest tu tylko dla wygody <code>curl</code> i testów. RFC 9700 (OAuth 2.0 Security Best Current Practice) zakazuje go w produkcji. Prawdziwy frontend używa Authorization Code z PKCE. Kurs pokazuje ten przepływ w rozdziale o OAuth.</p>
+  </div>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div>Po co dwa łańcuchy? Nie wystarczy jeden z <code>formLogin</code> i <code>oauth2ResourceServer</code>?</div>
+      <div class="a">O:</div><div>Dwa światy mają sprzeczne wymagania. Przeglądarka potrzebuje sesji i CSRF. Klient z tokenem nie ma ciasteczek, więc CSRF mu tylko przeszkadza, a sesja jest zbędna. <code>securityMatcher</code> kieruje żądanie do jednego łańcucha. Wygrywa pierwszy pasujący według <code>@Order</code>, dlatego węższy łańcuch ma niższy numer.</div>
+      <div class="q">P:</div><div>Czemu tu wolno wyłączyć CSRF, a w zadaniu 6 nie?</div>
+      <div class="a">O:</div><div>CSRF wykorzystuje to, że przeglądarka sama dołącza ciasteczko. Nagłówka <code>Authorization: Bearer</code> przeglądarka sama nie dołączy, a łańcuch <code>/ext/**</code> nie tworzy sesji.</div>
+    </div>
+  </div>
+</section>
+
+<section class="chapter" id="t-tests" data-level="1" data-title="Testy bezpieczeństwa">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Testy: każda reguła ma test, który ją pilnuje</h2><span class="tag">MockMvc, Testcontainers, prawdziwe HTTP, prawdziwy Keycloak</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#testing">📖 Kurs: Testy bezpieczeństwa</a><div class="tk-comps" data-used="postgres,redis,keycloak"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Konfiguracja bezpieczeństwa psuje się po cichu. Ktoś przestawi kolejność reguł, doda <code>permitAll</code> „na chwilę” albo wyłączy CSRF, bo test frontendu nie przechodził. Aplikacja dalej działa, tylko jest otwarta. Testy mają łapać właśnie takie zmiany.</p>
+  </div>
+  <div class="box comp reveal"><span class="lbl">🧩 Nowy komponent: Testcontainers</span>
+    <dl>
+      <dt>Co to</dt><dd>Biblioteka, która z testu JUnit uruchamia kontenery Dockera i sprząta je po testach.</dd>
+      <dt>Po co</dt><dd>Testy biegną na tym samym PostgreSQL 18, Redisie 8 i Keycloaku 26.8 co aplikacja, a nie na H2 czy mockach. Blokada konta naprawdę liczy w Redisie, a token naprawdę podpisuje Keycloak.</dd>
+      <dt>Jak łączy</dt><dd><code>TestcontainersConfiguration</code> wystawia kontenery jako beany z <code>@ServiceConnection</code>. Spring Boot sam ustawia z nich URL-e i hasła. Keycloak nie ma gotowego <code>@ServiceConnection</code>, więc jego adresy ustawia <code>@DynamicPropertySource</code>.</dd>
+    </dl>
+  </div>
+
+  <figure class="fig wide" id="fig-chain">
+    <div class="ftitle">▶ Żądanie przez dwa łańcuchy filtrów <span>wybierz test i zobacz, który filtr decyduje</span></div>
+    <div class="ctrl"><label>Scenariusz: <select id="fc-sel"></select></label><button class="btn" data-act="go">▶ Wyślij</button><button class="btn" data-act="reset">↺ Reset</button></div>
+    <div class="fc-req" id="fc-req"></div>
+    <div class="fc-wrap" id="fc-wrap"></div>
+    <div class="fc-res" id="fc-res"></div>
+    <div class="status" id="fc-status">Wybierz scenariusz i wyślij.</div>
+    <figcaption>Uproszczenie: pokazuję tylko filtry, które coś robią w danym scenariuszu, a pomijam filtry pomocnicze (na przykład <code>DisableEncodeUrlFilter</code>, <code>HeaderWriterFilter</code>, <code>RequestCacheAwareFilter</code>). Każdy scenariusz to test z projektu referencyjnego; kody odpowiedzi są z przebiegu tych testów.</figcaption>
+  </figure>
+
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 11</span>
+    <ol>
+      <li><b>MockMvc bez logowania.</b> W <code>AccessRulesTest</code> podstaw tożsamość przez <code>user("bob")</code>, <code>@WithMockUser(roles = "ADMIN")</code> albo <code>jwt()</code>. Do każdego POST i DELETE dodaj <code>csrf()</code>. Napisz też jeden test <em>bez</em> <code>csrf()</code>, który oczekuje 403.</li>
+      <li><b>Prawdziwe HTTP.</b> W <code>LoginFlowTest</code> uruchom serwer na losowym porcie (<code>RANDOM_PORT</code>) i użyj <code>HttpClient</code> z <code>CookieManager</code>. Sesja, ciasteczko <code>XSRF-TOKEN</code>, blokada konta i limit sesji działają tylko na prawdziwym serwerze z Redisem.</li>
+      <li data-level="2"><b>Prawdziwy Keycloak.</b> W <code>KeycloakTokenTest</code> uruchom Keycloaka jako <code>GenericContainer</code> z realmem, pobierz prawdziwe tokeny i sprawdź audience oraz podpis.</li>
+      <li>Uruchom <code>./mvnw test</code>.</li>
+    </ol>
+  </div>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p>Na projekcie referencyjnym <code>./mvnw test</code> uruchamia 27 testów i wszystkie przechodzą: <code>AccessRulesTest</code> (15), <code>LoginFlowTest</code> (7), <code>KeycloakTokenTest</code> (4) i <code>BrokenIdorTest</code> (1). Cały przebieg trwa kilka minut: w moich uruchomieniach od niecałych 3 do ponad 6. Najdłużej trwa start Keycloaka. Raz nie zdążył w 3 minuty, dlatego test czeka na niego do 5 minut.</p>
+<pre class="log"><code>[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0 -- in dev.notevault.AccessRulesTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0 -- in dev.notevault.LoginFlowTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0 -- in dev.notevault.KeycloakTokenTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0 -- in dev.notevault.BrokenIdorTest
+[INFO] Tests run: 27, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS</code></pre>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie (fragmenty)</summary>
+  <div class="file">src/test/java/dev/notevault/TestcontainersConfiguration.java</div>
+<pre><code>@TestConfiguration(proxyBeanMethods = false)
+public class TestcontainersConfiguration {
+
+    @Bean
+    @ServiceConnection
+    PostgreSQLContainer postgres() {
+        return new PostgreSQLContainer("postgres:18");
+    }
+
+    @Bean
+    @ServiceConnection(name = "redis")
+    GenericContainer&lt;?&gt; redis() {
+        return new GenericContainer&lt;&gt;("redis:8").withExposedPorts(6379);
+    }
+}</code></pre>
+  <div class="file">AccessRulesTest.java (fragmenty)</div>
+<pre><code>@Test
+void postWithoutCsrfTokenIsRejected() throws Exception {
+    mvc.perform(post("/api/notes").with(user("alice"))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"x\"}"))
+        .andExpect(status().isForbidden());
+}
+
+@Test
+void extAdminNeedsRoleFromToken() throws Exception {
+    mvc.perform(get("/ext/admin/stats").with(jwt()))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/ext/admin/stats").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+        .andExpect(status().isOk());
+}</code></pre>
+  <div class="file">KeycloakTokenTest.java (fragment)</div>
+<pre><code>@Container
+static GenericContainer&lt;?&gt; keycloak = new GenericContainer&lt;&gt;("quay.io/keycloak/keycloak:26.8")
+    .withCommand("start-dev", "--import-realm")
+    .withCopyFileToContainer(MountableFile.forHostPath("keycloak/notevault-realm.json"),
+            "/opt/keycloak/data/import/notevault-realm.json")
+    .withExposedPorts(8080)
+    .waitingFor(Wait.forHttp("/realms/notevault").forStatusCode(200)
+        .withStartupTimeout(Duration.ofMinutes(5)));
+
+@DynamicPropertySource
+static void keycloakUrls(DynamicPropertyRegistry registry) {
+    registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", KeycloakTokenTest::realm);
+    registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri",
+            () -&gt; realm() + "/protocol/openid-connect/certs");
+}</code></pre>
+  </details>
+  <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+    <div class="qa">
+      <div class="q">P:</div><div><code>jwt()</code> w MockMvc w ogóle nie sprawdza podpisu. Po co więc test z Keycloakiem?</div>
+      <div class="a">O:</div><div>Właśnie dlatego. <code>jwt()</code> wkłada gotowe <code>Authentication</code> i omija dekoder, więc testuje tylko reguły autoryzacji. Błędne <code>audiences</code>, zły <code>jwk-set-uri</code> albo role w innym claimie wyjdą dopiero na prawdziwym tokenie.</div>
+    </div>
+  </div>
+</section>
+
+<section class="part" id="part-4" data-level="1">
+  <div class="part-head reveal"><div class="part-num">Część IV</div><h2>Produkcja: hasła poza kodem</h2><p>Cały system w Dockerze, hasła jako pliki z sekretami, a na koniec test dymny i lista kontrolna.</p></div>
+</section>
+<section class="chapter" id="t-secrets" data-level="1" data-title="Hasła w produkcji">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Gdzie trzymać hasła: Docker secrets i dalej</h2><span class="tag">ani w kodzie, ani w zmiennych środowiskowych</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#enterprise">📖 Kurs: Enterprise</a><a class="tk-course" href="sd-config-secrets-course.html">📖 Kurs: Discovery · Config · Secrets</a><div class="tk-comps" data-used="app,postgres,redis,keycloak" data-new="secrets"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>NoteVault ma cztery hasła: do bazy, do Redisa, startowe hasło admina i hasło administratora Keycloaka. Do tej pory leżały w <code>compose.yaml</code> jako <code>dev-only</code>. Pytanie brzmi nie tylko „gdzie je schować”, ale też „kto i co je zobaczy po drodze”: historia gita, <code>docker inspect</code>, logi, procesy potomne, warstwy obrazu.</p>
+  </div>
+
+  <figure class="fig wide" id="fig-secrets">
+    <div class="ftitle">▶ Drabina: gdzie leży hasło do bazy <span>kliknij szczebel, potem sprawdź wycieki</span></div>
+    <div class="ctrl">
+      <button class="btn bad" data-leak="git">💥 ktoś klonuje repo</button>
+      <button class="btn bad" data-leak="inspect">💥 ktoś robi docker inspect</button>
+      <button class="btn bad" data-leak="image">💥 obraz trafia do rejestru</button>
+      <button class="btn bad" data-leak="rotate">💥 trzeba zmienić hasło</button>
+      <button class="btn" data-act="reset">↺ Reset</button>
+    </div>
+    <div class="sc-ladder" id="sc-ladder"></div>
+    <div class="sc-info" id="sc-info">Kliknij szczebel.</div>
+    <div class="status" id="sc-status">Pięć miejsc na to samo hasło. Wyżej jest bezpieczniej, ale potrzeba więcej infrastruktury.</div>
+    <figcaption>Uproszczenie: oceny to skrót, nie pełna analiza zagrożeń. „Docker secret” oznacza tu secret w zwykłym Docker Compose: plik z dysku hosta montowany w kontenerze tylko do odczytu, bez szyfrowania. Wynik <code>docker inspect</code> sprawdziłem na projekcie referencyjnym.</figcaption>
+  </figure>
+
+  <div class="box comp reveal"><span class="lbl">🧩 Nowy komponent: Docker secrets i configtree</span>
+    <dl>
+      <dt>Co to</dt><dd>Sekcja <code>secrets:</code> w Compose montuje plik z hosta do kontenera pod <code>/run/secrets/&lt;nazwa&gt;</code>. Spring Boot czyta katalog takich plików przez <code>spring.config.import=configtree:/run/secrets/</code>: nazwa pliku staje się nazwą właściwości, a treść pliku jej wartością.</dd>
+      <dt>Po co</dt><dd>Hasło nie trafia do zmiennych środowiskowych, więc nie widać go w <code>docker inspect</code> ani w środowisku procesów potomnych. Nie ma go w obrazie, w repozytorium ani w <code>compose.full.yaml</code>.</dd>
+      <dt>Jak łączy</dt><dd>Secret montujesz pod nazwą właściwości, na przykład <code>target: spring.datasource.password</code>. Wtedy configtree mapuje go bez żadnych placeholderów. Końcowy znak nowej linii configtree obcina sam (opcja <code>AUTO_TRIM_TRAILING_NEW_LINE</code>).</dd>
+    </dl>
+  </div>
+
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 12</span>
+    <ol>
+      <li>Napisz <code>Dockerfile</code> wieloetapowy: build na <code>eclipse-temurin:21-jdk</code> z cache'em Mavena (<code>RUN --mount=type=cache</code>), uruchomienie na <code>eclipse-temurin:21-jre</code> jako użytkownik bez roota. W <code>.dockerignore</code> wyklucz <code>secrets/*.txt</code>.</li>
+      <li>Napisz <code>secrets/generate.sh</code>, który tworzy losowe hasła w <code>secrets/*.txt</code> z prawami <code>600</code>. Dodaj <code>secrets/*.txt</code> do <code>.gitignore</code>.</li>
+      <li>Napisz <code>compose.full.yaml</code> z czterema secretami. PostgreSQL czyta hasło z <code>POSTGRES_PASSWORD_FILE</code>. Redis i Keycloak nie obsługują zmiennych <code>*_FILE</code>, więc ich komenda startowa czyta plik przez <code>sh -c</code>.</li>
+      <li>W aplikacji ustaw <code>SPRING_CONFIG_IMPORT=configtree:/run/secrets/</code>.</li>
+      <li>💣 Uruchom wszystko. Pobierz token z <code>localhost:8180</code> i wyślij go do <code>/ext/notes</code>. Jeśli dostajesz <code>401</code>, przeczytaj „Pułapkę issuera” niżej.</li>
+    </ol>
+  </div>
+<pre class="log"><code>./secrets/generate.sh
+docker compose -f compose.full.yaml up -d --build</code></pre>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+    <p>W zmiennych środowiskowych kontenera aplikacji nie ma żadnego hasła:</p>
+<pre class="log"><code>$ docker inspect notevault-app-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep SPRING
+SPRING_CONFIG_IMPORT=configtree:/run/secrets/
+SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/notevault/protocol/openid-connect/certs
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/notevault
+SPRING_DATASOURCE_USERNAME=notevault
+SPRING_DATA_REDIS_HOST=redis
+
+$ docker compose -f compose.full.yaml exec app ls /run/secrets
+notevault.admin.password  spring.data.redis.password  spring.datasource.password</code></pre>
+    <p>W logu aplikacji pojawia się <code>Admin account created</code>, czyli hasło admina doszło z pliku. Redis bez hasła odpowiada <code>NOAUTH Authentication required.</code></p>
+    <p>Sprawdziłem to tylko na Docker Desktop dla macOS. Tam pliki z prawami <code>600</code> są czytelne dla użytkownika <code>app</code> w kontenerze. Na Linuksie bind mount zachowuje właściciela z hosta, więc użytkownik o UID 10001 może nie mieć prawa odczytu. Wtedy dopasuj właściciela albo uprawnienia pliku do UID z <code>Dockerfile</code>.</p>
+  </div>
+  <details class="sol"><summary>🔑 Rozwiązanie</summary>
+  <div class="file">compose.full.yaml (fragment: aplikacja i Redis)</div>
+<pre><code>services:
+  app:
+    build: .
+    ports:
+      - '8080:8080'
+    environment:
+      SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/notevault'
+      SPRING_DATASOURCE_USERNAME: 'notevault'
+      SPRING_DATA_REDIS_HOST: 'redis'
+      # Każdy plik w /run/secrets staje się właściwością o nazwie pliku
+      SPRING_CONFIG_IMPORT: 'configtree:/run/secrets/'
+      # Klucze pobieramy po sieci Dockera; issuer w tokenie zostaje http://localhost:8180/...
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: 'http://keycloak:8080/realms/notevault/protocol/openid-connect/certs'
+    secrets:
+      - source: db_password
+        target: spring.datasource.password
+      - source: redis_password
+        target: spring.data.redis.password
+      - source: admin_password
+        target: notevault.admin.password
+
+  redis:
+    image: 'redis:8'
+    command: ['sh', '-c', 'exec redis-server --requirepass "$$(cat /run/secrets/redis_password)"']
+    secrets:
+      - redis_password
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  admin_password:
+    file: ./secrets/admin_password.txt
+  kc_admin_password:
+    file: ./secrets/kc_admin_password.txt</code></pre>
+  <div class="file">Dockerfile</div>
+<pre><code># syntax=docker/dockerfile:1
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /src
+COPY .mvn .mvn
+COPY mvnw pom.xml ./
+COPY src src
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -q package -DskipTests
+
+FROM eclipse-temurin:21-jre
+RUN useradd --system --uid 10001 app
+WORKDIR /app
+COPY --from=build /src/target/notevault-0.0.1-SNAPSHOT.jar app.jar
+USER app
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre>
+    <p>Pełny plik z PostgreSQL, Keycloakiem i healthcheckiem jest w projekcie referencyjnym. <code>$$</code> w komendzie Redisa to ucieczka: Compose zamienia <code>$$</code> na <code>$</code>, więc <code>$(cat …)</code> wykonuje dopiero powłoka w kontenerze.</p>
+  </details>
+  <div class="box watch reveal"><span class="lbl">⚠️ Pułapka issuera</span>
+    <p>Token pobrany na twoim komputerze z <code>localhost:8180</code> ma <code>"iss":"http://localhost:8180/realms/notevault"</code>. Kusi, żeby w kontenerze aplikacji ustawić <code>issuer-uri=http://keycloak:8080/realms/notevault</code>, bo tylko pod tym adresem aplikacja widzi Keycloaka. Wtedy każdy token odpada:</p>
+<pre class="log"><code>WWW-Authenticate: Bearer error="invalid_token", error_description="An error occurred while attempting to decode the Jwt: The iss claim is not valid", …</code></pre>
+    <p>Rozwiązanie z projektu: rozdziel dwa adresy. <code>jwk-set-uri</code> wskazuje sieć Dockera (<code>keycloak:8080</code>), bo stamtąd aplikacja pobiera klucze. <code>issuer-uri</code> zostaje <code>http://localhost:8180/…</code>, bo z nim Spring porównuje claim <code>iss</code>. Keycloak dostaje <code>KC_HOSTNAME=http://localhost:8180</code>, więc wpisuje ten sam issuer także do tokenów pobranych z wnętrza sieci Dockera. <code>KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true</code> pozwala przy tym aplikacji łączyć się z nim pod <code>keycloak:8080</code>.</p>
+    <p>Druga niespodzianka z tego samego uruchomienia: po dodaniu <code>KC_HOSTNAME</code> Keycloak odrzucał żądanie tokenu z hosta błędem <code>{"error":"invalid_request","error_description":"HTTPS required"}</code>. Realm deweloperski ma więc <code>"sslRequired": "none"</code>. W produkcji Keycloak stoi za HTTPS i tego ustawienia nie zmieniasz.</p>
+  </div>
+
+  <div class="deeper-wrap" data-level="3">
+  <details class="deeper"><summary>🔬 Głębiej (L3): co zamiast plików na produkcji</summary>
+    <p>Docker secret w zwykłym Compose to plik na dysku hosta. Jest lepszy od zmiennej środowiskowej, ale ktoś musi ten plik położyć, chronić i podmieniać. W większym systemie hasła wydaje i rotuje osobna usługa, a aplikacja dostaje do niej dostęp przez swoją tożsamość, bez hasła startowego.</p>
+    <div class="scroll-x">
+    <table class="mini">
+      <thead><tr><th>Opcja</th><th>Co to</th><th>Kiedy</th></tr></thead>
+      <tbody>
+        <tr><td>Kubernetes Secret</td><td>obiekt w API klastra, montowany jako plik albo zmienna; w etcd szyfruj go „at rest” (najlepiej przez KMS)</td><td>aplikacja i tak działa w Kubernetes; configtree czyta zamontowany katalog tak samo jak <code>/run/secrets</code></td></tr>
+        <tr><td>HashiCorp Vault / OpenBao</td><td>serwer sekretów; umie wydawać <em>dynamiczne</em> hasła do bazy z krótkim TTL; w Springu przez Spring Cloud Vault i <code>spring.config.import=vault://</code></td><td>wiele usług, wymóg rotacji i audytu, środowisko poza jedną chmurą</td></tr>
+        <tr><td>Menedżer sekretów chmury (AWS Secrets Manager, Google Secret Manager, Azure Key Vault)</td><td>zarządzana usługa z rotacją i logiem dostępu; aplikacja uwierzytelnia się rolą chmury (workload identity), np. Spring Cloud AWS: <code>spring.config.import=aws-secretsmanager:…</code></td><td>system działa w jednej chmurze</td></tr>
+        <tr><td>Sealed Secrets / SOPS</td><td>sekret zaszyfrowany kluczem klastra albo KMS, więc może leżeć w repozytorium GitOps</td><td>konfiguracja w gicie, wdrażanie przez Argo CD albo Flux</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Kurs <a href="sd-config-secrets-course.html">„Discovery · Config · Secrets”</a> porównuje te opcje z animacjami przepływu. Zasada, która obowiązuje zawsze: hasło, które raz trafiło do gita, uznajesz za spalone i zmieniasz. Usunięcie go z historii nie wystarczy, bo ktoś mógł już mieć klon repozytorium.</p>
+  </details>
+  </div>
+</section>
+
+<section class="chapter" id="t-final" data-level="1" data-title="Finał: test dymny">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Finał: cały system i test dymny</h2><span class="tag">każda linia to jedna obrona</span></div></div>
+  <div class="tk-meta"><a class="tk-course" href="spring-security-course.html#checklist">📖 Kurs: Checklista</a><a class="tk-course" href="spring-security-course.html#attacks">📖 Galeria ataków</a><div class="tk-comps" data-used="app,postgres,redis,keycloak,secrets"></div></div>
+  <div class="box why reveal"><span class="lbl">🧭 Po co to NoteVault</span>
+    <p>Testy jednostkowe i integracyjne sprawdzają kod. Test dymny sprawdza <em>wdrożenie</em>: czy sekrety doszły, czy issuer się zgadza i czy kontenery widzą się w sieci. Uruchamiasz go po każdym <code>docker compose up</code>.</p>
+  </div>
+  <div class="box task reveal"><span class="lbl">🎯 Zadanie 13</span>
+    <ol>
+      <li>Podnieś cały system: <code>docker compose -f compose.full.yaml up -d --build</code>. Jeśli port 8080 jest zajęty, ustaw inny: <code>APP_PORT=8088 docker compose -f compose.full.yaml up -d --build</code>, a skryptowi podaj <code>APP=http://localhost:8088</code>.</li>
+      <li>Uruchom <code>scripts/smoke.sh</code>. Skrypt rejestruje dwóch użytkowników, loguje się z CSRF, próbuje IDOR, wchodzi do panelu admina i woła <code>/ext</code> z tokenem z Keycloaka.</li>
+      <li>Przejdź listę kontrolną niżej i odhacz to, co masz.</li>
+      <li>Na koniec: <code>docker compose -f compose.full.yaml down -v</code>.</li>
+    </ol>
+  </div>
+  <div class="box verify reveal"><span class="lbl">✅ Jak sprawdzić</span>
+<pre class="log"><code>$ APP=http://localhost:8088 ./scripts/smoke.sh
+OK    health publiczny (200)
+OK    API bez logowania (401)
+OK    rejestracja z krótkim hasłem (400)
+OK    rejestracja (201)
+OK    logowanie bez tokenu CSRF (403)
+OK    logowanie (204)
+OK    nowa notatka (201)
+OK    Alice czyta swoją notatkę (200)
+OK    IDOR: Bob czyta notatkę Alice (404)
+OK    Bob w panelu admina (403)
+OK    admin z hasłem z Docker secret (204)
+OK    API /ext bez tokenu (401)
+OK    API /ext z tokenem z Keycloaka (200)
+OK    API /ext/admin bez roli admin (403)</code></pre>
+  </div>
+
+  <h3 class="reveal">Lista kontrolna NoteVault</h3>
+  <div class="ck reveal" id="ck-list">
+    <label><input type="checkbox"> Własny <code>SecurityFilterChain</code>, API zwraca 401/403 zamiast przekierowań, <code>/error</code> publiczne (zad. 2)</label>
+    <label><input type="checkbox"> Hasła w <code>{bcrypt}</code> przez <code>DelegatingPasswordEncoder</code>, walidacja długości (zad. 3)</label>
+    <label><input type="checkbox"> Właściciel w każdym zapytaniu o notatkę; cudza notatka daje 404 (zad. 4)</label>
+    <label><input type="checkbox"> <code>/api/admin/**</code> tylko dla ADMIN i <code>@PreAuthorize</code> na metodzie (zad. 5)</label>
+    <label><input type="checkbox"> CSRF włączone (<code>csrf.spa()</code>) dla łańcucha z ciasteczkiem (zad. 6)</label>
+    <label><input type="checkbox"> Sesje w Redisie, nowe ID sesji po logowaniu, limit sesji z odpowiedzią 401 (zad. 7)</label>
+    <label><input type="checkbox"> Licznik nieudanych logowań per konto, wspólny dla instancji (zad. 8)</label>
+    <label><input type="checkbox"> CSP bez <code>unsafe-inline</code>, <code>textContent</code> zamiast <code>innerHTML</code> (zad. 9)</label>
+    <label data-level="2"><input type="checkbox"> Resource server sprawdza podpis, issuer i audience; role z tokenu zamienione na <code>ROLE_*</code> (zad. 10)</label>
+    <label><input type="checkbox"> Test na każdą regułę, w tym testy „negatywne” (403 bez CSRF, 404 dla cudzej notatki) (zad. 11)</label>
+    <label><input type="checkbox"> Zero haseł w repozytorium, obrazie i zmiennych środowiskowych (zad. 12)</label>
+    <label><input type="checkbox"> Test dymny po każdym wdrożeniu (zad. 13)</label>
+  </div>
+  <div class="meter"><div id="ck-meter"></div></div>
+  <div class="status" id="ck-status"></div>
+
+  <div class="box pencil reveal"><span class="lbl">✏️ Dalej na własną rękę</span>
+    <ul>
+      <li>Dodaj <code>CompromisedPasswordChecker</code> do rejestracji i logowania (kurs: Brute force). Ustaw timeout i zdecyduj, co robisz, gdy Have I Been Pwned nie odpowiada.</li>
+      <li>Wpuść frontend przez Keycloaka (Authorization Code + PKCE) zamiast własnego formularza (kurs: OAuth 2.0 / OIDC, Gdzie trzymać token).</li>
+      <li>Postaw Caddy albo nginx z HTTPS przed aplikacją, ustaw <code>server.forward-headers-strategy</code> i sprawdź, że pojawia się <code>Strict-Transport-Security</code> (kurs: HTTPS, HSTS i proxy).</li>
+      <li>Loguj zdarzenia logowania do audytu (kurs: Audyt i obserwowalność).</li>
+    </ul>
+  </div>
+</section>
+<section class="chapter" id="final" data-title="Quiz + ściągawka">
+  <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Quiz i ściągawka projektu</h2><span class="tag">sprawdź, co zostało w głowie</span></div></div>
+  <div class="box relax reveal"><span class="lbl">🎓 Odpowiedź na zagadkę ze startu</span>
+    <p>Nie, odpowiedzi są różne. <code>curl</code> dostał <code>401</code> z <code>WWW-Authenticate: Basic realm="Realm"</code>, a żądanie z <code>Accept: text/html</code> dostało <code>302</code> na <code>/login</code>. Starter włącza naraz HTTP Basic i formularz, a wybiera między nimi po nagłówkach żądania. Dlatego w zadaniu 2 entry point ustawiasz sam.</p>
+  </div>
+  <div id="quiz"></div>
+  <div class="score" id="score">Wynik: 0 / 0</div>
+  <h3 class="reveal">Ściągawka: element → co robi → gdzie w NoteVault</h3>
+  <div class="scroll-x reveal">
+  <table class="mini cheat">
+    <thead><tr><th>Element</th><th>Co robi / wartość</th><th>Gdzie w NoteVault</th></tr></thead>
+    <tbody>
+      <tr><td>logging.level.org.springframework.security=DEBUG</td><td>lista filtrów i decyzje każdego żądania</td><td>zad. 1, diagnoza</td></tr>
+      <tr><td>HttpStatusEntryPoint(UNAUTHORIZED)</td><td>401 zamiast przekierowania na /login</td><td>łańcuch web (zad. 2)</td></tr>
+      <tr><td>permitAll() dla /error</td><td>prawdziwy kod błędu zamiast 401</td><td>zad. 2</td></tr>
+      <tr><td>PasswordEncoderFactories.createDelegatingPasswordEncoder()</td><td>hash z prefiksem {bcrypt}; obsługa starszych formatów</td><td>zad. 3</td></tr>
+      <tr><td>JdbcUserDetailsManager</td><td>konta w tabelach users i authorities</td><td>UserAccounts (zad. 3)</td></tr>
+      <tr><td>WHERE id = ? AND owner = ?</td><td>ochrona przed IDOR; cudze dane = 404</td><td>NoteRepository (zad. 4)</td></tr>
+      <tr><td>@EnableMethodSecurity + @PreAuthorize</td><td>reguła przy metodzie, także z danymi (#id)</td><td>NoteService.delete (zad. 5)</td></tr>
+      <tr><td>csrf(csrf -&gt; csrf.spa())</td><td>ciasteczko XSRF-TOKEN, nagłówek X-XSRF-TOKEN</td><td>łańcuch web (zad. 6)</td></tr>
+      <tr><td>spring.session.data.redis.repository-type=indexed</td><td>sesje w Redisie z indeksem po użytkowniku</td><td>zad. 7</td></tr>
+      <tr><td>maximumSessions(1) + expiredSessionStrategy</td><td>jedna sesja na konto; wygaszona = 401</td><td>zad. 7</td></tr>
+      <tr><td>AuthenticationFailureBadCredentialsEvent</td><td>zdarzenie nieudanego logowania (publikuje DefaultAuthenticationEventPublisher)</td><td>LoginAttempts (zad. 8)</td></tr>
+      <tr><td>User.withUserDetails(u).accountLocked(true)</td><td>LockedException przed sprawdzeniem hasła</td><td>UserAccounts (zad. 8)</td></tr>
+      <tr><td>contentSecurityPolicy("default-src 'self'; …")</td><td>blokuje skrypty inline i obce źródła</td><td>zad. 9</td></tr>
+      <tr><td>securityMatcher("/ext/**") + @Order(1)</td><td>osobny łańcuch dla API z tokenem</td><td>extApi (zad. 10)</td></tr>
+      <tr><td>spring.security.oauth2.resourceserver.jwt.audiences</td><td>odrzuca tokeny wydane dla innych odbiorców</td><td>zad. 10</td></tr>
+      <tr><td>JwtAuthenticationConverter</td><td>principal z preferred_username, role z realm_access.roles</td><td>KeycloakRoles (zad. 10)</td></tr>
+      <tr><td>user(), @WithMockUser, jwt(), csrf()</td><td>tożsamość i token CSRF w MockMvc</td><td>AccessRulesTest (zad. 11)</td></tr>
+      <tr><td>@ServiceConnection</td><td>Testcontainers ustawia URL-e i hasła</td><td>TestcontainersConfiguration (zad. 11)</td></tr>
+      <tr><td>spring.config.import=configtree:/run/secrets/</td><td>plik = właściwość; końcowy znak nowej linii obcięty</td><td>compose.full.yaml (zad. 12)</td></tr>
+      <tr><td>POSTGRES_PASSWORD_FILE</td><td>hasło bazy z pliku zamiast zmiennej</td><td>compose.full.yaml (zad. 12)</td></tr>
+      <tr><td>issuer-uri ≠ jwk-set-uri</td><td>issuer do porównania z iss, JWKS z sieci Dockera</td><td>zad. 12</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box relax reveal"><span class="lbl">🎓 Gratulacje</span>
+    <p>Masz aplikację z dwoma łańcuchami filtrów, sesjami w Redisie, tokenami z Keycloaka, testami na prawdziwych kontenerach i hasłami poza kodem. Każdą decyzję potrafisz pokazać testem albo poleceniem <code>curl</code>. Projekt referencyjny z wszystkimi plikami: <a href="https://github.com/gbryk1/html-pages/tree/main/projects/notevault">projects/notevault</a>.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  Projekt ćwiczeniowy w jednym pliku HTML, bez frameworków, kroku budowania i zależności sieciowych. Towarzyszy kursowi <a href="spring-security-course.html">„Spring Security: obrona i atak”</a>.
+  Wersje i zachowanie sprawdzone 31 października 2026 na projekcie referencyjnym: Spring Boot 4.1.1, Spring Security 7.1.1, Spring Framework 7.0.9, Spring Session 4.1.1, Testcontainers 2.0.5, PostgreSQL 18, Redis 8, Keycloak 26.8.1, Java 21; Docker Desktop dla macOS.
+  Spring, Keycloak, Redis, PostgreSQL, Docker i inne nazwy są znakami towarowymi ich właścicieli. Domena NoteVault jest fikcyjna.
+</footer>
+
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sleep = ms => new Promise(r => setTimeout(r, REDUCE ? 0 : ms));
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, text, attrs = {}) {
+  const t = S('text', Object.assign({ x, y, 'text-anchor': 'middle' }, attrs), parent);
+  t.textContent = text;
+  return t;
+}
+function H(tag, cls, html, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const ease = k => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (REDUCE || ms <= 0) { fn(1); return res(); }
+    const t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / ms);
+      fn(ease(k));
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+function flyDot(parent, x0, y0, x1, y1, { ms = 600, color, r = 5 } = {}) {
+  const c = S('circle', { cx: x0, cy: y0, r, class: 'fly' }, parent);
+  c.style.fill = color || C.accent;
+  return tween(ms, k => { c.setAttribute('cx', x0 + (x1 - x0) * k); c.setAttribute('cy', y0 + (y1 - y0) * k); }).then(() => c.remove());
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function readColors() { for (const k of ['ink', 'paper', 'paper2', 'mut', 'line', 'accent', 'accent2', 'ok', 'bad', 'warn', 'dim', 'card']) C[k] = cssVar('--' + k); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function ringXY(cx, cy, r, f) { const a = f * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+
+/* ---------- structure: auto numbering, TOC, course map, level chips, depth switch ---------- */
+const LEVELS = ['Podstawy', 'Praktyk', 'Produkcja'];   // data-level = index + 1
+const lvlOf = el => +(el.dataset.level || 1);
+const levelled = (root = document) => $$('main [data-level]', root).filter(e => !e.closest('#map'));   // content, not the map's own links
+const DEPTH_KEY = 'akp-depth:' + location.pathname;
+const blocks = $$('main > section.part, main > section.chapter');
+const chapters = blocks.filter(b => b.classList.contains('chapter'));
+chapters.forEach((s, i) => { const n = $('.chap-num', s); if (n && !n.textContent.trim()) n.textContent = i; });
+const titleOf = s => s.dataset.title || $('h2', s).textContent.trim();
+(() => {
+  const toc = $('#toc'), map = $('#map');
+  if (toc) toc.innerHTML = '<b>Zadania</b>';
+  let grp = null;
+  for (const b of blocks) {
+    const lv = lvlOf(b);
+    if (b.classList.contains('part')) {
+      const name = `${$('.part-no', b)?.textContent || ''} · ${$('h2', b).textContent}`;
+      if (toc) H('div', 'toc-part', null, toc).textContent = name;
+      if (map) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = name; grp.dataset.level = lv; }
+      continue;
+    }
+    const num = $('.chap-num', b)?.textContent || '';
+    if (toc) { const a = H('a', '', null, toc); a.href = '#' + b.id; a.textContent = `${num} · ${titleOf(b)}`; a.dataset.level = lv; }
+    if (map) {
+      if (!grp) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = 'Start'; }
+      const a = H('a', 'map-ch l' + lv, `<i>${num}</i><span></span>`, grp); a.href = '#' + b.id; a.dataset.level = lv;
+      $('span', a).textContent = titleOf(b);
+    }
+  }
+  const multi = levelled().some(e => lvlOf(e) > 1);
+  // level chips on chapter headings and "go deeper" summaries
+  chapters.forEach(s => { if (multi && s.dataset.level) { const h = $('.chap-head h2', s); if (h) H('span', 'lvl-chip l' + lvlOf(s), `L${lvlOf(s)} · ${LEVELS[lvlOf(s) - 1] || ''}`, h); } });
+  $$('details.deeper').forEach(d => { const sm = $('summary', d); if (sm) sm.insertAdjacentHTML('afterbegin', `<span class="lvl-chip l${lvlOf(d)}">L${lvlOf(d)}</span>`); });
+  // jumping to a chapter deeper than the current depth raises the depth first
+  $$('#toc a, #map a').forEach(a => a.addEventListener('click', () => { if (+a.dataset.level > depth) setDepth(+a.dataset.level); }));
+  const dEl = $('#depth');
+  if (!multi || !dEl) { if (dEl) dEl.remove(); return; }
+  dEl.innerHTML = '<span>Poziom</span>';
+  LEVELS.forEach((n, i) => { const b = H('button', '', `${i + 1}<span class="nm"> ${n}</span>`, dEl); b.title = n; b.onclick = () => setDepth(i + 1); });
+})();
+let depth = LEVELS.length;
+try { const d = +localStorage.getItem(DEPTH_KEY); if (d >= 1 && d <= LEVELS.length) depth = d; } catch (e) { }
+function setDepth(d) {
+  depth = d;
+  try { localStorage.setItem(DEPTH_KEY, d); } catch (e) { }
+  levelled().forEach(el => el.classList.toggle('lvl-off', lvlOf(el) > depth));
+  $$('#toc a, #map a, .map-part').forEach(a => a.classList.toggle('dim', lvlOf(a) > depth));
+  $$('#depth button').forEach((b, i) => b.classList.toggle('on', i + 1 === depth));
+  $$('.lvl-hint').forEach(h => h.remove());
+  chapters.forEach(s => {
+    if (s.classList.contains('lvl-off')) return;
+    const hid = levelled(s).filter(e => e.classList.contains('lvl-off'));
+    if (!hid.length) return;
+    const need = Math.min(...hid.map(lvlOf));
+    const b = H('button', 'lvl-hint', `＋ ukryte bloki głębszego poziomu: ${hid.length}. Pokaż poziom ${need} (${LEVELS[need - 1] || ''})`, s);
+    b.onclick = () => setDepth(need);
+  });
+}
+setDepth(depth);
+
+/* ---------- scroll machinery ---------- */
+const bar = $('#progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+    document.body.classList.toggle('past-cover', scrollY > innerHeight * .8);
+    ticking = false;
+  });
+}, { passive: true });
+
+const revealIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('shown'); revealIO.unobserve(e.target); }
+}), { threshold: 0.12 });
+$$('.reveal').forEach(el => revealIO.observe(el));
+
+const tocLinks = new Map($$('#toc a').map(a => [a.getAttribute('href').slice(1), a]));
+const tocIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove('active'));
+  const a = tocLinks.get(e.target.id); if (a) a.classList.add('active');
+  $$('#map a').forEach(m => { const on = m.getAttribute('href') === '#' + e.target.id; m.classList.toggle('here', on); if (on) m.classList.add('seen'); });
+}), { rootMargin: '-35% 0px -60% 0px' });
+$$('section.chapter').forEach(s => tocIO.observe(s));
+
+const figIO = new IntersectionObserver(es => es.forEach(e => {
+  const f = e.target._fig; if (!f) return;
+  if (e.isIntersecting) {
+    if (f.visible) return;
+    f.visible = true;
+    if (!f.seen) { f.seen = true; f.first && f.first(); }
+    f.enter && f.enter();
+  } else if (f.visible) {
+    f.visible = false; f.leave && f.leave();
+  }
+}), { threshold: 0.25 });
+function registerFig(el, api) { el._fig = api; figIO.observe(el); return api; }
+
+/* enqueue helper: serialize animation runs, drop excess clicks */
+function makeQueue() {
+  let queue = Promise.resolve(), pending = 0;
+  return fn => { if (pending >= 3) return; pending++; queue = queue.then(fn).catch(e => console.error(e)).finally(() => pending--); };
+}
+
+
+/* ---------- generic helpers ---------- */
+function paintBar(el, segs, cap) {           // stacked bar: segs = [{k, v, c, t}], widths as % of cap
+  for (const s of segs) {
+    let d = el.querySelector(`[data-k="${s.k}"]`);
+    if (!d) { d = H('div', 'seg', null, el); d.dataset.k = s.k; }
+    d.style.width = Math.min(100, 100 * s.v / cap) + '%';
+    d.style.background = s.c;
+    d.textContent = s.v >= cap * 0.07 ? s.t : '';
+  }
+}
+function logLine(box, text, cls = '') {      // append a fading-in line to a .log box (textContent: safe)
+  const d = H('div', cls, null, box); d.textContent = text;
+  requestAnimationFrame(() => d.classList.add('shown'));
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+function say(el, html, cls = '') { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = html; }
+const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase labels wrap between words, not mid-word
+
+/* ---------- cover ---------- */
+(() => {
+  const g = $('#cover-nodes');
+  const icons = ['🔑', '🍪', '🛡️', '🐘', '🧠', '🎫', '🐳', '🧪'];
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = ringXY(200, 200, 150, i / 8);
+    const c = S('circle', { cx: x, cy: y, r: 17 }, g);
+    c.style.fill = C.paper2; c.style.stroke = C.ink; c.style.strokeWidth = 3;
+    T(g, x, y + 6, icons[i], { 'font-size': 16 });
+  }
+})();
+
+/* ---------- 1. architecture: containers stage by stage ---------- */
+const arApi = (() => {
+  const root = $('#fig-arch'), grid = $('#ar-grid'), info = $('#ar-info'), st = $('#ar-status');
+  const NODES = [
+    { id: 'browser', ic: '🧑‍💻', nm: 'Przeglądarka', port: 'index.html + app.js', from: 0, txt: '<b>Przeglądarka</b> (nie kontener). Ładuje frontend z aplikacji, loguje się formularzem, trzyma ciasteczka <code>SESSION</code> i <code>XSRF-TOKEN</code>.' },
+    { id: 'app', ic: '🍃', nm: 'app', port: ':8080', from: 0, txt: '<b>app</b>: Spring Boot 4.1.1 + Spring Security 7.1.1. Dwa łańcuchy filtrów: <code>/ext/**</code> na tokenach i reszta na sesji. W zadaniu 12 budowany z <code>Dockerfile</code> i uruchamiany jako użytkownik bez roota.' },
+    { id: 'postgres', ic: '🐘', nm: 'postgres', port: 'postgres:18 · :5432', from: 0, txt: '<b>postgres</b>: konta (<code>users</code>, <code>authorities</code>) i notatki (<code>note</code>). Schemat tworzy Flyway (V1, V2). Hasła kont jako hashe <code>{bcrypt}</code>.' },
+    { id: 'redis', ic: '🧠', nm: 'redis', port: 'redis:8 · :6379', from: 1, txt: '<b>redis</b>: sesje Spring Session (klucze <code>spring:session:*</code>), indeks sesji po użytkowniku dla limitu sesji i liczniki <code>login-failures:*</code> z zadania 8.' },
+    { id: 'ext', ic: '📱', nm: 'Klient zewnętrzny', port: 'Bearer JWT', from: 2, txt: '<b>Klient zewnętrzny</b> (nie kontener): aplikacja mobilna albo integracja. Pobiera token z Keycloaka i woła <code>/ext/**</code> z nagłówkiem <code>Authorization: Bearer</code>.' },
+    { id: 'keycloak', ic: '🎫', nm: 'keycloak', port: 'keycloak:26.8 · :8180', from: 2, txt: '<b>keycloak</b>: dostawca tożsamości. Wydaje podpisane tokeny JWT, a klucze publiczne udostępnia pod <code>…/protocol/openid-connect/certs</code>. Realm importowany z <code>keycloak/notevault-realm.json</code>.' },
+    { id: 'secrets', ic: '🗝️', nm: 'Docker secrets', port: '/run/secrets', from: 3, txt: '<b>Docker secrets</b>: cztery pliki z <code>secrets/*.txt</code> montowane w kontenerach. Aplikacja czyta je przez <code>configtree</code>, PostgreSQL przez <code>POSTGRES_PASSWORD_FILE</code>, a Redis i Keycloak przez <code>sh -c</code>.' },
+  ];
+  const STAGE = ['Etap 0: aplikacja i baza danych. Konta i notatki w PostgreSQL.', 'Zadanie 7: dochodzi Redis. Sesje przeżywają restart aplikacji i są wspólne dla instancji.', 'Zadanie 10: dochodzi Keycloak i klient zewnętrzny z tokenem JWT.', 'Zadanie 12: hasła wychodzą z plików compose do Docker secrets.'];
+  const el = {};
+  for (const n of NODES) {
+    const d = H('div', 'ar-node', `<span class="ic">${n.ic}</span><b>${n.nm}</b><small>${n.port}</small>`, grid);
+    d.onclick = () => { touched = true; select(n.id); };
+    el[n.id] = d;
+  }
+  let stage = 0, touched = false, run = 0;
+  function setStage(s) {
+    stage = s;
+    for (const n of NODES) { el[n.id].classList.toggle('off', n.from > s); el[n.id].classList.toggle('new', n.from === s && s > 0); el[n.id].classList.remove('down'); }
+    $$('#ar-ctrl [data-stage]').forEach(b => b.classList.toggle('on', +b.dataset.stage === s));
+    say(st, STAGE[s]);
+  }
+  function select(id) {
+    const n = NODES.find(x => x.id === id); if (!n) return;
+    if (n.from > stage) setStage(n.from);
+    for (const k in el) el[k].classList.toggle('sel', k === id);
+    info.innerHTML = n.txt;
+  }
+  async function down() {
+    const my = ++run;
+    setStage(3); select('redis');
+    el.redis.classList.add('down');
+    say(st, '💥 Redis zatrzymany. Żądania do aplikacji zaczynają wisieć…', 'bad');
+    await sleep(1400); if (my !== run) return;
+    say(st, '<code>GET /api/notes</code>: brak odpowiedzi przez 120 s. <code>/actuator/health</code>: <code>503</code> po 60 s. Każde żądanie przechodzi przez Spring Session, więc Redis jest zależnością każdego żądania.', 'bad');
+    await sleep(2200); if (my !== run) return;
+    el.redis.classList.remove('down');
+    say(st, 'Redis wstaje z powrotem: sesja admina nadal działa, bo <code>redis:8</code> zapisał dane na dysk przy zatrzymaniu. Ustaw krótki <code>spring.data.redis.timeout</code>.', 'ok');
+  }
+  root.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    touched = true; run++;
+    if (b.dataset.stage) setStage(+b.dataset.stage);
+    else if (b.dataset.act === 'down') down();
+    else if (b.dataset.act === 'reset') { setStage(0); info.textContent = 'Kliknij etap albo kontener.'; for (const k in el) el[k].classList.remove('sel'); }
+  });
+  setStage(0);
+  registerFig(root, { async first() { for (const s of [1, 2, 3]) { await sleep(1500); if (touched) return; setStage(s); } } });
+  return { select };
+})();
+
+/* ---------- 2. IDOR ---------- */
+(() => {
+  const root = $('#fig-idor'), row = $('#id-row'), url = $('#id-url'), st = $('#id-status');
+  const NOTES = [
+    { id: 1, owner: 'alice', title: 'PIN do sejfu' },
+    { id: 2, owner: 'bob', title: 'Lista zakupów' },
+    { id: 3, owner: 'alice', title: 'Hasło do Wi-Fi' },
+    { id: 4, owner: 'bob', title: 'Prezent dla Alice' },
+  ];
+  const cards = {};
+  for (const who of ['alice', 'bob']) {
+    const c = H('div', 'id-card', `<h5>${who === 'alice' ? '👩 Notatki Alice' : '🧔 Bob (atakujący)'}</h5>`, row);
+    cards[who] = c;
+  }
+  const noteEl = {};
+  for (const n of NOTES.filter(n => n.owner === 'alice')) { noteEl[n.id] = H('div', 'id-note', null, cards.alice); noteEl[n.id].textContent = `#${n.id} ${n.title}`; }
+  const got = H('div', '', '<small>Co Bob dostał:</small>', cards.bob);
+  const gotList = H('div', '', null, cards.bob);
+  let mode = 'naive', run = 0;
+  const q = makeQueue();
+  function setMode(m) { mode = m; $$('[data-act="naive"],[data-act="owner"]', root).forEach(b => b.classList.toggle('on', b.dataset.act === m)); }
+  function reset() { run++; gotList.innerHTML = ''; for (const k in noteEl) noteEl[k].className = 'id-note'; url.textContent = 'GET /api/notes/…'; say(st, `Zapytanie: ${mode === 'naive' ? 'findById(id)' : 'findByIdAndOwner(id, me)'}. Puść atak.`); }
+  async function attack() {
+    reset(); const my = run;
+    for (const n of NOTES) {
+      url.textContent = `GET /api/notes/${n.id}   (zalogowany: bob)`;
+      await sleep(700); if (my !== run) return;
+      const mine = n.owner === 'bob';
+      const ok = mine || mode === 'naive';
+      const line = H('div', 'id-note ' + (ok && !mine ? 'leak' : ok ? '' : 'safe'), null, gotList);
+      line.textContent = ok ? `200 · #${n.id} ${n.title}` : `404 · #${n.id}`;
+      if (!mine) noteEl[n.id].classList.add(ok ? 'leak' : 'safe');
+    }
+    if (mode === 'naive') say(st, '🏴‍☠️ Bob przeczytał obie notatki Alice. <code>findById</code> nie wie, kto pyta, a reguła <code>authenticated()</code> sprawdza tylko, czy ktoś jest zalogowany.', 'bad');
+    else say(st, '🛡️ Notatki Alice dają <code>404</code>, jakby ich nie było. Bob widzi tylko swoje. Właściciel jest w samym zapytaniu SQL.', 'ok');
+  }
+  root.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const a = b.dataset.act;
+    if (a === 'naive' || a === 'owner') { setMode(a); reset(); }
+    else if (a === 'attack') q(attack);
+    else if (a === 'reset') { setMode('naive'); reset(); }
+  });
+  setMode('naive');
+  registerFig(root, { first() { q(attack); } });
+})();
+
+/* ---------- 3. JWT validation ---------- */
+(() => {
+  const root = $('#fig-jwt'), steps = $('#jw-steps'), tok = $('#jw-tok'), st = $('#jw-status'), ep = $('#jw-ep');
+  const STEPS = [['sig', 'Podpis', 'klucz z JWKS'], ['iss', 'iss', 'issuer-uri'], ['exp', 'exp', 'ważność'], ['aud', 'aud', 'audiences'], ['role', 'Rola', 'reguła URL']];
+  const sEl = {};
+  for (const [k, nm, sub] of STEPS) sEl[k] = H('div', 'jw-s', `<b>${nm}</b>${sub}`, steps);
+  const BASE = { iss: 'http://localhost:8180/realms/notevault', aud: 'notevault-api', azp: 'notevault-cli', preferred_username: 'alice', realm_access: { roles: ['user'] }, 'exp - iat': '300 s' };
+  const TOK = {
+    alice: { claims: BASE },
+    admin: { claims: Object.assign({}, BASE, { preferred_username: 'admin', realm_access: { roles: ['user', 'admin'] } }) },
+    aud: { claims: Object.assign({}, BASE, { aud: null, azp: 'other-app' }), stop: 'aud', hl: 'aud', why: 'W tokenie klienta <code>other-app</code> nie ma <code>notevault-api</code> w <code>aud</code>. Walidator z <code>audiences</code> go odrzuca: <code>401</code>.' },
+    sig: { claims: BASE, stop: 'sig', hl: 'sig', why: 'Ktoś zmienił jeden znak podpisu. Podpis nie pasuje do klucza publicznego z JWKS, więc claimy nie mają znaczenia: <code>401</code>.' },
+    iss: { claims: BASE, stop: 'iss', hl: 'iss', why: 'Aplikacja ma ustawione <code>issuer-uri=http://keycloak:8080/…</code>, a token ma <code>iss</code> z <code>localhost:8180</code>: <code>401</code>, „The iss claim is not valid”.' },
+  };
+  let run = 0, cur = null;
+  const q = makeQueue();
+  function paint(name) {
+    const t = TOK[name];
+    let txt = JSON.stringify(t.claims, null, 1).replace(/\n\s*/g, ' ');
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    txt = esc(txt);
+    if (t.hl === 'aud') txt = txt.replace('"aud": null', '<span class="hl">"aud": null</span>');
+    if (t.hl === 'iss') txt = txt.replace('"iss": "http://localhost:8180/realms/notevault"', '<span class="hl">"iss": "http://localhost:8180/realms/notevault"</span>');
+    tok.innerHTML = `header: {"alg":"RS256","typ":"JWT","kid":"…"}\npayload: ${txt}${t.hl === 'sig' ? '\nsignature: …<span class="hl">B</span>…' : '\nsignature: …'}`;
+  }
+  function clear() { for (const k in sEl) sEl[k].className = 'jw-s'; }
+  async function send(name) {
+    const my = ++run; cur = name; clear(); paint(name);
+    $$('[data-tok]', root).forEach(b => b.classList.toggle('on', b.dataset.tok === name));
+    const t = TOK[name], path = ep.value;
+    for (const [k] of STEPS) {
+      await sleep(550); if (my !== run) return;
+      if (t.stop === k) { sEl[k].classList.add('stop'); say(st, `${path}: ` + t.why, 'bad'); return; }
+      if (k === 'role') {
+        const roles = t.claims.realm_access.roles.map(r => 'ROLE_' + r.toUpperCase());
+        const need = path === '/ext/admin/stats';
+        if (need && !roles.includes('ROLE_ADMIN')) { sEl[k].classList.add('stop'); say(st, `${path}: token jest ważny, ale role to ${roles.join(', ')}. Brak <code>ROLE_ADMIN</code>: <code>403</code>, nie 401.`, 'bad'); return; }
+        sEl[k].classList.add('pass');
+        say(st, `${path}: <code>200</code>. Principal: <code>${t.claims.preferred_username}</code> (z <code>preferred_username</code>), role: ${roles.join(', ')}.`, 'ok');
+        return;
+      }
+      sEl[k].classList.add('pass');
+    }
+  }
+  root.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.tok) q(() => send(b.dataset.tok));
+    else if (b.dataset.act === 'reset') { run++; cur = null; clear(); tok.textContent = 'Wybierz token.'; ep.value = '/ext/notes'; $$('[data-tok]', root).forEach(x => x.classList.remove('on')); say(st, 'Token jest podpisany kluczem Keycloaka. Aplikacja ma tylko klucz publiczny.'); }
+  });
+  ep.addEventListener('change', () => { if (cur) q(() => send(cur)); });
+  registerFig(root, { first() { q(() => send('alice')); } });
+})();
+
+/* ---------- 4. request through two filter chains ---------- */
+(() => {
+  const root = $('#fig-chain'), sel = $('#fc-sel'), req = $('#fc-req'), wrap = $('#fc-wrap'), res = $('#fc-res'), st = $('#fc-status');
+  const EXT = ['SecurityContextHolderFilter', 'CorsFilter', 'BearerTokenAuthenticationFilter', 'AnonymousAuthenticationFilter', 'ExceptionTranslationFilter', 'AuthorizationFilter'];
+  const WEB = ['SecurityContextHolderFilter', 'CsrfFilter', 'UsernamePasswordAuthenticationFilter', 'ConcurrentSessionFilter', 'AnonymousAuthenticationFilter', 'ExceptionTranslationFilter', 'AuthorizationFilter'];
+  // stop: filter that decides; code: final status; ctrl: true when the controller answers
+  const SC = [
+    { t: 'anonymousGets401NotARedirect', r: 'GET /api/notes (bez ciasteczka)', ch: 'web', stop: 'AuthorizationFilter', code: 401, why: '<code>AuthorizationFilter</code> widzi użytkownika anonimowego. <code>ExceptionTranslationFilter</code> woła entry point: <code>401</code> bez przekierowania.' },
+    { t: 'postWithoutCsrfTokenIsRejected', r: 'POST /api/notes (alice, bez X-XSRF-TOKEN)', ch: 'web', stop: 'CsrfFilter', code: 403, why: '<code>CsrfFilter</code> nie znalazł tokenu i odrzucił żądanie, zanim doszło do autoryzacji: <code>403</code>.' },
+    { t: 'postWithCsrfTokenCreatesNote', r: 'POST /api/notes (alice, z tokenem CSRF)', ch: 'web', code: 201, ctrl: true, why: 'Token się zgadza, użytkownik jest zalogowany. Kontroler zapisuje notatkę: <code>201</code>.' },
+    { t: 'userWithoutAdminRoleGets403', r: 'GET /api/admin/users (bob, ROLE_USER)', ch: 'web', stop: 'AuthorizationFilter', code: 403, why: 'Bob jest zalogowany, ale <code>/api/admin/**</code> wymaga <code>ROLE_ADMIN</code>: <code>403</code>.' },
+    { t: 'idorSomeoneElsesNoteLooksMissing', r: 'GET /api/notes/1 (bob, notatka Alice)', ch: 'web', code: 404, ctrl: true, why: 'Filtry przepuszczają, bo Bob jest zalogowany. Decyzję podejmuje zapytanie <code>findByIdAndOwner</code>: <code>404</code>. Filtry nie znają właścicieli danych.' },
+    { t: 'methodSecurityStopsDeletingSomeoneElsesNote', r: 'DELETE /api/notes/1 (bob, z tokenem CSRF)', ch: 'web', code: 403, ctrl: true, why: 'Filtry przepuszczają. <code>@PreAuthorize</code> na <code>NoteService.delete</code> rzuca <code>AccessDeniedException</code>: <code>403</code>.' },
+    { t: 'secondLoginExpiresTheFirstSession', r: 'GET /api/me (laptop, sesja wygaszona przez logowanie z telefonu)', ch: 'web', stop: 'ConcurrentSessionFilter', code: 401, why: '<code>ConcurrentSessionFilter</code> widzi sesję oznaczoną jako wygaszoną i woła <code>expiredSessionStrategy</code>: <code>401</code>.' },
+    { t: 'extApiNeedsBearerToken', r: 'GET /ext/notes (bez nagłówka Authorization)', ch: 'ext', stop: 'AuthorizationFilter', code: 401, why: 'Łańcuch <code>/ext/**</code>: brak tokenu, więc użytkownik anonimowy. <code>401</code> z <code>WWW-Authenticate: Bearer resource_metadata=…</code>.' },
+    { t: 'tamperedSignatureIsRejected', r: 'GET /ext/notes (Bearer, zmieniony podpis)', ch: 'ext', stop: 'BearerTokenAuthenticationFilter', code: 401, why: '<code>BearerTokenAuthenticationFilter</code> nie przyjmuje tokenu, bo podpis się nie zgadza: <code>401</code>.' },
+    { t: 'extAdminNeedsRoleFromToken', r: 'GET /ext/admin/stats (Bearer, tylko ROLE_USER)', ch: 'ext', stop: 'AuthorizationFilter', code: 403, why: 'Token jest ważny, ale w <code>realm_access.roles</code> nie ma <code>admin</code>: <code>403</code>.' },
+    { t: 'corsAllowsOnlyConfiguredOrigin', r: 'OPTIONS /ext/notes (Origin: https://evil.example)', ch: 'ext', stop: 'CorsFilter', code: 403, why: '<code>CorsFilter</code> odrzuca preflight z originu spoza listy: <code>403</code>. Origin <code>http://localhost:5173</code> dostaje <code>200</code>.' },
+  ];
+  for (const [i, s] of SC.entries()) { const o = H('option', null, null, sel); o.value = i; o.textContent = s.t; }
+  function build() {
+    wrap.innerHTML = '';
+    const mk = (id, name, list) => { const c = H('div', 'fc-chain', `<span class="nm">${name}</span>`, wrap); c.id = id; for (const f of list) { const d = H('span', 'fc-f', wbr(f), c); d.dataset.f = f; } return c; };
+    mk('fc-ext', 'Łańcuch 1 · @Order(1) · securityMatcher("/ext/**")', EXT);
+    mk('fc-web', 'Łańcuch 2 · @Order(2) · każde inne żądanie', WEB);
+    const ctl = H('div', 'fc-chain', '<span class="nm">Aplikacja</span>', wrap); H('span', 'fc-f', 'kontroler / serwis', ctl).dataset.f = 'ctrl';
+    ctl.id = 'fc-ctl';
+    res.textContent = ''; res.className = 'fc-res';
+  }
+  let run = 0;
+  const q = makeQueue();
+  async function go() {
+    const my = ++run, s = SC[+sel.value];
+    build(); req.textContent = s.r;
+    const chain = $(s.ch === 'ext' ? '#fc-ext' : '#fc-web'), other = $(s.ch === 'ext' ? '#fc-web' : '#fc-ext');
+    other.classList.add('unused');
+    say(st, `Ścieżka ${s.ch === 'ext' ? 'pasuje do <code>/ext/**</code>: łańcuch 1' : 'nie pasuje do <code>/ext/**</code>: łańcuch 2'}.`);
+    for (const f of $$('.fc-f', chain)) {
+      await sleep(380); if (my !== run) return;
+      if (s.stop === f.dataset.f) { f.classList.add('stop'); $$('.fc-f', chain).forEach(x => { if (!x.classList.contains('pass') && x !== f) x.classList.add('skip'); }); $('#fc-ctl').classList.add('unused'); break; }
+      f.classList.add('pass');
+    }
+    if (s.ctrl) { await sleep(380); if (my !== run) return; const c = $('[data-f="ctrl"]'); c.classList.add(s.code < 300 ? 'pass' : 'stop'); }
+    res.textContent = `${s.code}`; res.classList.add(s.code < 300 ? 'ok' : 'bad');
+    say(st, `<code>${s.t}</code>: ${s.why}`, s.code < 300 ? 'ok' : 'bad');
+  }
+  root.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.act === 'go') q(go);
+    else if (b.dataset.act === 'reset') { run++; sel.value = 0; build(); req.textContent = ''; say(st, 'Wybierz scenariusz i wyślij.'); }
+  });
+  sel.addEventListener('change', () => q(go));
+  build();
+  registerFig(root, { first() { q(go); } });
+})();
+
+/* ---------- 5. where secrets live ---------- */
+(() => {
+  const root = $('#fig-secrets'), lad = $('#sc-ladder'), info = $('#sc-info'), st = $('#sc-status');
+  const LV = [
+    { n: 1, t: 'W kodzie albo application.properties w gicie', ex: 'spring.datasource.password=s3cret', leak: { git: 1, inspect: 0, image: 1, rotate: 1 }, d: 'Hasło jest w historii repozytorium na zawsze i w każdym obrazie zbudowanym z tego kodu. Zmiana hasła wymaga commita i nowego wdrożenia.' },
+    { n: 2, t: 'Zmienna środowiskowa w compose', ex: 'SPRING_DATASOURCE_PASSWORD: s3cret', leak: { git: 1, inspect: 1, image: 0, rotate: 1 }, d: 'Plik compose zwykle leży w repozytorium. Wartość widać w <code>docker inspect</code> i dziedziczy ją każdy proces potomny.' },
+    { n: 3, t: 'Zmienna z pliku .env poza gitem', ex: '.env + ${DB_PASSWORD}', leak: { git: 0, inspect: 1, image: 0, rotate: 1 }, d: 'Repozytorium jest czyste, ale kontener nadal dostaje zwykłą zmienną środowiskową, widoczną w <code>docker inspect</code>.' },
+    { n: 4, t: 'Docker secret (plik w /run/secrets)', ex: 'configtree:/run/secrets/', leak: { git: 0, inspect: 0, image: 0, rotate: 1 }, d: 'Plik na hoście montowany w kontenerze. Nie ma go w repozytorium, obrazie ani w <code>docker inspect</code> (sprawdzone w zadaniu 12). Plik trzeba jednak położyć na hoście i podmieniać ręcznie.' },
+    { n: 5, t: 'Menedżer sekretów (Vault, chmura)', ex: 'spring.config.import=vault://', leak: { git: 0, inspect: 0, image: 0, rotate: 0 }, d: 'Hasło wydaje usługa z audytem i rotacją, a w Vaulcie może być dynamiczne, z krótkim TTL. Aplikacja uwierzytelnia się swoją tożsamością. Koszt: kolejny system do utrzymania.' },
+  ];
+  const LEAK = { git: 'ktoś klonuje repozytorium', inspect: 'ktoś z dostępem do Dockera robi docker inspect', image: 'obraz trafia do publicznego rejestru', rotate: 'trzeba zmienić hasło bez nowego wdrożenia' };
+  const rows = LV.map(l => {
+    const r = H('div', 'sc-step', `<span class="n">${l.n}</span><span class="t">${l.t}<small>${l.ex}</small></span><span class="v"></span>`, lad);
+    r.onclick = () => pick(l.n - 1);
+    return r;
+  });
+  function clear() { rows.forEach(r => { r.classList.remove('leak', 'held', 'sel'); $('.v', r).textContent = ''; }); }
+  function pick(i) { clear(); rows[i].classList.add('sel'); info.innerHTML = `<b>Szczebel ${i + 1}.</b> ${LV[i].d}`; }
+  let run = 0;
+  async function leak(kind) {
+    const my = ++run; clear();
+    say(st, `💥 Scenariusz: ${LEAK[kind]}.`, 'bad');
+    let bad = 0;
+    for (const [i, l] of LV.entries()) {
+      await sleep(350); if (my !== run) return;
+      const hit = l.leak[kind];
+      rows[i].classList.add(hit ? 'leak' : 'held');
+      $('.v', rows[i]).textContent = kind === 'rotate' ? (hit ? 'ręcznie' : 'automatycznie') : (hit ? 'wyciek' : 'bezpieczne');
+      bad += hit;
+    }
+    say(st, kind === 'rotate' ? 'Rotację bez ręcznej pracy daje dopiero menedżer sekretów (szczebel 5).' : `${bad} z 5 miejsc przegrywa w tym scenariuszu. Docker secret i menedżer sekretów wytrzymują.`, kind === 'rotate' ? '' : 'bad');
+  }
+  root.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.leak) leak(b.dataset.leak);
+    else if (b.dataset.act === 'reset') { run++; clear(); info.textContent = 'Kliknij szczebel.'; say(st, 'Pięć miejsc na to samo hasło. Wyżej jest bezpieczniej, ale potrzeba więcej infrastruktury.'); }
+  });
+  registerFig(root, { first() { leak('inspect'); } });
+})();
+
+/* ---------- container chips ---------- */
+(() => {
+  $$('.tk-comps').forEach(box => {
+    const add = (list, cls) => (list || '').split(',').filter(Boolean).forEach(n => {
+      const c = H('span', 'tk-c' + cls, null, box); c.textContent = n.trim();
+      c.title = 'pokaż na schemacie';
+      c.onclick = () => { $('#fig-arch').scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); arApi.select(n.trim()); };
+    });
+    add(box.dataset.new, ' new');
+    add(box.dataset.used, '');
+  });
+})();
+
+/* ---------- checklist ---------- */
+(() => {
+  const KEY = 'notevault-checklist';
+  const boxes = $$('#ck-list input'), meter = $('#ck-meter'), st = $('#ck-status');
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { saved = []; }
+  boxes.forEach((b, i) => { b.checked = !!saved[i]; b.onchange = upd; });
+  $$('#depth button').forEach(b => b.addEventListener('click', upd));
+  function upd() {
+    const vis = boxes.filter(b => !b.closest('.lvl-off'));
+    const n = vis.filter(b => b.checked).length;
+    meter.style.width = (vis.length ? 100 * n / vis.length : 0) + '%';
+    say(st, `${n} / ${vis.length}${n === vis.length ? ' · komplet, gratulacje!' : ''}`, n === vis.length ? 'ok' : '');
+    try { localStorage.setItem(KEY, JSON.stringify(boxes.map(b => b.checked))); } catch (e) { }
+  }
+  upd();
+})();
+
+/* ---------- quiz ---------- */
+(() => {
+  const Q = [
+    ['Zadanie 1: sam starter, zero konfiguracji. Co dostaje <code>curl localhost:8080/api/notes</code> bez danych logowania?', ['401 z WWW-Authenticate: Basic', '302 na /login', '403 Forbidden'], 0, 'Przekierowanie dostaje żądanie z Accept: text/html. curl dostaje wyzwanie HTTP Basic.'],
+    ['Zadanie 2: POST z poprawnym Basic, ale bez tokenu CSRF, a <code>/error</code> nie jest publiczne. Jaki kod widzisz?', ['403', '401', '400'], 1, 'CsrfFilter odrzuca żądanie przed BasicAuthenticationFilter. Przekazanie do /error jest anonimowe, więc entry point daje 401.'],
+    ['Zadanie 3: dlaczego <code>JdbcUserDetailsManager</code> nie jest osobnym beanem obok <code>UserAccounts</code>?', ['Bo nie jest thread-safe', 'Bo wymaga JPA', 'Przy dwóch beanach UserDetailsService Spring Security nie podpina żadnego sam'], 2, 'InitializeUserDetailsBeanManagerConfigurer podpina UserDetailsService tylko wtedy, gdy jest dokładnie jeden.'],
+    ['Zadanie 4: Bob pyta o notatkę Alice po poprawce. Co dostaje i dlaczego?', ['404, bo właściciel jest w zapytaniu i notatka „nie istnieje” dla Boba', '403, bo nie jest właścicielem', '200, bo jest zalogowany'], 0, '404 nie zdradza, że notatka istnieje.'],
+    ['Zadanie 5: gdzie najlepiej sprawdzić „usuwa właściciel albo admin”?', ['Tylko w regule URL', 'W @PreAuthorize na metodzie serwisu', 'W JavaScripcie frontendu'], 1, 'Reguła zależy od danych (#id), a reguła URL ich nie zna. Przy metodzie obowiązuje każdego wołającego.'],
+    ['Zadanie 6: po co frontend woła <code>GET /api/csrf</code> przed logowaniem?', ['Żeby zalogować się anonimowo', 'Żeby wyłączyć CSRF dla logowania', 'Token ładuje się leniwie; endpoint z parametrem CsrfToken tworzy ciasteczko XSRF-TOKEN'], 2, 'Od Spring Security 6 token CSRF jest ładowany dopiero przy pierwszym użyciu.'],
+    ['Zadanie 7: <code>maximumSessions(1)</code> bez własnej strategii. Co dostaje wygaszona sesja?', ['200 z tekstem „This session has been expired…”', '401', 'Przekierowanie na /login'], 0, 'Domyślna strategia odpowiada 200 z komunikatem, dlatego projekt ustawia expiredSessionStrategy na 401.'],
+    ['Zadanie 8: po 5 złych hasłach użytkownik podaje dobre. Co się dzieje?', ['Logowanie się udaje i zeruje licznik', '401: DaoAuthenticationProvider rzuca LockedException przed porównaniem hasła', '500, bo Redis blokuje klucz'], 1, 'Blokada jest sprawdzana przed hasłem. Licznik wygasa po 15 minutach.'],
+    ['Zadanie 9: czemu nie widzisz Strict-Transport-Security po http://localhost?', ['Bo trzeba go włączyć ręcznie', 'Bo CSP go zastępuje', 'Spring Security dodaje go tylko do odpowiedzi na żądania HTTPS'], 2, 'Za proxy kończącym TLS aplikacja musi ufać nagłówkom X-Forwarded-*.'],
+    ['(L2) Zadanie 10: token klienta <code>other-app</code> z poprawnym podpisem i issuerem. Wynik na /ext/notes?', ['401, bo aud nie zawiera notevault-api', '200', '403, bo brak roli'], 0, 'Właściwość audiences dodaje walidator claimu aud.'],
+    ['Zadanie 11: co sprawdza <code>jwt()</code> z spring-security-test w MockMvc?', ['Podpis i issuer tokenu', 'Nic z tokenu: wkłada gotowe Authentication, więc testuje tylko reguły', 'Tylko datę ważności'], 1, 'Dlatego projekt ma też KeycloakTokenTest z prawdziwymi tokenami.'],
+    ['Zadanie 12: gdzie hasło do bazy NIE jest widoczne w wersji z Docker secrets?', ['W /run/secrets w kontenerze', 'W pliku secrets/db_password.txt na hoście', 'W docker inspect (zmienne środowiskowe)'], 2, 'Secret to plik montowany w kontenerze; do zmiennych środowiskowych nie trafia.'],
+    ['Zadanie 12: aplikacja w Dockerze ma <code>issuer-uri=http://keycloak:8080/…</code>, a token pobrano z localhost:8180. Wynik?', ['401: The iss claim is not valid', '200, bo klucze się zgadzają', '503, bo Keycloak jest niedostępny'], 0, 'Rozdziel jwk-set-uri (sieć Dockera) i issuer-uri (wartość z claimu iss).'],
+    ['Zadanie 13: czemu test dymny po wdrożeniu, skoro są testy w Mavenie?', ['Nie ma po co', 'Sprawdza wdrożenie: sekrety, issuer, sieć między kontenerami', 'Bo testy w Mavenie nie używają Dockera'], 1, 'Testy w Mavenie sprawdzają kod; konfiguracja compose.full.yaml jest poza nimi.'],
+  ];
+  const box = $('#quiz'); let answered = 0, good = 0; const scoreEl = $('#score');
+  function upd() { scoreEl.textContent = `Wynik: ${good} / ${answered}`; }
+  Q.forEach(([q, opts, ok, why], n) => {
+    const d = H('div', 'quiz-q reveal', `<h4>${n + 1}. ${q}</h4><div class="opts"></div><div class="why">💡 ${why}</div>`, box);
+    opts.forEach((t, i) => {
+      const b = H('button', '', null, $('.opts', d)); b.textContent = t;
+      b.onclick = () => {
+        if (d.classList.contains('done')) return;
+        d.classList.add('done'); answered++;
+        if (i === ok) good++; else b.classList.add('wrong');
+        $('.opts', d).children[ok].classList.add('right');
+        $$('button', d).forEach(x => x.disabled = true);
+        upd();
+      };
+    });
+    revealIO.observe(d);
+  });
+})();
+
+</script>
+</body>
+</html>

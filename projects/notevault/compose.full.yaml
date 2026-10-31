@@ -1,0 +1,78 @@
+# Cały system w kontenerach. Hasła przychodzą jako Docker secrets (pliki w /run/secrets),
+# nie jako zmienne środowiskowe. Najpierw: ./secrets/generate.sh
+services:
+  app:
+    build: .
+    ports:
+      - '${APP_PORT:-8080}:8080'
+    environment:
+      SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/notevault'
+      SPRING_DATASOURCE_USERNAME: 'notevault'
+      SPRING_DATA_REDIS_HOST: 'redis'
+      # Każdy plik w /run/secrets staje się właściwością o nazwie pliku
+      SPRING_CONFIG_IMPORT: 'configtree:/run/secrets/'
+      # Klucze pobieramy po sieci Dockera; issuer w tokenie zostaje http://localhost:8180/...
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: 'http://keycloak:8080/realms/notevault/protocol/openid-connect/certs'
+    secrets:
+      - source: db_password
+        target: spring.datasource.password
+      - source: redis_password
+        target: spring.data.redis.password
+      - source: admin_password
+        target: notevault.admin.password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      keycloak:
+        condition: service_started
+
+  postgres:
+    image: 'postgres:18'
+    environment:
+      POSTGRES_DB: 'notevault'
+      POSTGRES_USER: 'notevault'
+      POSTGRES_PASSWORD_FILE: '/run/secrets/db_password'
+    secrets:
+      - db_password
+    volumes:
+      - 'pgdata:/var/lib/postgresql'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U notevault -d notevault']
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: 'redis:8'
+    command: ['sh', '-c', 'exec redis-server --requirepass "$$(cat /run/secrets/redis_password)"']
+    secrets:
+      - redis_password
+
+  keycloak:
+    image: 'quay.io/keycloak/keycloak:26.8'
+    # start-dev: tylko do nauki. Produkcja: `start`, HTTPS, własna baza danych Keycloaka.
+    entrypoint: ['/bin/sh', '-c', 'KC_BOOTSTRAP_ADMIN_PASSWORD="$$(cat /run/secrets/kc_admin_password)" exec /opt/keycloak/bin/kc.sh start-dev --import-realm']
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: 'admin'
+      KC_HOSTNAME: 'http://localhost:8180'
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: 'true'
+    secrets:
+      - kc_admin_password
+    volumes:
+      - './keycloak:/opt/keycloak/data/import:ro'
+    ports:
+      - '8180:8080'
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  admin_password:
+    file: ./secrets/admin_password.txt
+  kc_admin_password:
+    file: ./secrets/kc_admin_password.txt
+
+volumes:
+  pgdata:

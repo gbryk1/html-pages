@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>NoteVault</title>
+<script src="/app.js" defer></script>
+</head>
+<body>
+<h1>NoteVault</h1>
+<form id="login">
+  <input name="username" placeholder="login" autocomplete="username">
+  <input name="password" type="password" placeholder="hasło" autocomplete="current-password">
+  <button>Zaloguj</button>
+</form>
+<section id="notes" hidden>
+  <p>Zalogowano jako <b id="who"></b> <button id="logout">Wyloguj</button></p>
+  <form id="add"><input name="title" placeholder="tytuł"><button>Dodaj</button></form>
+  <ul id="list"></ul>
+</section>
+</body>
+</html>
