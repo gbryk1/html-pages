@@ -15,7 +15,7 @@ ROOT = pathlib.Path(__file__).resolve().parent
 SRC = ROOT / "src"
 OUT = ROOT / "docs"
 
-STATIC_PAGES = ["cassandra-course.html", "copilot-pm-course.html", "claude-code-course.html", "claude-code-course-pl.html", "kafka-course.html", "system-design-course.html", "spark-course.html", "db-app-course.html", "k8s-course.html", "aws-dva-course.html", "archetypes-course.html", "docker-course.html", "terraform-course.html", "sd-config-secrets-course.html", "gof-patterns-course.html", "spring-security-course.html", "hibernate-course.html", "hibernate-project.html", "requirements-course.html", "spring-security-project.html", "cpsa-f-course.html", "java-concurrency-course.html"]  # plain pages, copied verbatim
+STATIC_PAGES = ["cassandra-course.html", "copilot-pm-course.html", "claude-code-course.html", "claude-code-course-pl.html", "kafka-course.html", "system-design-course.html", "spark-course.html", "db-app-course.html", "k8s-course.html", "aws-dva-course.html", "archetypes-course.html", "docker-course.html", "terraform-course.html", "sd-config-secrets-course.html", "gof-patterns-course.html", "spring-security-course.html", "hibernate-course.html", "hibernate-project.html", "requirements-course.html", "spring-security-project.html", "cpsa-f-course.html", "java-concurrency-course.html", "java-gc-course.html"]  # plain pages, copied verbatim
 
 
 def main() -> None:
