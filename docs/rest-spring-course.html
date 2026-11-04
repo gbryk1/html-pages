@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REST i Spring: kompendium od protokołu HTTP po produkcję</title>
+<meta name="description" content="Animowane kompendium REST po polsku: HTTP, styl REST, Spring MVC, projektowanie API, wzorce enterprise, klienci, bezpieczeństwo, testy i produkcja.">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper:#fbf8f1; --paper2:#ffffff; --ink:#1c1c22; --mut:#5d5f6b; --line:#d9d3c4; --shadow:#1c1c22;
+  --accent:#1b6fa8; --accent2:#e39b2d; --ok:#2f9e63; --bad:#d64545; --warn:#c98a00;
+  --pen:#b8431f; --note:#fff4c2; --card:#f1ece0; --code:#f3efe6; --dim:#9aa0ab;
+  --hand:"Segoe Print","Bradley Hand","Comic Neue","Comic Sans MS","Chalkboard SE","Marker Felt",cursive;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,"Palatino Linotype",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#15171c; --paper2:#1d2027; --ink:#e7e5df; --mut:#a3a6b1; --line:#383c49; --shadow:#000;
+          --accent:#5aa9e6; --accent2:#f0b34f; --ok:#4cc38a; --bad:#f06b6b; --warn:#f0c040;
+          --pen:#ff9a6b; --note:#3a3420; --card:#232730; --code:#22262e; --dim:#5d6270; }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.68 var(--serif); }
+a { color:var(--accent); }
+code, kbd { font:.86em var(--mono); background:var(--code); padding:.08em .35em; border-radius:4px; }
+pre { font:14px/1.5 var(--mono); background:var(--code); border-left:4px solid var(--accent); padding:.9rem 1rem; overflow:auto; border-radius:4px; }
+pre code { background:none; padding:0; font-size:inherit; }
+h1,h2,h3,h4 { font-family:var(--sans); line-height:1.2; }
+h3 { font-size:1.28rem; margin:2.2rem 0 .6rem; }
+strong, b { font-weight:700; }
+.hand { font-family:var(--hand); color:var(--pen); }
+.mut { color:var(--mut); }
+
+/* progress + toc */
+#progress { position:fixed; inset:0 0 auto 0; height:5px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform-origin:0 50%; transform:scaleX(0); z-index:50; }
+#toc { position:fixed; top:1.4rem; left:1rem; width:205px; font:13.5px/1.35 var(--sans); z-index:40; display:none; opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #toc { opacity:1; pointer-events:auto; }
+#toc b { display:block; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.5rem; }
+#toc a { display:block; padding:.28rem .55rem; border-left:3px solid var(--line); color:var(--mut); text-decoration:none; }
+#toc a:hover { color:var(--ink); }
+#toc a.active { border-color:var(--accent2); color:var(--ink); font-weight:700; background:var(--card); }
+@media (min-width:1440px) { #toc { display:block; } }
+
+/* cover */
+.cover { min-height:96vh; display:grid; place-items:center; padding:3rem 1.2rem; position:relative; overflow:hidden;
+         background:radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 55%), var(--paper); }
+.cover-inner { max-width:1040px; width:100%; display:grid; gap:2rem; grid-template-columns:1fr; align-items:center; }
+@media (min-width:900px) { .cover-inner { grid-template-columns:1.1fr .9fr; } }
+.cover .kicker { font:700 .85rem var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); }
+.cover h1 { font-size:clamp(2.4rem,5.6vw,4.2rem); margin:.3rem 0 .6rem; letter-spacing:-.02em; }
+.cover h1 span { display:inline-block; background:var(--ink); color:var(--paper); padding:0 .25em; transform:rotate(-1.5deg); }
+.cover .sub { font-size:1.2rem; color:var(--mut); max-width:34em; }
+.cover .stamp { display:inline-block; margin-top:1.2rem; font:700 1rem var(--hand); color:var(--pen); border:3px solid var(--pen); padding:.3rem .8rem; border-radius:8px; transform:rotate(-4deg); }
+.cover svg { width:100%; max-width:400px; justify-self:center; overflow:visible; }
+.spin { animation:spin 50s linear infinite; transform-origin:200px 200px; }
+.spin-rev { animation:spin 34s linear infinite reverse; transform-origin:200px 200px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.cover .scroll-hint { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); font:1rem var(--hand); color:var(--mut); animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob { 50% { transform:translate(-50%,8px); } }
+
+/* layout */
+main { max-width:800px; margin:0 auto; padding:0 1.2rem 6rem; }
+.chapter { padding-top:4.5rem; }
+.chap-head { display:flex; gap:1.1rem; align-items:center; margin-bottom:1rem; }
+.chap-num { flex:none; width:4.2rem; height:4.2rem; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font:800 1.7rem var(--sans); transform:rotate(-6deg); box-shadow:4px 4px 0 var(--accent2); }
+.chap-head h2 { font-size:clamp(1.6rem,3.8vw,2.2rem); margin:0; }
+.chap-head .tag { font:1.02rem var(--hand); color:var(--pen); display:block; margin-top:.3rem; }
+
+/* reveal */
+.js .reveal { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.js .reveal.shown { opacity:1; transform:none; }
+
+/* head-first boxes */
+.box { position:relative; margin:2rem 0; padding:1.1rem 1.25rem 1rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper2); box-shadow:5px 5px 0 var(--shadow); }
+.box > .lbl { position:absolute; top:-1rem; left:1rem; font:800 .82rem var(--sans); letter-spacing:.06em; text-transform:uppercase; background:var(--ink); color:var(--paper); padding:.25rem .65rem; border-radius:4px; transform:rotate(-2deg); }
+.box.brain { border-style:dashed; background:color-mix(in srgb, var(--accent) 8%, var(--paper2)); }
+.box.brain > .lbl { background:var(--accent); color:#fff; }
+.box.pencil { background:color-mix(in srgb, var(--accent2) 10%, var(--paper2)); }
+.box.pencil > .lbl { background:var(--accent2); color:#1c1c22; }
+.box.watch { border-color:var(--bad); box-shadow:5px 5px 0 var(--bad); }
+.box.watch > .lbl { background:var(--bad); color:#fff; }
+.box.geek { background:var(--card); font-size:.95em; }
+.box.geek > .lbl { background:var(--mut); }
+.box.relax { border-color:var(--ok); box-shadow:5px 5px 0 var(--ok); }
+.box.relax > .lbl { background:var(--ok); color:#fff; }
+.box.bullets { background:var(--note); transform:rotate(-.4deg); }
+.box.bullets ul { margin:.3rem 0 0; padding-left:1.2rem; }
+.box.bullets li { margin:.35rem 0; }
+.box.bullets li::marker { content:"▸ "; color:var(--pen); }
+.box.usecase { border-color:var(--accent); box-shadow:5px 5px 0 var(--accent); }
+.box.usecase > .lbl { background:var(--accent); color:#fff; }
+.box.usecase ol { margin:.5rem 0 .3rem; padding-left:1.3rem; }
+.box.usecase li { margin:.4rem 0; }
+.box p:first-of-type { margin-top:.4rem; }
+.box p:last-child { margin-bottom:0; }
+.qa { display:grid; grid-template-columns:auto 1fr; gap:.4rem .8rem; margin:.8rem 0 1rem; }
+.qa .q, .qa .a { font:800 1.15rem var(--sans); }
+.qa .q { color:var(--accent); } .qa .a { color:var(--pen); }
+.qa div { margin:0; }
+details { margin-top:.8rem; }
+summary { cursor:pointer; font:700 .95rem var(--sans); color:var(--pen); }
+.fire { display:grid; gap:.7rem; margin-top:.5rem; }
+.fire .who { font:800 .85rem var(--sans); text-transform:uppercase; letter-spacing:.05em; }
+.fire .line { display:grid; grid-template-columns:7.5rem 1fr; gap:.8rem; }
+.fire .line.l2 .who { color:var(--accent); } .fire .line.l1 .who { color:var(--pen); }
+@media (max-width:560px) { .fire .line { grid-template-columns:1fr; gap:.1rem; } }
+.anno { font:1.05rem/1.35 var(--hand); color:var(--pen); display:block; margin:.4rem 0 .4rem 1.2rem; transform:rotate(-1.2deg); }
+.anno::before { content:"↖ "; }
+.pull { font:italic 1.35rem/1.45 var(--serif); border-left:6px solid var(--accent2); padding:.2rem 0 .2rem 1rem; margin:1.6rem 0; }
+.prompt-ex { font:13.5px/1.5 var(--mono); background:var(--code); border:1.5px dashed var(--line); border-radius:6px; padding:.7rem .85rem; margin-top:.7rem; white-space:pre-wrap; }
+.prompt-ex b { font-family:var(--sans); color:var(--pen); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+
+/* figures (generic) */
+.fig { margin:2.2rem -1rem; padding:1rem 1rem .9rem; background:var(--paper2); border:2px solid var(--ink); border-radius:8px; box-shadow:6px 6px 0 var(--shadow); position:relative; }
+@media (min-width:1000px) { .fig.wide { margin-left:-6rem; margin-right:-6rem; } }
+.fig .ftitle { font:800 .95rem var(--sans); margin:0 0 .6rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.fig .ftitle span { font:400 .85rem var(--sans); color:var(--mut); }
+.fig figcaption, .fig .cap { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.6rem; }
+.fig svg { display:block; width:100%; height:auto; }
+.fig svg text { fill:var(--ink); font-family:var(--sans); }
+.ctrl { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.4rem 0 .6rem; font:14px var(--sans); }
+.btn { font:700 13.5px var(--sans); color:var(--ink); background:var(--paper2); border:2px solid var(--ink); border-radius:999px; padding:.33rem .85rem; box-shadow:2px 2px 0 var(--shadow); cursor:pointer; transition:transform .08s; }
+.btn:hover { background:var(--card); }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.on { background:var(--ink); color:var(--paper); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.ctrl input[type=text], .ctrl select, .calc input { font:14px var(--mono); padding:.3rem .5rem; border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); }
+.ctrl input[type=text] { width:9rem; }
+.ctrl label { display:inline-flex; gap:.35rem; align-items:center; }
+.scroll-x { overflow-x:auto; }
+.scroll-x > svg { min-width:620px; }
+.two { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:720px) { .two { grid-template-columns:1.2fr 1fr; align-items:start; } }
+table.mini { width:100%; border-collapse:collapse; font:13.5px var(--sans); }
+table.mini th, table.mini td { text-align:left; padding:.28rem .4rem; border-bottom:1px solid var(--line); }
+table.mini th { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+table.mini tr.flash td { animation:flashbg 1.2s ease; }
+@keyframes flashbg { 0%{ background:color-mix(in srgb, var(--accent2) 45%, transparent);} 100%{ background:transparent;} }
+.chip { display:inline-block; min-width:1.6em; text-align:center; font:800 12px var(--sans); color:#fff; padding:.1rem .4rem; border-radius:999px; }
+.status { font:14px/1.45 var(--sans); padding:.55rem .75rem; border-radius:6px; background:var(--card); margin-top:.5rem; min-height:2.2rem; }
+.status.ok { background:color-mix(in srgb, var(--ok) 16%, var(--paper2)); }
+.status.bad { background:color-mix(in srgb, var(--bad) 16%, var(--paper2)); }
+.status.warn { background:color-mix(in srgb, var(--warn) 20%, var(--paper2)); }
+.fly { pointer-events:none; }
+.small { font-size:11px; }
+.tiny { font-size:9.5px; }
+.edge { stroke:var(--line); stroke-width:2; }
+.nd circle, .nd rect { fill:var(--paper2); stroke:var(--ink); stroke-width:2.2; transition:fill .3s, opacity .3s; }
+.nd text { font-weight:800; font-size:12px; pointer-events:none; }
+.nd.off circle, .nd.off rect { fill:var(--dim); opacity:.5; stroke-dasharray:4 3; }
+.nd.hot circle, .nd.hot rect { fill:var(--accent2); }
+.nd.pulse circle, .nd.pulse rect, .pop { animation:pulse .6s ease; transform-box:fill-box; transform-origin:center; }
+@keyframes pulse { 40% { transform:scale(1.3); } }
+
+
+/* ---- generic extras: meters, legends, logs, stacked token bars ---- */
+main, footer { overflow-wrap:break-word; }   /* long URLs / identifiers in prose must not widen the page */
+.two > * { min-width:0; }
+.ctrl label { flex-wrap:wrap; max-width:100%; }
+.ctrl select { max-width:100%; min-width:0; }
+.meter { height:12px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); overflow:hidden; }
+.meter > i { display:block; height:100%; width:0; background:var(--ok); transition:width .6s ease, background .4s; }
+.legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font:12px var(--sans); color:var(--mut); margin-top:.4rem; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.3rem; background:var(--c); vertical-align:-1px; }
+.log { font:12px/1.45 var(--mono); background:var(--code); border-radius:6px; padding:.5rem .6rem; height:190px; overflow-y:auto; }
+.log div { opacity:0; transform:translateX(-6px); transition:opacity .3s, transform .3s; white-space:pre-wrap; }
+.log div.shown { opacity:1; transform:none; }
+.log .u { color:var(--accent); font-weight:700; } .log .e { color:var(--bad); } .log .g { color:var(--ok); }
+.stack { position:relative; height:34px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:var(--paper); display:flex; }
+.stack .seg { height:100%; transition:width .7s ease; overflow:hidden; white-space:nowrap; font:700 10.5px/34px var(--sans); color:#fff; text-indent:4px; }
+
+/* ---- multi-level structure: parts, level chips, depth switch, "go deeper", course map ---- */
+.part { margin:5rem 0 0; padding:1.4rem 1.3rem 1.2rem; border-radius:10px; background:var(--ink); color:var(--paper); box-shadow:6px 6px 0 var(--accent2); }
+.part .part-no { font:800 .8rem var(--sans); letter-spacing:.18em; text-transform:uppercase; color:var(--accent2); }
+.part h2 { margin:.2rem 0 .35rem; font-size:clamp(1.7rem,4vw,2.4rem); }
+.part p { margin:0; font-size:1rem; opacity:.85; }
+.lvl-chip { display:inline-block; vertical-align:middle; margin-left:.5rem; font:800 10.5px/1.5 var(--sans); letter-spacing:.06em; text-transform:uppercase; padding:.08rem .5rem; border-radius:999px; color:#fff; background:var(--ok); }
+.lvl-chip.l2 { background:var(--accent); } .lvl-chip.l3 { background:#8e44ad; } .lvl-chip.l4 { background:var(--bad); }
+.lvl-off { display:none !important; }
+details.deeper { border:2px dashed #8e44ad; border-radius:8px; padding:.6rem .9rem; margin:1.8rem 0; background:color-mix(in srgb, #8e44ad 6%, var(--paper2)); }
+details.deeper > summary { font:700 1rem var(--sans); color:var(--ink); }
+details.deeper > summary .lvl-chip { margin:0 .4rem 0 0; }
+details.deeper[open] > summary { margin-bottom:.5rem; }
+.lvl-hint { display:block; width:100%; text-align:left; margin:1.4rem 0 0; font:700 13px var(--sans); color:var(--accent); background:none; border:2px dashed var(--accent); border-radius:8px; padding:.45rem .8rem; cursor:pointer; }
+#depth { position:fixed; left:1rem; bottom:1rem; z-index:45; display:flex; gap:.2rem; align-items:center; font:700 12px var(--sans); background:var(--paper2); color:var(--ink); border:2px solid var(--ink); border-radius:999px; padding:.22rem .3rem .22rem .75rem; box-shadow:3px 3px 0 var(--shadow); opacity:0; pointer-events:none; transition:opacity .4s; }
+body.past-cover #depth { opacity:1; pointer-events:auto; }
+#depth button { font:700 12px var(--sans); border:0; border-radius:999px; padding:.25rem .6rem; background:transparent; color:var(--ink); cursor:pointer; }
+#depth button.on { background:var(--ink); color:var(--paper); }
+@media (max-width:640px) { #depth .nm { display:none; } }
+#toc { max-height:calc(100vh - 5.5rem); overflow-y:auto; }
+.toc-part { font:800 .7rem var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:.8rem 0 .2rem .2rem; }
+#map { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.7rem; margin:1.5rem 0; }
+.map-part { border:2px solid var(--line); border-radius:10px; padding:.55rem .6rem; background:var(--paper2); }
+.map-part > b { display:block; font:800 11.5px var(--sans); text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin-bottom:.35rem; }
+.map-ch { display:flex; gap:.45rem; align-items:baseline; font:13px/1.3 var(--sans); color:var(--ink); text-decoration:none; padding:.22rem .4rem; border-radius:6px; border-left:4px solid var(--ok); margin:.15rem 0; transition:background .3s; }
+.map-ch.l2 { border-left-color:var(--accent); } .map-ch.l3 { border-left-color:#8e44ad; } .map-ch.l4 { border-left-color:var(--bad); }
+.map-ch i { font:800 11px var(--mono); font-style:normal; color:var(--mut); min-width:1.4em; }
+.map-ch:hover { background:var(--card); }
+.map-ch.here { background:var(--accent2); color:#1c1c22; font-weight:700; }
+.map-ch.seen::after { content:"✓"; margin-left:auto; color:var(--ok); font-weight:800; }
+.map-ch.dim, #toc a.dim { opacity:.4; }
+
+/* ==== per-figure CSS goes here — prefix every class with the figure name (.ex-…) to avoid collisions ==== */
+.ex-row { display:grid; grid-template-columns:6rem 1fr; gap:.6rem; align-items:center; font:12.5px var(--sans); margin:.4rem 0; }
+/* quiz */
+.quiz-q { margin:1.2rem 0; padding:.9rem 1rem; border:2px solid var(--ink); border-radius:8px; background:var(--paper2); }
+.quiz-q h4 { margin:0 0 .6rem; font-size:1rem; }
+.quiz-q .opts { display:grid; gap:.4rem; }
+.quiz-q button { text-align:left; font:14px/1.4 var(--sans); color:var(--ink); background:var(--paper); border:2px solid var(--line); border-radius:6px; padding:.45rem .7rem; cursor:pointer; }
+.quiz-q button:hover:not(:disabled) { border-color:var(--ink); }
+.quiz-q button.right { border-color:var(--ok); background:color-mix(in srgb, var(--ok) 18%, var(--paper2)); }
+.quiz-q button.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, var(--paper2)); }
+.quiz-q .why { font:14px/1.45 var(--sans); color:var(--mut); margin-top:.5rem; display:none; }
+.quiz-q.done .why { display:block; }
+.score { position:sticky; bottom:1rem; margin-left:auto; width:max-content; font:800 1rem var(--sans); background:var(--ink); color:var(--paper); padding:.45rem .9rem; border-radius:999px; box-shadow:3px 3px 0 var(--accent2); }
+.cheat td:first-child { font-family:var(--mono); font-size:12.5px; white-space:nowrap; }
+footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var(--sans); color:var(--mut); border-top:2px solid var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+  html { scroll-behavior:auto; }
+}
+.stage{min-width:0}
+.sq{position:relative;background:var(--code);border-radius:8px;padding:.3rem .5rem .6rem;font:12px/1.35 var(--sans);overflow:hidden}
+.sq-head,.sq-body{position:relative}
+.sq-head{display:flex;justify-content:space-between;font-weight:700;margin-bottom:.3rem}
+.sq-head span{flex:1 1 0;text-align:center;min-width:0;overflow-wrap:anywhere}
+.sq-life{position:absolute;top:0;bottom:0;width:1px;border-left:1px dashed var(--line);opacity:.45}
+.sq-row{position:relative;margin:.15rem 0 .35rem;animation:sqin .3s ease both}
+@keyframes sqin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.sq-lab{font-family:var(--mono);font-size:11.5px;overflow-wrap:anywhere;position:relative;background:var(--code);display:inline-block;padding:0 .2rem;max-width:100%}
+.sq-line{position:relative;height:0;border-top:2px solid var(--ink);margin-top:2px}
+.sq-line::after{content:"";position:absolute;top:-6px;right:-1px;border-left:8px solid var(--ink);border-top:5px solid transparent;border-bottom:5px solid transparent}
+.sq-line.back::after{right:auto;left:-1px;border-left:0;border-right:8px solid var(--ink)}
+.sq-row.ok .sq-lab{color:var(--ok);font-weight:700}.sq-row.ok .sq-line{border-color:var(--ok)}.sq-row.ok .sq-line::after{border-left-color:var(--ok);border-right-color:var(--ok)}
+.sq-row.bad .sq-lab{color:var(--bad);font-weight:700}.sq-row.bad .sq-line{border-color:var(--bad)}.sq-row.bad .sq-line::after{border-left-color:var(--bad);border-right-color:var(--bad)}
+.sq-row.warn .sq-lab{color:var(--warn);font-weight:700}
+.sq-note{display:flex}.sq-note i{font-style:normal;background:var(--paper2);border:1px solid var(--line);border-radius:5px;padding:.05rem .35rem;font-size:11.5px;max-width:82%;overflow-wrap:anywhere;position:relative}
+.pp{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:.45rem}
+.pp-s{border:2px solid var(--line);border-radius:8px;padding:.35rem .45rem;font:12px/1.3 var(--sans);background:var(--paper2);transition:background .25s,border-color .25s,transform .25s;min-width:0;overflow-wrap:anywhere}
+.pp-s b{display:block;font-size:12px}.pp-s small{color:var(--mut)}
+.pp-s.on{border-color:var(--accent);transform:translateY(-2px);box-shadow:2px 2px 0 var(--ink)}
+.pp-s.done{border-color:var(--ok)}.pp-s.fail{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--paper2))}
+.pp-s.skip{opacity:.4}
+.an-l{display:block;width:100%;text-align:left;font:12.5px/1.45 var(--mono);background:var(--code);border:0;border-left:4px solid transparent;padding:.15rem .5rem;color:var(--ink);cursor:pointer;overflow-wrap:anywhere}
+.an-l.on{border-left-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--code))}
+.dq{display:flex;flex-wrap:wrap;gap:.35rem;margin:.4rem 0}.dq b{flex:1 0 100%;font:600 14px var(--sans)}
+.tg{display:grid;grid-template-columns:1fr;gap:.3rem}.tg label{display:flex;gap:.45rem;align-items:flex-start;font:13px/1.35 var(--sans);min-width:0}
+.mux{display:grid;gap:.3rem;font:12px var(--sans)}.mux-r{display:grid;grid-template-columns:74px 1fr;gap:.4rem;align-items:center}
+.mux-t{display:flex;gap:2px;height:22px;min-width:0}.mux-t i{flex:1 1 0;border-radius:2px;background:var(--line);opacity:.25;transition:opacity .2s;min-width:0}
+.mux-t i.a{background:var(--accent);opacity:1}.mux-t i.b{background:var(--accent2);opacity:1}.mux-t i.c{background:var(--ok);opacity:1}.mux-t i.x{background:var(--bad);opacity:1}
+.pg-w{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem}.pg-c{min-width:0}.pg-c h5{margin:0 0 .2rem;font:700 12.5px var(--sans)}
+.pg-i{font:12px var(--mono);padding:.1rem .35rem;border-radius:4px;margin:2px 0;background:var(--paper2);border:1px solid var(--line)}
+.pg-i.p1{border-color:var(--accent);color:var(--accent)}.pg-i.p2{border-color:var(--ok);color:var(--ok)}.pg-i.dup{background:color-mix(in srgb,var(--bad) 18%,var(--paper2));border-color:var(--bad);color:var(--bad);font-weight:700}.pg-i.new{border-style:dashed}
+.st-m{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem}.st-m div{min-width:0;text-align:center;padding:.4rem .2rem;border:2px solid var(--line);border-radius:8px;font:700 12px var(--sans);overflow-wrap:anywhere}
+.st-m div.on{background:var(--accent);color:#1c1c22;border-color:var(--ink)}
+.th-g{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin:.4rem 0}.th-g i{height:18px;border-radius:3px;background:var(--line);opacity:.3;transition:all .2s}.th-g i.b{background:var(--bad);opacity:1}.th-g i.f{background:var(--ok);opacity:1}
+.th-q{font:12px var(--sans);color:var(--mut)}
+.jsn{font:12px/1.45 var(--mono);background:var(--code);padding:.4rem .5rem;border-radius:6px;white-space:pre-wrap;overflow-wrap:anywhere;min-height:5.5em}
+.chk{list-style:none;padding-left:0}.chk li{padding-left:1.5rem;position:relative}.chk li::before{content:"☐";position:absolute;left:0}
+
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Rozdziały"></nav>   <!-- built from parts/chapters by JS -->
+<div id="depth" role="group" aria-label="Głębokość czytania"></div>   <!-- built by JS when any data-level > 1 exists -->
+
+<header class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="kicker">Animowane kompendium · HTTP · REST · Spring Framework 7 · Spring Boot 4</div>
+      <h1>REST i Spring <span>od protokołu po produkcję</span></h1>
+      <p class="sub">HTTP bez skrótów, styl REST bez mitów, projektowanie API, wzorce enterprise, testy, a przy każdym mechanizmie: jak robi to Spring i co dzieje się w środku. Przewijaj, diagramy startują same.</p>
+      <div class="stamp">Klikaj i psuj! 🧠</div>
+    </div>
+    <svg viewBox="0 0 400 400" aria-hidden="true">
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <g id="cover-nodes"></g>
+      </g>
+      <g class="spin-rev">
+        <circle cx="200" cy="200" r="95" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 10"/>
+      </g>
+      <circle cx="200" cy="200" r="46" fill="var(--accent)" stroke="var(--ink)" stroke-width="4"/>
+    </svg>
+  </div>
+  <div class="scroll-hint">przewijaj ↓</div>
+</header>
+
+<main>
+<section class="chapter" id="intro" data-level="1" data-title="Jak czytać"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Jak czytać to kompendium</h2><span class="tag">mechanizm przed adnotacją</span></div></div>
+<p class="reveal">Większość API w firmach „działa”, aż przyjdzie pierwszy timeout, pierwszy podwójny przelew albo pierwsza zmiana kontraktu. Wtedy okazuje się, że ktoś znał adnotacje Springa, ale nie znał HTTP. To kompendium idzie w odwrotną stronę: najpierw mechanizm protokołu, potem styl REST, a dopiero potem pytanie: <em>jak Spring to wspiera i co robi w środku</em>.</p>
+<p class="reveal">Każdy rozdział to jeden mechanizm. Figury są klikalne i mają przyciski 💥, które psują system celowo. Wybierz poziom w lewym dolnym rogu: <b>Podstawy</b> wystarczą do pierwszego solidnego kontrolera, <b>Praktyk</b> to codzienność w enterprise, a <b>Ekspert</b> to internals Springa i produkcja. Kod dotyczy Spring Framework 7 i Spring Boot 4, a sekcje o tym, co zmieniły te wersje, są zaznaczone wprost.</p>
+<div id="map"></div>
+<div class="box brain reveal"><span class="lbl">🧠 Pomyśl</span>
+  <p>Klient wysyła <code>POST /payments</code>. Serwer zapisuje płatność, ale odpowiedź ginie w sieci i klient dostaje timeout. Co powinien zrobić klient? Co musi umieć serwer, żeby klient mógł bezpiecznie ponowić żądanie? Wrócimy do tego na końcu.</p>
+</div>
+</section>
+<section class="part" id="part-i" data-level="1"><span class="part-no">Część I</span><h2>HTTP: protokół, na którym wszystko stoi</h2><p>Semantyka metod, statusów, nagłówków i cache. Tego Spring za ciebie nie zaprojektuje.</p></section>
+<section class="chapter" id="http-msg" data-level="1" data-title="Anatomia wymiany"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Żądanie i odpowiedź: tekst z regułami</h2><span class="tag">wiadomość, nie wywołanie funkcji</span></div></div>
+<p class="reveal">HTTP to bezstanowy protokół typu żądanie-odpowiedź. Klient otwiera połączenie i wysyła wiadomość. Serwer odsyła wiadomość. Obie mają ten sam kształt: linia startowa, pola nagłówka, pusta linia, opcjonalna treść. Semantykę opisuje RFC 9110, cache RFC 9111, a format na łączu RFC 9112 (HTTP/1.1), RFC 9113 (HTTP/2) i RFC 9114 (HTTP/3). Dzięki temu podziałowi semantyka nie zmienia się między wersjami protokołu: zmienia się tylko sposób przesyłania bajtów.</p>
+<figure class="fig wide" id="fig-anat"><div class="ftitle">▶ Anatomia wiadomości <span>kliknij linię</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Przykład uproszczony. Nazwy pól są nieczułe na wielkość liter, a w HTTP/2 i HTTP/3 linia startowa zamienia się w pseudonagłówki, np. :method i :status.</figcaption></figure>
+<p class="reveal">Trzy rzeczy, które warto zapamiętać od razu. <b>Host</b> jest obowiązkowy w HTTP/1.1, bo pod jednym adresem IP żyje wiele serwisów. <b>Content-Type</b> opisuje treść, która właśnie leci, a <b>Accept</b> mówi, czego klient oczekuje z powrotem. <b>Status</b> to wynik semantyczny, który rozumieją proxy, cache i klienci, zanim ktokolwiek dotknie treści.</p>
+<div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+  <div class="qa">
+    <div class="q">Q:</div><div>HTTP jest „bezstanowy”, a przecież loguję się i mam sesję?</div>
+    <div class="a">A:</div><div>Bezstanowy jest protokół: każda wiadomość jest zrozumiała sama w sobie. Sesja to stan aplikacji, który ciastko lub token tylko wskazuje lub niesie. Rozdział o REST pokaże, gdzie ten stan powinien mieszkać.</div>
+  </div>
+</div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Wiadomość = linia startowa + nagłówki + pusta linia + treść.</li><li>Semantyka (RFC 9110) nie zależy od wersji HTTP.</li><li><code>Content-Type</code> opisuje to, co wysyłasz. <code>Accept</code> mówi, co chcesz dostać.</li></ul></div>
+
+</section>
+<section class="chapter" id="methods" data-level="1" data-title="Metody"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Metody: safe, idempotent i powód, dla którego to ważne</h2><span class="tag">kontrakt z całą siecią</span></div></div>
+<p class="reveal">Metoda to nie etykieta, tylko obietnica składana wszystkim pośrednikom. <b>Safe</b> znaczy: klient nie prosi o zmianę stanu. <b>Idempotent</b> znaczy: skutek zamierzony N identycznych żądań jest taki sam jak jednego. Te dwie własności decydują, czy klient, proxy albo biblioteka może bezpiecznie ponowić żądanie po zerwanym połączeniu.</p>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Metoda</th><th>Safe</th><th>Idempotent</th><th>Do czego służy</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td>tak</td><td>tak</td><td>pobranie reprezentacji</td></tr>
+<tr><td>HEAD</td><td>tak</td><td>tak</td><td>jak GET, ale bez treści odpowiedzi</td></tr>
+<tr><td>OPTIONS</td><td>tak</td><td>tak</td><td>opcje komunikacji, np. preflight CORS</td></tr>
+<tr><td>PUT</td><td>nie</td><td>tak</td><td>zastąpienie stanu zasobu pod danym URI</td></tr>
+<tr><td>DELETE</td><td>nie</td><td>tak</td><td>usunięcie powiązania URI z zasobem</td></tr>
+<tr><td>POST</td><td>nie</td><td>nie</td><td>przetworzenie treści według semantyki zasobu</td></tr>
+<tr><td>PATCH (RFC 5789)</td><td>nie</td><td>nie</td><td>częściowa zmiana opisana dokumentem zmian</td></tr>
+</tbody>
+</table></div>
+<figure class="fig wide" id="fig-retry"><div class="ftitle">▶ Ponawianie po utracie odpowiedzi <span>PUT kontra POST</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Uproszczenie: jedno ponowienie, brak klucza idempotencji. Rozdział o Idempotency-Key naprawia wariant z POST.</figcaption></figure>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Idempotentność dotyczy <b>stanu serwera, nie odpowiedzi</b>. Drugi <code>DELETE</code> może zwrócić 404, a metoda nadal jest idempotentna. Z drugiej strony <code>GET /orders/7/cancel</code> to mina: robot indeksujący albo prefetch w przeglądarce anuluje zamówienia, bo GET obiecuje bezpieczeństwo.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Safe ⊂ idempotent. Każda metoda safe jest idempotentna, nie odwrotnie.</li><li>Ponawiać automatycznie można tylko to, co idempotentne.</li><li>POST i PATCH potrzebują dodatkowego mechanizmu, żeby ponowienie było bezpieczne.</li></ul></div>
+
+</section>
+<section class="chapter" id="statuses" data-level="1" data-title="Statusy"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Statusy: wybieraj semantycznie, nie z przyzwyczajenia</h2><span class="tag">200 z błędem w treści to kłamstwo</span></div></div>
+<p class="reveal">Pięć klas: 1xx informacja, 2xx sukces, 3xx przekierowanie, 4xx błąd klienta, 5xx błąd serwera. Rozróżnienie 4xx i 5xx ma konsekwencje operacyjne: 5xx budzi dyżurnego i liczy się do SLO serwisu, a 4xx mówi klientowi „popraw żądanie, ponowienie tego samego nie pomoże”. Wyjątkami są np. 408 i 429, po których ponowienie ma sens.</p>
+<figure class="fig wide" id="fig-status"><div class="ftitle">▶ Który status zwrócić? <span>odpowiadaj na pytania</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Drzewo jest skrótem najczęstszych decyzji, nie pełnym rejestrem statusów HTTP.</figcaption></figure>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Status</th><th>Znaczenie</th><th>Kiedy użyć</th></tr></thead>
+<tbody>
+<tr><td>200 OK</td><td>sukces z treścią</td><td>GET, a także PUT/PATCH z reprezentacją w odpowiedzi</td></tr>
+<tr><td>201 Created</td><td>utworzono zasób</td><td>POST, z nagłówkiem <code>Location</code></td></tr>
+<tr><td>202 Accepted</td><td>przyjęto, nie ukończono</td><td>operacje długie</td></tr>
+<tr><td>204 No Content</td><td>sukces bez treści</td><td>DELETE, PUT bez reprezentacji</td></tr>
+<tr><td>304 Not Modified</td><td>użyj kopii z cache</td><td>warunkowy GET; nie ma treści</td></tr>
+<tr><td>400 Bad Request</td><td>żądanie błędne składniowo lub niepoprawne</td><td>niepoprawny JSON, błąd typu parametru</td></tr>
+<tr><td>401 Unauthorized</td><td>brak ważnego uwierzytelnienia</td><td>musi zawierać <code>WWW-Authenticate</code></td></tr>
+<tr><td>403 Forbidden</td><td>serwer zrozumiał, ale odmawia</td><td>znana tożsamość, brak uprawnień</td></tr>
+<tr><td>404 Not Found</td><td>nie ma reprezentacji lub serwer tego nie ujawnia</td><td>także celowe ukrycie cudzego zasobu</td></tr>
+<tr><td>405 Method Not Allowed</td><td>metoda niewspierana przez zasób</td><td>musi zawierać <code>Allow</code></td></tr>
+<tr><td>406 Not Acceptable</td><td>brak reprezentacji zgodnej z <code>Accept</code></td><td>negocjacja treści</td></tr>
+<tr><td>409 Conflict</td><td>konflikt ze stanem zasobu</td><td>duplikat, niedozwolone przejście stanu</td></tr>
+<tr><td>412 Precondition Failed</td><td>warunek nie spełniony</td><td><code>If-Match</code> z nieaktualnym ETag</td></tr>
+<tr><td>415 Unsupported Media Type</td><td>nieobsługiwany format treści</td><td>zły <code>Content-Type</code></td></tr>
+<tr><td>422 Unprocessable Content</td><td>składnia poprawna, treść nie do przetworzenia</td><td>reguły biznesowe; zespół wybiera granicę z 400</td></tr>
+<tr><td>428 Precondition Required</td><td>serwer wymaga warunku (RFC 6585)</td><td>brak <code>If-Match</code></td></tr>
+<tr><td>429 Too Many Requests</td><td>limit przekroczony (RFC 6585)</td><td>rate limiting, z <code>Retry-After</code></td></tr>
+<tr><td>500 / 502 / 503 / 504</td><td>błąd serwera / bramy / niedostępność / timeout bramy</td><td>503 może mieć <code>Retry-After</code></td></tr>
+</tbody>
+</table></div>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>„Zawsze 200, a błąd w polu <code>success:false</code>” wyłącza monitoring, cache, ponowienia i retry w bramach. Każda warstwa pośrednia uzna błąd za sukces, a metryka błędów pokaże 0%.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>4xx: zmień żądanie. 5xx: to problem serwera.</li><li>401 to „kim jesteś?”. 403 to „wiem, kim jesteś, i nie wolno ci”.</li><li>201 z <code>Location</code>, 204 bez treści, 304 bez treści.</li></ul></div>
+
+</section>
+<section class="chapter" id="headers" data-level="1" data-title="Nagłówki i negocjacja"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Nagłówki i negocjacja treści</h2><span class="tag">jeden zasób, wiele reprezentacji</span></div></div>
+<p class="reveal">Klient mówi, co akceptuje (<code>Accept</code>, <code>Accept-Language</code>, <code>Accept-Encoding</code>), a serwer wybiera reprezentację. Wartości q określają preferencję: <code>Accept: application/json, text/csv;q=0.5</code>. Gdy wynik zależy od nagłówka żądania, odpowiedź powinna to ogłosić polem <code>Vary</code>, inaczej współdzielony cache poda JSON klientowi, który chciał CSV.</p>
+<figure class="fig wide" id="fig-neg"><div class="ftitle">▶ Negocjacja treści w Springu <span>wybierz Accept i Content-Type</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Kontroler przykładowy ma consumes=application/json i produces=application/json. Uproszczenie: pomijamy wartości q i typy z wieloma parametrami.</figcaption></figure>
+<p class="reveal">Spring robi to w dwóch miejscach. Atrybuty <code>consumes</code> i <code>produces</code> zawężają mapowanie, więc niedopasowanie kończy się 415 lub 406 przed wejściem do metody. Domyślnie sprawdzany jest tylko nagłówek <code>Accept</code>: dawna strategia rozszerzenia w ścieżce (<code>/orders.json</code>) została usunięta w Spring Framework 7.</p>
+<pre class="reveal">@PostMapping(path = "/orders", consumes = MediaType.APPLICATION_JSON_VALUE,
+             produces = MediaType.APPLICATION_JSON_VALUE)
+public ResponseEntity&lt;OrderDto&gt; create(@RequestBody NewOrder body) { ... }</pre>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li><code>Accept</code> niepasujący = 406. <code>Content-Type</code> niepasujący = 415.</li><li>Odpowiedź zależna od nagłówka żądania wymaga <code>Vary</code>.</li><li>Spring negocjuje przez <code>Accept</code>, rozszerzenia w URL już nie.</li></ul></div>
+
+</section>
+<section class="chapter" id="caching" data-level="1" data-title="Cache i warunki"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Cache i żądania warunkowe</h2><span class="tag">najszybsze żądanie to to, którego nie ma</span></div></div>
+<p class="reveal">Cache HTTP (RFC 9111) to dwa mechanizmy. <b>Świeżość</b>: <code>Cache-Control: max-age=60</code> pozwala przez 60 sekund nie pytać serwera wcale. <b>Walidacja</b>: po upływie świeżości klient pyta warunkowo, wysyłając <code>If-None-Match</code> z poprzednim <code>ETag</code>. Gdy nic się nie zmieniło, dostaje 304 bez treści.</p>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Dyrektywa</th><th>Co znaczy</th><th>Kiedy użyć</th></tr></thead>
+<tbody>
+<tr><td><code>max-age=N</code></td><td>świeże przez N sekund</td><td>dane mogą być chwilę nieaktualne</td></tr>
+<tr><td><code>s-maxage=N</code></td><td>jak max-age, ale dla cache współdzielonych</td><td>CDN, gateway</td></tr>
+<tr><td><code>no-cache</code></td><td>wolno zapisać, ale trzeba walidować przed użyciem</td><td>zawsze aktualne, a 304 oszczędza transfer</td></tr>
+<tr><td><code>no-store</code></td><td>nie zapisywać nigdzie</td><td>dane wrażliwe</td></tr>
+<tr><td><code>private</code></td><td>tylko cache prywatny</td><td>odpowiedź per użytkownik</td></tr>
+<tr><td><code>must-revalidate</code></td><td>po utracie świeżości nie wolno użyć bez walidacji</td><td>nieaktualne dane są niedopuszczalne</td></tr>
+</tbody>
+</table></div>
+<figure class="fig wide" id="fig-cache"><div class="ftitle">▶ ETag w akcji <span>świeżość, 304, brak Vary</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Wartości ETag są ilustracyjne. Pomijamy Last-Modified, działający analogicznie z If-Modified-Since.</figcaption></figure>
+<p class="reveal">Spring daje trzy poziomy. <code>CacheControl</code> buduje nagłówek. <code>WebRequest.checkNotModified(etag)</code> kończy przetwarzanie wcześnie, jeśli klient ma aktualną wersję. Pomija to serializację, a przy tanim ETagu, np. z kolumny version, także ładowanie danych. <code>ShallowEtagHeaderFilter</code> liczy ETag z gotowej treści odpowiedzi: oszczędza pasmo, ale nie CPU, bo odpowiedź i tak powstaje w całości.</p>
+<pre class="reveal">@GetMapping("/products/{id}")
+public ResponseEntity&lt;ProductDto&gt; get(@PathVariable long id, WebRequest request) {
+    String etag = "\"" + service.version(id) + "\"";   // tani odczyt samej kolumny version
+    if (request.checkNotModified(etag)) {
+        return null;                    // Spring odeśle 304
+    }
+    ProductDto product = service.find(id);
+    return ResponseEntity.ok()
+            .cacheControl(CacheControl.maxAge(Duration.ofSeconds(60)))
+            .eTag(etag)
+            .body(product);
+}</pre>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p><code>no-cache</code> nie znaczy „nie zapisuj”. Do tego służy <code>no-store</code>. To jedna z najczęstszych pomyłek w przeglądach bezpieczeństwa.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Świeżość oszczędza żądanie, walidacja oszczędza transfer.</li><li><code>checkNotModified</code> przy tanim ETagu oszczędza pracę serwera, filtr płytki tylko pasmo.</li><li><code>If-None-Match</code> to cache. <code>If-Match</code> to ochrona przed utratą aktualizacji.</li></ul></div>
+
+</section>
+<section class="chapter" id="versions" data-level="2" data-title="HTTP/1.1, 2, 3"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>HTTP/1.1, HTTP/2, HTTP/3</h2><span class="tag">ta sama semantyka, inne bajty</span></div></div>
+<p class="reveal">HTTP/1.1 używa połączeń trwałych, ale na jednym połączeniu odpowiedzi idą po kolei. Dlatego przeglądarki otwierały kilka połączeń naraz. HTTP/2 dzieli wiadomości na binarne ramki i przeplata wiele strumieni w jednym połączeniu TCP, a nagłówki kompresuje przez HPACK. HTTP/3 działa na QUIC, czyli na UDP: strata pakietu blokuje tylko jego strumień, a nagłówki kompresuje QPACK.</p>
+<figure class="fig wide" id="fig-mux"><div class="ftitle">▶ Trzy żądania, jedno połączenie <span>zgub pakiet</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Liczba ramek jest ilustracyjna. Figura pokazuje samą zasadę kolejkowania.</figcaption></figure>
+<p class="reveal">W Spring Boot <code>server.http2.enabled</code> ma domyślnie wartość <code>false</code>. Przeglądarki używają HTTP/2 tylko po TLS, więc w praktyce wymaga to certyfikatu albo terminacji na bramie. Twój kod kontrolera nie zmienia się w ogóle, bo semantyka jest taka sama.</p>
+<div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
+  <div class="qa">
+    <div class="q">Q:</div><div>Czyli po przejściu na HTTP/2 mogę sklejać wszystko w jedno połączenie i zapomnieć o puli?</div>
+    <div class="a">A:</div><div>Multipleksowanie usuwa blokowanie na poziomie HTTP, ale w HTTP/2 strata pakietu TCP nadal wstrzymuje wszystkie strumienie tego połączenia. To właśnie naprawia HTTP/3.</div>
+  </div>
+</div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>HTTP/2: ramki, strumienie, HPACK, nadal TCP.</li><li>HTTP/3: QUIC na UDP, strumienie niezależne przy stracie pakietu.</li><li>Kontrolery Springa nie zależą od wersji HTTP.</li></ul></div>
+
+</section>
+<section class="part" id="part-ii" data-level="1"><span class="part-no">Część II</span><h2>REST: styl architektoniczny, nie format URL</h2><p>Co naprawdę napisał Fielding i co z tego zostaje w enterprise.</p></section>
+<section class="chapter" id="fielding" data-level="1" data-title="Ograniczenia REST"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Sześć ograniczeń Fieldinga</h2><span class="tag">REST to zestaw ograniczeń, nie „JSON po HTTP”</span></div></div>
+<p class="reveal">REST (Representational State Transfer) opisał Roy Fielding w rozprawie z 2000 roku. To styl architektoniczny dla rozproszonych systemów hipermedialnych, zdefiniowany jako zestaw ograniczeń. Każde ograniczenie kosztuje coś w zamian za konkretną własność całego systemu. Ogranicz, a dostaniesz skalowalność, widoczność i niezależną ewolucję.</p>
+<figure class="fig wide" id="fig-rest"><div class="ftitle">▶ Wyłącz ograniczenie <span>zobacz, co tracisz</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Skutki opisane jakościowo. Fielding definiuje REST jako całość ograniczeń; system bez któregoś z nich nie jest formalnie RESTful.</figcaption></figure>
+<p class="reveal">Jednolity interfejs ma cztery składowe: identyfikacja zasobów, manipulacja przez reprezentacje, wiadomości samoopisowe i hipermedia jako silnik stanu aplikacji (HATEOAS). Bezstanowość znaczy, że każde żądanie zawiera wszystko, co potrzebne do jego zrozumienia, a stan sesji trzyma klient. Stan zasobów, np. zamówienia, oczywiście żyje w bazie: to nie jest stan sesji.</p>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Client-server, stateless, cache, uniform interface, layered system, code on demand (opcjonalne).</li><li>Stan sesji u klienta, stan zasobów na serwerze.</li><li>REST to styl, a nie standard: nie ma „certyfikatu RESTful”.</li></ul></div>
+
+</section>
+<section class="chapter" id="rmm" data-level="1" data-title="Richardson, HATEOAS"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Model dojrzałości Richardsona i HATEOAS</h2><span class="tag">poziom 2 to rzeczywistość enterprise</span></div></div>
+<p class="reveal">Leonard Richardson opisał cztery poziomy, a Martin Fowler je spopularyzował. To model nauczania, nie norma.</p>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Poziom</th><th>Co jest</th><th>Przykład</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>jeden punkt wejścia, HTTP jako tunel</td><td><code>POST /api</code> z nazwą akcji w treści</td></tr>
+<tr><td>1</td><td>zasoby</td><td><code>POST /orders/7</code> do wszystkiego</td></tr>
+<tr><td>2</td><td>metody i statusy zgodne z semantyką</td><td><code>GET</code>, <code>PUT</code>, 201, 404</td></tr>
+<tr><td>3</td><td>hipermedia: odpowiedź mówi, co dalej</td><td>linki <code>_links.cancel</code></td></tr>
+</tbody>
+</table></div>
+<p class="reveal">Większość firmowych API to poziom 2 i jest to rozsądny cel. Poziom 3 daje klientowi odkrywanie akcji i ukrywa zmiany URI, ale kosztuje media type, bibliotekę i klientów, którzy naprawdę podążają za linkami. Spring HATEOAS dostarcza do tego <code>EntityModel</code>, <code>RepresentationModel</code>, <code>WebMvcLinkBuilder</code> oraz format HAL.</p>
+<pre class="reveal">EntityModel&lt;OrderDto&gt; model = EntityModel.of(order,
+    linkTo(methodOn(OrderController.class).get(order.id())).withSelfRel());
+if (order.cancellable()) {
+    model.add(linkTo(methodOn(OrderController.class).cancel(order.id())).withRel("cancel"));
+}</pre>
+<div class="box fireside reveal"><span class="lbl">🔥 Rozmowa przy kominku</span>
+  <p><b>Poziom 2:</b> Mój kontrakt jest w OpenAPI. Generujesz klienta i działa.</p>
+  <p><b>Poziom 3:</b> A gdy zmienisz regułę „kiedy można anulować”, każdy klient kopiuje ją u siebie. U mnie po prostu nie ma linku.</p>
+  <p><b>Poziom 2:</b> Pod warunkiem, że klient w ogóle czyta linki. A zwykle nie czyta.</p>
+</div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Poziom 2 to realistyczny standard enterprise.</li><li>Linki warunkowe (HATEOAS) mają sens przy złożonych przepływach stanu.</li><li>Model Richardsona to narzędzie dydaktyczne, nie kryterium zgodności.</li></ul></div>
+
+</section>
+<section class="chapter" id="resources" data-level="1" data-title="Zasoby i URI"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Zasoby, reprezentacje, URI</h2><span class="tag">rzeczowniki, nie czasowniki</span></div></div>
+<p class="reveal">Zasób to pojęcie, a reprezentacja to jego obecny stan w formacie JSON, XML albo CSV. URI identyfikuje zasób, metoda mówi, co z nim zrobić. Dlatego <code>POST /createOrder</code> dubluje semantykę, a <code>POST /orders</code> ją wykorzystuje.</p>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Zamiast</th><th>Lepiej</th><th>Dlaczego</th></tr></thead>
+<tbody>
+<tr><td><code>/getOrders</code></td><td><code>GET /orders</code></td><td>czasownik siedzi w metodzie</td></tr>
+<tr><td><code>/order/7</code> i <code>/orders</code></td><td><code>/orders/7</code></td><td>jedna kolekcja, jedna forma</td></tr>
+<tr><td><code>/users/1/orders/7/items/3/tax</code></td><td><code>/order-items/3/tax</code></td><td>głębokie zagnieżdżenia wiążą klienta z hierarchią</td></tr>
+<tr><td><code>/orders?id=7</code></td><td><code>/orders/7</code></td><td>tożsamość w ścieżce, filtr w query</td></tr>
+<tr><td><code>/Orders/DeleteAll</code></td><td><code>DELETE /orders?status=draft</code> lub zasób operacji</td><td>spójne małe litery, jawna semantyka</td></tr>
+</tbody>
+</table></div>
+<p class="reveal">Identyfikatory publiczne nie muszą być kluczami z bazy. Sekwencyjne ID mogą ułatwiać zgadywanie kolejnych wartości i zdradzać wolumen, dlatego w API publicznym wiele zespołów wybiera UUID. To nie zastępuje autoryzacji, co pokaże rozdział o BOLA.</p>
+<div class="box pencil reveal"><span class="lbl">✏️ Zaostrz ołówek</span><p>Zaprojektuj URI dla: listy faktur klienta, pobrania PDF faktury, oraz anulowania faktury.</p>
+<details><summary>Odpowiedź</summary><p><code>GET /customers/{id}/invoices</code>, <code>GET /invoices/{id}</code> z <code>Accept: application/pdf</code>, a anulowanie to <code>POST /invoices/{id}/cancellation</code>, czyli utworzenie zasobu anulowania. Rozdział o akcjach rozwija tę technikę.</p></details></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>URI to rzeczowniki w liczbie mnogiej i małymi literami.</li><li>Zagnieżdżenie maksymalnie jeden poziom, gdy relacja jest własnością.</li><li>Format wybiera negocjacja, nie rozszerzenie w URI.</li></ul></div>
+
+</section>
+<section class="part" id="part-iii" data-level="1"><span class="part-no">Część III</span><h2>Spring MVC: droga żądania</h2><p>Jak Spring zamienia bajty HTTP w wywołanie metody i z powrotem.</p></section>
+<section class="chapter" id="dispatcher" data-level="1" data-title="DispatcherServlet"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>DispatcherServlet: droga jednego żądania</h2><span class="tag">Front Controller w praktyce</span></div></div>
+<p class="reveal">Serwer (domyślnie Tomcat w <code>spring-boot-starter-webmvc</code>) przyjmuje połączenie, parsuje HTTP i przekazuje żądanie przez łańcuch filtrów Servlet do jednego serwletu: <code>DispatcherServlet</code>. To wzorzec Front Controller. Sam niczego nie decyduje, tylko deleguje do strategii, a Boot rejestruje je automatycznie.</p>
+<figure class="fig wide" id="fig-disp"><div class="ftitle">▶ Droga żądania przez Spring MVC <span>prześledź żądanie</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Uproszczenie: pomijamy dispatch async, multipart i locale. Wariant 404: gdy żadne mapowanie nie pasuje, żądanie trafia do obsługi zasobów statycznych.</figcaption></figure>
+<p class="reveal">Skrót działania: <code>HandlerMapping</code> znajduje metodę i interceptory, <code>HandlerAdapter</code> ją wywołuje, resolvery argumentów budują parametry, a konwertery czytają i zapisują treść. Wyjątek z dowolnego etapu trafia do łańcucha <code>HandlerExceptionResolver</code>.</p>
+<div class="box geek reveal" data-level="2"><span class="lbl">🤓 Głębiej</span><p><code>@RestController</code> to złożenie <code>@Controller</code> i <code>@ResponseBody</code>. Dzięki <code>@ResponseBody</code> wynik metody nie jest nazwą widoku, tylko trafia do <code>HttpMessageConverter</code>, a <code>ViewResolver</code> w ogóle nie jest używany.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Filtry Servlet działają przed <code>DispatcherServlet</code>.</li><li>HandlerMapping wybiera, HandlerAdapter wywołuje.</li><li><code>@ResponseBody</code> omija widoki i używa konwerterów.</li></ul></div>
+
+</section>
+<section class="chapter" id="controller" data-level="1" data-title="Kontroler"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Kontroler, wiązanie danych, ResponseEntity</h2><span class="tag">cienka warstwa tłumacząca HTTP</span></div></div>
+<p class="reveal">Kontroler tłumaczy HTTP na wywołanie domeny. Nie zawiera logiki biznesowej ani transakcji. Oto pełny CRUD z poprawnymi statusami:</p>
+<pre class="reveal">@RestController
+@RequestMapping("/orders")
+class OrderController {
+
+    private final OrderService service;
+
+    OrderController(OrderService service) { this.service = service; }
+
+    @GetMapping("/{id}")
+    OrderDto get(@PathVariable long id) {
+        return service.find(id);                     // 200, wyjątek domenowy = 404
+    }
+
+    @PostMapping
+    ResponseEntity&lt;OrderDto&gt; create(@Valid @RequestBody NewOrder body) {
+        OrderDto created = service.create(body);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(created.id()).toUri();
+        return ResponseEntity.created(location).body(created);   // 201 + Location
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void delete(@PathVariable long id) {
+        service.delete(id);                          // 204
+    }
+}</pre>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Adnotacja</th><th>Skąd bierze wartość</th><th>Błąd, gdy brak lub zły typ</th></tr></thead>
+<tbody>
+<tr><td><code>@PathVariable</code></td><td>segment URI</td><td>zły typ: 400</td></tr>
+<tr><td><code>@RequestParam</code></td><td>query lub formularz</td><td>brak wymaganego: 400</td></tr>
+<tr><td><code>@RequestHeader</code></td><td>nagłówek</td><td>brak wymaganego: 400</td></tr>
+<tr><td><code>@RequestBody</code></td><td>treść przez konwerter</td><td>nieczytelna treść: 400</td></tr>
+<tr><td><code>@ModelAttribute</code> lub obiekt bez adnotacji</td><td>query i formularz do pól obiektu</td><td>błąd wiązania: 400</td></tr>
+</tbody>
+</table></div>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Od Spring Framework 6 <code>/orders/</code> nie pasuje do mapowania <code>/orders</code>, a w wersji 7 usunięto opcję <code>trailingSlashMatch</code>. Jeśli klienci wysyłają końcowy ukośnik, użyj <code>UrlHandlerFilter</code> albo normalizuj URL na bramie.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Kontroler: wiązanie, walidacja, status, DTO. Logika idzie do serwisu.</li><li><code>ResponseEntity</code> daje pełną kontrolę nad statusem i nagłówkami.</li><li>POST tworzący zasób zwraca 201 i <code>Location</code>.</li></ul></div>
+
+</section>
+<section class="chapter" id="converters" data-level="1" data-title="Konwertery, Jackson"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>HttpMessageConverter i Jackson 3</h2><span class="tag">bajty w obiekt i z powrotem</span></div></div>
+<p class="reveal"><code>HttpMessageConverter</code> to strategia: „umiem czytać ten typ Java z tego media type” i „umiem zapisać go do tego media type”. Spring pyta kolejne konwertery i bierze pierwszy, który pasuje. Dla JSON w Spring Framework 7 jest to <code>JacksonJsonHttpMessageConverter</code> oparty na Jackson 3.</p>
+<figure class="fig wide" id="fig-conv"><div class="ftitle">▶ Wybór konwertera <span>różne scenariusze</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Lista konwerterów skrócona do typowych przypadków.</figcaption></figure>
+<div class="box usecase reveal" data-level="1"><span class="lbl">🧰 Z życia wzięte</span><ol>
+<li><b>Nowe pakiety:</b> Jackson 3 żyje w <code>tools.jackson</code>, np. <code>tools.jackson.databind.JsonNode</code>. Adnotacje typu <code>@JsonProperty</code> zostają w <code>com.fasterxml.jackson.annotation</code>.</li>
+<li><b>Bean:</b> Boot 4 konfiguruje <code>JsonMapper</code> i to on jest preferowany. Wsparcie Jackson 2 jest w Spring Framework 7 przestarzałe.</li>
+<li><b>Konfiguracja:</b> właściwości <code>spring.jackson.*</code>, a własne serializatory przez <code>@JacksonComponent</code>.</li>
+</ol></div>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Zwracanie encji JPA wprost to prośba o kłopoty: leniwe kolekcje, pętle przy relacjach dwukierunkowych i ujawnianie pól. Rozdział o DTO wyjaśnia, dlaczego kontrakt nie może być kopią tabeli.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Konwerter wybierają typ Java oraz media type.</li><li>Boot 4 = Jackson 3 = pakiety <code>tools.jackson</code>.</li><li>Niepoprawny JSON = <code>HttpMessageNotReadableException</code> = 400.</li></ul></div>
+
+</section>
+<section class="chapter" id="validation" data-level="1" data-title="Walidacja"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Walidacja: dwa wyjątki, które musisz znać</h2><span class="tag">Bean Validation w kontrolerze</span></div></div>
+<p class="reveal">Dodaj <code>spring-boot-starter-validation</code> i adnotuj DTO. <code>@Valid</code> na <code>@RequestBody</code> uruchamia walidację obiektu. Od Spring Framework 6.1 działa też wbudowana walidacja metod: ograniczenia wprost na parametrach, np. <code>@Min</code> na <code>@PathVariable</code>.</p>
+<pre class="reveal">public record NewOrder(@NotBlank String customerId,
+                       @NotEmpty List&lt;@Valid Line&gt; lines) { }
+
+@GetMapping("/{id}")
+OrderDto get(@PathVariable @Min(1) long id) { ... }     // walidacja metody
+
+@PostMapping
+ResponseEntity&lt;OrderDto&gt; create(@Valid @RequestBody NewOrder body) { ... }</pre>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Sytuacja</th><th>Wyjątek</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td><code>@Valid @RequestBody</code>, brak ograniczeń na parametrach</td><td><code>MethodArgumentNotValidException</code></td><td>400</td></tr>
+<tr><td>ograniczenia bezpośrednio na parametrach metody</td><td><code>HandlerMethodValidationException</code></td><td>400 lub 500, zależnie od przyczyny</td></tr>
+<tr><td>klasa z <code>@Validated</code> (proxy AOP)</td><td><code>ConstraintViolationException</code></td><td>500, jeśli go nie obsłużysz</td></tr>
+</tbody>
+</table></div>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Obsłuż oba wyjątki z pierwszych wierszy tabeli. Usuń też <code>@Validated</code> z klasy kontrolera, żeby korzystać z wbudowanej walidacji metod zamiast proxy AOP. Dokumentacja Springa zaleca to wprost.</p></div>
+<div class="box geek reveal" data-level="2"><span class="lbl">🤓 Głębiej</span><p>Walidacja składniowa (format, wymagalność) należy do DTO. Reguły biznesowe wymagające stanu, np. „klient ma limit”, należą do domeny i często kończą się 409 lub 422, a nie 400. Grupy walidacji przez <code>@Validated(Group.class)</code> na argumencie pozwalają różnicować create i update, choć dwa osobne DTO są zwykle czytelniejsze.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li><code>@Valid</code> na obiekcie, ograniczenia wprost na parametrach.</li><li>Dwa wyjątki MVC do obsłużenia: <code>MethodArgumentNotValidException</code> i <code>HandlerMethodValidationException</code>.</li><li>Domena pilnuje reguł zależnych od stanu.</li></ul></div>
+
+</section>
+<section class="chapter" id="errors" data-level="1" data-title="ProblemDetail"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Błędy: ProblemDetail i RFC 9457</h2><span class="tag">jeden format błędu w całej firmie</span></div></div>
+<p class="reveal">RFC 9457 definiuje <code>application/problem+json</code> z polami <code>type</code>, <code>title</code>, <code>status</code>, <code>detail</code> i <code>instance</code> oraz dowolnymi rozszerzeniami. Domyślny typ to <code>about:blank</code>. Spring ma do tego klasę <code>ProblemDetail</code>. Wbudowane wyjątki MVC implementują <code>ErrorResponse</code>.</p>
+<pre class="reveal">@RestControllerAdvice
+class ApiErrors extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(OrderNotFound.class)
+    ProblemDetail notFound(OrderNotFound ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND, "Zamówienie " + ex.id() + " nie istnieje");
+        pd.setTitle("Nie znaleziono zamówienia");
+        pd.setType(URI.create("https://api.example.com/problems/order-not-found"));
+        pd.setProperty("orderId", ex.id());      // rozszerzenie na najwyższym poziomie JSON
+        return pd;
+    }
+}</pre>
+<pre class="reveal">{
+  "type": "https://api.example.com/problems/order-not-found",
+  "title": "Nie znaleziono zamówienia",
+  "status": 404,
+  "detail": "Zamówienie 7 nie istnieje",
+  "instance": "/orders/7",
+  "orderId": 7
+}</pre>
+<figure class="fig wide" id="fig-err"><div class="ftitle">▶ Gdzie ląduje wyjątek <span>łańcuch resolverów</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Kolejność to domyślna konfiguracja Spring MVC. Filtry stoją poza DispatcherServlet, więc ich wyjątki nie trafiają do @ExceptionHandler.</figcaption></figure>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Sposób</th><th>Co robi</th><th>Kiedy użyć</th></tr></thead>
+<tbody>
+<tr><td><code>spring.mvc.problemdetails.enabled=true</code></td><td>Boot rejestruje handler dla wyjątków MVC; domyślnie <code>false</code></td><td>szybki start bez własnego advice</td></tr>
+<tr><td><code>extends ResponseEntityExceptionHandler</code></td><td>obsługa wyjątków MVC plus punkty rozszerzeń</td><td>standard w projekcie enterprise</td></tr>
+<tr><td><code>@ResponseStatus</code> na wyjątku</td><td>tylko status</td><td>proste przypadki</td></tr>
+<tr><td><code>ErrorResponseException</code></td><td>wyjątek niosący ProblemDetail</td><td>wyjątki wielokrotnego użytku</td></tr>
+</tbody>
+</table></div>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Nie wysyłaj stack trace ani komunikatów SQL w <code>detail</code>. Ostatni handler dla <code>Exception</code> powinien logować szczegóły, a klientowi zwracać ogólny komunikat i identyfikator śladu. W Boot 4 właściwości kontrolujące treść domyślnej strony błędu to <code>spring.web.error.include-*</code>.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Jeden format błędu: <code>application/problem+json</code>.</li><li><code>@RestControllerAdvice</code> rozszerzający <code>ResponseEntityExceptionHandler</code>.</li><li>Właściwości dodatkowe przez <code>setProperty</code> lądują na wierzchu JSON.</li></ul></div>
+
+</section>
+<section class="chapter" id="mvctest" data-level="1" data-title="MockMvcTester"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Pierwszy test: MockMvcTester</h2><span class="tag">test HTTP bez serwera</span></div></div>
+<p class="reveal"><code>@WebMvcTest</code> ładuje tylko warstwę MVC: kontrolery, advice, konwertery, filtry. Serwisy podstawiasz przez <code>@MockitoBean</code>. <code>MockMvcTester</code> to API na AssertJ, a w Boot 4 adnotacja ma nowy pakiet i moduł <code>spring-boot-webmvc-test</code>.</p>
+<pre class="reveal">import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+
+@WebMvcTest(OrderController.class)
+class OrderControllerTest {
+
+    @Autowired MockMvcTester mvc;
+    @MockitoBean OrderService service;
+
+    @Test
+    void returnsProblemWhenMissing() {
+        given(service.find(7L)).willThrow(new OrderNotFound(7L));
+
+        assertThat(mvc.get().uri("/orders/{id}", 7))
+                .hasStatus(HttpStatus.NOT_FOUND)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .bodyJson().extractingPath("$.orderId").isEqualTo(7);
+    }
+}</pre>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>MockMvc nie uruchamia prawdziwego kontenera Servlet. Niskopoziomowe elementy, np. mapowanie <code>/error</code>, nie działają tak jak na serwerze. Do nich służą testy z prawdziwym portem, opisane w części o testach.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li><code>@WebMvcTest</code> + <code>MockMvcTester</code> + <code>@MockitoBean</code>.</li><li>Testuj kontrakt: status, nagłówki, JSON, nie wywołania mocka.</li><li><code>@MockBean</code> usunięto w Boot 4.</li></ul></div>
+</section>
+<section class="part" id="part-iv" data-level="2"><span class="part-no">Część IV</span><h2>Projektowanie API</h2><p>Decyzje, które trudno cofnąć, gdy klienci już działają.</p></section>
+<section class="chapter" id="contract" data-level="2" data-title="API-first, OpenAPI"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Kontrakt: API-first, code-first, OpenAPI</h2><span class="tag">kontrakt to produkt</span></div></div>
+<p class="reveal">OpenAPI opisuje API w formacie maszynowym: ścieżki, schematy, błędy, bezpieczeństwo. Są dwie drogi. <b>API-first</b>: zespół zaczyna od pliku YAML, przegląda go, a klient i szkielet serwera są generowane. <b>Code-first</b>: dokument powstaje z kodu, np. przez springdoc-openapi.</p>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Podejście</th><th>Plusy</th><th>Minusy</th><th>Kiedy</th></tr></thead>
+<tbody>
+<tr><td>API-first</td><td>przegląd przed kodem, praca równoległa</td><td>wymaga dyscypliny i generatora</td><td>API międzyzespołowe i publiczne</td></tr>
+<tr><td>Code-first</td><td>szybko, dokument nie rozjeżdża się z kodem</td><td>kontrakt przecieka z implementacji</td><td>API wewnętrzne jednego zespołu</td></tr>
+</tbody>
+</table></div>
+<p class="reveal">Springdoc skanuje kontrolery i udostępnia dokument na <code>/v3/api-docs</code> oraz interfejs na <code>/swagger-ui.html</code>. Niezależnie od podejścia w CI warto uruchamiać linter kontraktu i porównanie z poprzednią wersją, które wykryje zmiany łamiące klientów.</p>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Publiczne lub międzyzespołowe API: API-first.</li><li>Dokument OpenAPI jest artefaktem CI, nie załącznikiem.</li><li>Automatyczna detekcja zmian łamiących zastępuje dobre chęci.</li></ul></div>
+
+</section>
+<section class="chapter" id="paging" data-level="2" data-title="Paginacja"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Paginacja: offset kontra keyset</h2><span class="tag">„strona 3” nie jest stabilna</span></div></div>
+<p class="reveal">Offset (<code>?page=3&amp;size=20</code>) jest prosty, pozwala skakać do strony, ale baza musi przejść pominięte wiersze, a wstawienie rekordu przesuwa wyniki między stronami. Keyset (kursor) pamięta ostatni klucz: <code>WHERE id &lt; :last ORDER BY id DESC LIMIT 20</code>. Jest stabilny i szybki przy indeksie, ale nie pozwala skoczyć do strony 50.</p>
+<figure class="fig wide" id="fig-page"><div class="ftitle">▶ Rekord wstawiony między stronami <span>offset kontra keyset</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Dane ilustracyjne, rozmiar strony 3, sortowanie od najnowszych.</figcaption></figure>
+<p class="reveal">Spring Data wspiera oba podejścia. <code>Pageable</code> rozwiązuje parametry <code>page</code>, <code>size</code> i <code>sort</code>, domyślnie 20 elementów, z limitem 2000, który warto znacznie obniżyć. Scrollowanie zwraca <code>Window&lt;T&gt;</code>.</p>
+<pre class="reveal">// offset, stabilny JSON przez PagedModel
+@GetMapping
+PagedModel&lt;OrderDto&gt; list(Pageable pageable) {
+    return new PagedModel&lt;&gt;(service.find(pageable));
+}
+
+// keyset
+Window&lt;Order&gt; findFirst20ByOrderByIdDesc(ScrollPosition position);</pre>
+<pre class="reveal">spring.data.web.pageable.max-page-size=100
+spring.data.web.pageable.serialization-mode=via-dto</pre>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Nie zwracaj <code>Page</code> wprost. <code>PageImpl</code> to typ domenowy, a jego JSON nie jest stabilnym kontraktem. Dokumentacja Spring Data zaleca <code>PagedModel</code> lub tryb <code>VIA_DTO</code>. Domyślny tryb serializacji to wciąż <code>direct</code>.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Offset: panele administracyjne i małe zbiory.</li><li>Keyset: duże zbiory, feedy, integracje.</li><li>Zawsze ogranicz <code>max-page-size</code>.</li></ul></div>
+
+</section>
+<section class="chapter" id="filtering" data-level="2" data-title="Filtrowanie"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Filtrowanie, sortowanie, zakres pól</h2><span class="tag">query string to mały język</span></div></div>
+<p class="reveal">Proste filtry to parametry: <code>GET /orders?status=PAID&amp;createdFrom=2026-01-01</code>. W Springu wiąże je obiekt bez adnotacji albo rekord, walidowany przez <code>@Valid</code>. Rzecz ważniejsza to białe listy: klient nie może sortować ani filtrować po dowolnej kolumnie, bo pole bez indeksu to prosty sposób na atak wydajnościowy.</p>
+<pre class="reveal">public record OrderFilter(OrderStatus status, LocalDate createdFrom) { }
+
+@GetMapping
+PagedModel&lt;OrderDto&gt; list(@Valid OrderFilter filter, Pageable pageable) { ... }</pre>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Technika</th><th>Co daje</th><th>Kiedy</th></tr></thead>
+<tbody>
+<tr><td>parametry query</td><td>proste, cache'owalne</td><td>domyślnie</td></tr>
+<tr><td><code>POST /orders/search</code></td><td>złożone filtry w treści, brak limitów URL</td><td>bardzo duże kryteria; rezygnujesz z cache GET</td></tr>
+<tr><td><code>fields=id,status</code></td><td>mniejsza odpowiedź</td><td>klienci mobilni, gdy dane są ciężkie</td></tr>
+<tr><td>JPA Specification</td><td>składanie warunków po stronie repozytorium</td><td>filtry dynamiczne</td></tr>
+</tbody>
+</table></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Białe listy pól do filtrowania i sortowania.</li><li>Filtr jako rekord z walidacją, nie 10 parametrów metody.</li><li>Parametr niedozwolony = 400, nie cisza.</li></ul></div>
+
+</section>
+<section class="chapter" id="patch" data-level="2" data-title="PUT vs PATCH"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>PUT kontra PATCH</h2><span class="tag">null to nie to samo co brak pola</span></div></div>
+<p class="reveal"><code>PUT</code> zastępuje całą reprezentację, więc pominięte pole znika. <code>PATCH</code> (RFC 5789) wysyła dokument zmian, a format określa <code>Content-Type</code>. Są dwa standardy: <b>JSON Merge Patch</b> (RFC 7396, <code>application/merge-patch+json</code>) i <b>JSON Patch</b> (RFC 6902, <code>application/json-patch+json</code>), czyli lista operacji <code>add</code>, <code>remove</code>, <code>replace</code>, <code>move</code>, <code>copy</code>, <code>test</code>.</p>
+<figure class="fig wide" id="fig-patch"><div class="ftitle">▶ Trzy dokumenty, jeden zasób <span>zobacz wynik</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Przykład ilustracyjny, pomijamy walidację po scaleniu. Figura stosuje reguły RFC 7396 i semantykę PUT.</figcaption></figure>
+<p class="reveal">Pułapka Javy: rekord z polami <code>String</code> nie odróżnia <code>null</code> od braku pola. Dlatego PATCH często przyjmuje <code>JsonNode</code> i scala go z obecnym DTO, po czym waliduje wynik. Poniższe scalanie jest płytkie: zagnieżdżone obiekty są zastępowane bez <code>@JsonMerge</code>, a <code>null</code> ustawia pole na <code>null</code>. Dla pełnej semantyki RFC 7396 potrzebna jest własna implementacja.</p>
+<pre class="reveal">@PatchMapping(path = "/{id}", consumes = "application/merge-patch+json")
+OrderDto patch(@PathVariable long id, @RequestBody JsonNode patch) {
+    OrderUpdate current = service.currentUpdate(id);
+    OrderUpdate merged = mapper.readerForUpdating(current).readValue(patch);
+    validator.validate(merged);                 // walidujemy wynik, nie łatkę
+    return service.update(id, merged);
+}</pre>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Merge Patch nie umie ustawić pola na <code>null</code>, bo <code>null</code> oznacza usunięcie. Tablice zastępuje w całości. Jeśli potrzebujesz zmian w środku listy, wybierz JSON Patch albo osobny podzasób.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>PUT: całość. PATCH: zmiana.</li><li>W Merge Patch <code>null</code> usuwa, a brak pola zostawia.</li><li>PATCH nie jest z definicji idempotentny.</li></ul></div>
+
+</section>
+<section class="chapter" id="versioning" data-level="2" data-title="Wersjonowanie"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Wersjonowanie i wsparcie w Spring 7</h2><span class="tag">wersjonuj tylko to, czego nie możesz ewoluować</span></div></div>
+<p class="reveal">Najlepsza wersja to ta, której nie trzeba tworzyć: zmiany addytywne nie łamią klientów. Gdy zmiana łamie kontrakt, masz cztery miejsca na wersję. Spring Framework 7 obsługuje je natywnie przez <code>ApiVersionStrategy</code>, a dokumentacja przyznaje wprost, że standardu nie ma.</p>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Miejsce</th><th>Przykład</th><th>Właściwość Boot</th><th>Kiedy</th></tr></thead>
+<tbody>
+<tr><td>Segment ścieżki</td><td><code>/v2/orders</code></td><td><code>spring.mvc.apiversion.use.path-segment</code></td><td>API publiczne, routing na bramie</td></tr>
+<tr><td>Nagłówek</td><td><code>API-Version: 2</code></td><td><code>spring.mvc.apiversion.use.header</code></td><td>URI bez wersji, klienci integracyjni</td></tr>
+<tr><td>Parametr query</td><td><code>?version=2</code></td><td><code>spring.mvc.apiversion.use.query-parameter</code></td><td>szybkie testy</td></tr>
+<tr><td>Parametr media type</td><td><code>application/json;v=2</code></td><td><code>spring.mvc.apiversion.use.media-type-parameter.*</code></td><td>wersja per reprezentacja</td></tr>
+</tbody>
+</table></div>
+<pre class="reveal">@Configuration
+class WebConfig implements WebMvcConfigurer {
+    @Override
+    public void configureApiVersioning(ApiVersionConfigurer configurer) {
+        configurer.useRequestHeader("API-Version");
+    }
+}
+
+@GetMapping(path = "/{id}", version = "1.0")   // tylko 1.0
+OrderV1 getV1(@PathVariable long id) { ... }
+
+@GetMapping(path = "/{id}", version = "1.2+")  // 1.2 i nowsze wspierane
+OrderV2 getV2(@PathVariable long id) { ... }
+
+@GetMapping(path = "/{id}", version = "2.0")   // tylko 2.0
+OrderV3 getV3(@PathVariable long id) { ... }</pre>
+<figure class="fig wide" id="fig-ver"><div class="ftitle">▶ Wybór metody po wersji <span>wyślij żądanie</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Wersje obsługiwane wykryte z mapowań: 1.0, 1.2, 2.0, a wersja jest wymagana (domyślnie). Spring wybiera najwyższą pasującą wersję nie większą od żądanej.</figcaption></figure>
+<div class="box usecase reveal"><span class="lbl">🧰 Z życia wzięte</span><ol>
+<li>Wersja jest domyślnie wymagana. Brak daje <code>MissingApiVersionException</code> i 400, chyba że ustawisz <code>spring.mvc.apiversion.default</code> lub <code>required=false</code>.</li>
+<li>Nieobsługiwana wersja daje <code>InvalidApiVersionException</code> i 400.</li>
+<li>Domyślny parser <code>SemanticApiVersionParser</code> dopełnia <code>minor</code> i <code>patch</code> zerami.</li>
+<li>Klienci: <code>RestClient</code>, <code>WebClient</code>, HTTP Service Clients oraz testy MockMvc i <code>WebTestClient</code> także wspierają wersje.</li>
+</ol></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Najpierw ewolucja addytywna, wersja dopiero przy zmianie łamiącej.</li><li><code>"1.2"</code> dokładnie, <code>"1.2+"</code> baseline.</li><li>Starą wersję wycofuj z <code>Deprecation</code> i <code>Sunset</code>.</li></ul></div>
+
+</section>
+<section class="chapter" id="actions" data-level="2" data-title="Akcje, bulk"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Akcje, operacje masowe, częściowy sukces</h2><span class="tag">nie wszystko jest CRUD-em</span></div></div>
+<p class="reveal">Przejście stanu modeluj na jeden z trzech sposobów. Podzasób-rzeczownik: <code>POST /orders/7/cancellation</code>. Zmiana pola przez PATCH, jeśli przejście jest proste. Albo jawna akcja: <code>POST /orders/7:cancel</code> lub <code>/orders/7/cancel</code>, jeśli zespół uzna to za czytelniejsze. Ważne, by jedna konwencja obowiązywała w całej firmie.</p>
+<p class="reveal">Operacje masowe: <code>POST /orders/bulk</code> z limitem liczby elementów. Odpowiedź musi mówić, co się udało. Wybierz, czy operacja jest <b>atomowa</b> (całość albo nic, zwykły status) czy <b>częściowa</b> (207 Multi-Status z RFC 4918, z wynikiem dla każdego elementu).</p>
+<pre class="reveal">HTTP/1.1 207 Multi-Status
+Content-Type: application/json
+
+{ "results": [
+    { "ref": "a1", "status": 201, "id": 901 },
+    { "ref": "a2", "status": 422, "problem": { "title": "Brak towaru" } } ] }</pre>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>200 przy częściowej porażce kłamie monitoringowi. Jeśli w tablicy jest błąd, klient musi go przeczytać, więc 207 to wyraźny sygnał, że status całości nie wystarcza.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Akcję zamień w rzeczownik, jeśli to naturalne.</li><li>Bulk: limit rozmiaru i wybór atomowy lub częściowy.</li><li>Maszyna stanów domeny decyduje o 409.</li></ul></div>
+
+</section>
+<section class="chapter" id="longops" data-level="2" data-title="Operacje długie"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Operacje długie: 202 i zasób statusu</h2><span class="tag">nie trzymaj żądania godzinami</span></div></div>
+<p class="reveal">Gdy praca trwa dłużej niż rozsądny timeout, serwer odpowiada 202 i wskazuje zasób monitorujący. 202 nie gwarantuje, że operacja się powiedzie. Klient odpytuje status, a na końcu dostaje link do wyniku.</p>
+<pre class="reveal">POST /reports                 → 202 Accepted
+                                Location: /report-jobs/51
+                                Retry-After: 10
+GET /report-jobs/51           → 200 { "state": "RUNNING" }
+GET /report-jobs/51           → 303 See Other
+                                Location: /reports/88</pre>
+<pre class="reveal">@PostMapping("/reports")
+ResponseEntity&lt;Void&gt; start(@Valid @RequestBody ReportRequest body) {
+    long jobId = jobs.submit(body);
+    return ResponseEntity.accepted()
+            .location(URI.create("/report-jobs/" + jobId))
+            .header(HttpHeaders.RETRY_AFTER, "10")
+            .build();
+}</pre>
+<div class="box geek reveal"><span class="lbl">🤓 Głębiej</span><p>To wzorzec inny niż <code>DeferredResult</code> z części IX. <code>DeferredResult</code> zwalnia wątek, ale połączenie HTTP nadal czeka. 202 kończy żądanie, więc przeżyje restart poda, o ile zadanie jest trwale zapisane, np. w tabeli lub kolejce.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>202 + <code>Location</code> + <code>Retry-After</code>.</li><li>Zadanie zapisane trwale, nie w pamięci.</li><li>Alternatywa dla odpytywania: webhook lub SSE.</li></ul></div>
+
+</section>
+<section class="part" id="part-v" data-level="2"><span class="part-no">Część V</span><h2>Wzorce enterprise</h2><p>Rozwiązania problemów, które pojawiają się przy pierwszym prawdziwym ruchu.</p></section>
+<section class="chapter" id="dto" data-level="2" data-title="DTO, open-in-view"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>DTO, mapowanie i open-in-view</h2><span class="tag">kontrakt to nie tabela</span></div></div>
+<p class="reveal">Encja to model zapisu i ORM. DTO to kontrakt. Gdy są tym samym, zmiana kolumny łamie klienta, a nowe pole w tabeli (<code>passwordHash</code>, <code>isAdmin</code>) ujawnia się samo. Przy zapisie ten sam błąd to <b>mass assignment</b>: klient wysyła <code>"role":"ADMIN"</code>, a Jackson posłusznie ustawia pole.</p>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Narzędzie</th><th>Plusy</th><th>Kiedy</th></tr></thead>
+<tbody>
+<tr><td>Rekord + ręczne mapowanie</td><td>jawne, bez magii</td><td>domyślnie przy małych modelach</td></tr>
+<tr><td>MapStruct</td><td>kod generowany przy kompilacji</td><td>duże modele</td></tr>
+<tr><td>Zamknięte projekcje Spring Data</td><td>zapytanie pobiera tylko potrzebne atrybuty; otwarte projekcje z <code>@Value</code> pobierają całość</td><td>odczyty</td></tr>
+</tbody>
+</table></div>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p><code>spring.jpa.open-in-view</code> ma w Boot wartość domyślną <code>true</code>. <code>EntityManager</code> żyje przez całe żądanie, więc leniwe kolekcje ładują się nawet podczas serializacji, poza transakcją serwisu. Ukrywa to N+1 i trzyma połączenie dłużej. W API ustaw <code>false</code> i mapuj na DTO w serwisie.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Osobne DTO na odczyt, create i update.</li><li>Mapuj w serwisie, w granicach transakcji.</li><li><code>spring.jpa.open-in-view=false</code> w każdym API.</li></ul></div>
+
+</section>
+<section class="chapter" id="idem" data-level="2" data-title="Idempotency-Key"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Idempotency-Key: bezpieczne ponawianie POST</h2><span class="tag">pytanie z początku kompendium</span></div></div>
+<p class="reveal">POST nie jest idempotentny, więc utrata odpowiedzi to loteria. Rozwiązanie: klient generuje unikalny klucz (UUID) i wysyła go z żądaniem. Ponowienie używa <b>tego samego</b> klucza. Serwer zapisuje wynik pierwszego wykonania i odtwarza go. Nagłówek <code>Idempotency-Key</code> opisuje szkic IETF httpapi, który nie jest jeszcze RFC.</p>
+<figure class="fig wide" id="fig-idem"><div class="ftitle">▶ Podwójna płatność <span>z kluczem i bez</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Uproszczenie: jedna instancja bazy. Kody 400, 409 i 422 za szkicem IETF draft-ietf-httpapi-idempotency-key-header-07.</figcaption></figure>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Sytuacja</th><th>Odpowiedź według szkicu</th></tr></thead>
+<tbody>
+<tr><td>brak wymaganego klucza</td><td>400</td></tr>
+<tr><td>ten sam klucz, inna treść</td><td>422</td></tr>
+<tr><td>ten sam klucz, pierwsze żądanie wciąż trwa</td><td>409</td></tr>
+<tr><td>ten sam klucz, ta sama treść, zakończone</td><td>zapisana odpowiedź</td></tr>
+</tbody>
+</table></div>
+<p class="reveal">Spring nie ma tego gotowego. Rdzeń to unikalny indeks w bazie, nie sprawdzanie w pamięci: dwa równoległe żądania nie mogą oba przejść. Klucz zapisuje krótka, osobna transakcja, dzięki czemu równoległe żądanie od razu widzi trwające wykonanie i dostaje 409. Skutek biznesowy i wynik zapisuje druga transakcja. Rekord bez wyniku po awarii procesu musi wygasać, inaczej klucz zablokuje się na stałe.</p>
+<pre class="reveal">public PaymentResult pay(String key, String fingerprint, PaymentRequest request) {
+    // REQUIRES_NEW: INSERT ... ON CONFLICT DO NOTHING, commit od razu
+    int inserted = keys.tryInsert(key, fingerprint);
+    if (inserted == 0) {
+        StoredKey stored = keys.find(key);
+        if (!stored.fingerprint().equals(fingerprint)) throw new KeyReusedException();  // 422
+        if (stored.result() == null) throw new RequestInProgressException();            // 409
+        return stored.result();
+    }
+    return payments.chargeAndStore(key, request);   // osobna transakcja: skutek + wynik
+}</pre>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Jeśli obciążenie to zewnętrzne wywołanie, transakcja bazy go nie cofnie. Przekaż ten sam klucz dalej do dostawcy płatności. Idempotencja musi sięgać do końca łańcucha. Ustal też retencję kluczy, np. 24 godziny, i opisz ją w kontrakcie.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Klucz od klienta, ten sam przy ponowieniu.</li><li>Unikalny indeks rozstrzyga wyścig.</li><li>Odcisk treści wykrywa ponowne użycie klucza do czegoś innego.</li></ul></div>
+
+</section>
+<section class="chapter" id="optim" data-level="2" data-title="ETag + @Version"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>ETag i @Version: utrata aktualizacji</h2><span class="tag">dwóch edytorów, jeden rekord</span></div></div>
+<p class="reveal">Dwóch użytkowników pobiera to samo zamówienie. Obaj edytują. Ostatni zapis nadpisuje pierwszy i nikt nie dostaje błędu. To <b>lost update</b>. Klasyczna odpowiedź HTTP łączy ETag z warunkowym zapisem: <code>If-Match</code>. Po stronie bazy to <code>@Version</code> z JPA.</p>
+<figure class="fig wide" id="fig-lost"><div class="ftitle">▶ Lost update <span>bez warunku i z If-Match</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Wartości wersji ilustracyjne. Dla klienta bez nagłówka serwer może wymagać warunku statusem 428.</figcaption></figure>
+<pre class="reveal">@PutMapping("/{id}")
+ResponseEntity&lt;OrderDto&gt; put(@PathVariable long id,
+        @RequestHeader(name = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+        @Valid @RequestBody OrderUpdate body) {
+    if (ifMatch == null) {
+        return ResponseEntity.status(HttpStatus.PRECONDITION_REQUIRED).build();  // 428
+    }
+    long version = Long.parseLong(ifMatch.replace("\"", ""));
+    OrderDto saved = service.update(id, version, body);     // porównuje wersję
+    return ResponseEntity.ok().eTag("\"" + saved.version() + "\"").body(saved);
+}</pre>
+<p class="reveal">Serwis porównuje wersję z żądania i rzuca wyjątek mapowany na 412. Sam <code>@Version</code> chroni dodatkowo przed wyścigiem w krótkim oknie między odczytem a zapisem: dostawca JPA sprawdza wersję przy zapisie, a Spring zgłasza <code>OptimisticLockingFailureException</code>, którą advice mapuje na 412 lub 409.</p>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>GET zwraca ETag, PUT wysyła <code>If-Match</code>.</li><li>Niezgodność = 412, brak warunku = 428.</li><li><code>@Version</code> domyka okno wyścigu w bazie.</li></ul></div>
+
+</section>
+<section class="chapter" id="outbox" data-level="2" data-title="Outbox, webhooki"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Transactional outbox i webhooki</h2><span class="tag">baza i broker nie mają wspólnej transakcji</span></div></div>
+<p class="reveal">Zapis do bazy i publikacja zdarzenia to dwa systemy. Jeśli publikujesz w transakcji, a commit się nie uda, wysłałeś kłamstwo. Jeśli po commicie i aplikacja padnie, zdarzenie przepadło. Outbox zapisuje zdarzenie do tabeli <b>w tej samej transakcji</b>, a osobny relay publikuje je dalej. Gwarancja to at-least-once, więc konsumenci muszą deduplikować po identyfikatorze zdarzenia.</p>
+<pre class="reveal">@Transactional
+public OrderDto create(NewOrder body) {
+    Order order = orders.save(Order.from(body));
+    outbox.save(OutboxEvent.orderCreated(order));   // ta sama transakcja
+    return OrderDto.from(order);
+}</pre>
+<p class="reveal">Webhook to odwrócony kierunek: twój serwis wywołuje klienta. Podpisz treść HMAC, dodaj znacznik czasu przeciw replay, ponawiaj z rosnącym opóźnieniem i udostępnij identyfikator zdarzenia. Odbiorca powinien odpowiedzieć szybko, a pracę wykonać asynchronicznie.</p>
+<div class="box geek reveal"><span class="lbl">🤓 Głębiej</span><p><code>@TransactionalEventListener(phase = AFTER_COMMIT)</code> uruchamia kod po commicie, ale jeśli proces padnie zaraz potem, zdarzenie zniknie. Do gwarancji dostarczenia potrzebna jest trwała tabela.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Outbox: dane i zdarzenie w jednej transakcji.</li><li>At-least-once wymaga idempotentnych konsumentów.</li><li>Webhook: podpis, ponowienia, deduplikacja.</li></ul></div>
+
+</section>
+<section class="chapter" id="gateway" data-level="2" data-title="Gateway, BFF"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>API Gateway i BFF</h2><span class="tag">sprawy przekrojowe na brzegu</span></div></div>
+<p class="reveal">Gateway to wspólny punkt wejścia: TLS, routing, limity, uwierzytelnianie wstępne. BFF (Backend for Frontend) to API dopasowane do jednego klienta, np. aplikacji mobilnej, składające dane z kilku usług. W ekosystemie Springa bramę realizuje Spring Cloud Gateway.</p>
+<p class="reveal">Za proxy aplikacja widzi adres bramy, nie klienta, więc linki w <code>Location</code> mogą wskazywać zły host. Rozwiązanie to nagłówki <code>X-Forwarded-*</code> lub <code>Forwarded</code> oraz właściwość <code>server.forward-headers-strategy</code> z wartościami <code>native</code>, <code>framework</code> lub <code>none</code>.</p>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Nagłówki przekazywane mogą zostać podrobione przez klienta. Włączaj ich obsługę tylko wtedy, gdy zaufane proxy na brzegu je usuwa i ustawia na nowo. Dokumentacja Springa ostrzega przed tym wprost przy <code>ForwardedHeaderFilter</code>.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Gateway dla spraw przekrojowych, nie logiki biznesowej.</li><li>BFF, gdy klienci mają bardzo różne potrzeby.</li><li><code>server.forward-headers-strategy</code> tylko za zaufanym proxy.</li></ul></div>
+
+</section>
+<section class="part" id="part-vi" data-level="2"><span class="part-no">Część VI</span><h2>Klienci HTTP</h2><p>Połowa awarii REST zaczyna się po stronie klienta.</p></section>
+<section class="chapter" id="restclient" data-level="2" data-title="RestClient"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>RestClient: nowoczesny klient synchroniczny</h2><span class="tag">następca RestTemplate</span></div></div>
+<p class="reveal"><code>RestClient</code> to płynne API synchroniczne. Boot dostarcza <code>RestClient.Builder</code> jako bean prototypowy, skonfigurowany konwerterami i fabryką żądań. Używaj go zamiast <code>RestClient.create()</code>, które omija auto-konfigurację Boota.</p>
+<pre class="reveal">@Component
+class StockClient {
+    private final RestClient client;
+
+    StockClient(RestClient.Builder builder) {
+        this.client = builder.baseUrl("https://stock.internal").build();
+    }
+
+    Optional&lt;Stock&gt; find(String sku) {
+        return Optional.ofNullable(client.get()
+                .uri("/stock/{sku}", sku)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .onStatus(s -&gt; s.value() == 404, (req, res) -&gt; { })   // 404 bez wyjątku
+                .body(Stock.class));
+    }
+}</pre>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Klient</th><th>Model</th><th>Stan</th></tr></thead>
+<tbody>
+<tr><td><code>RestClient</code></td><td>synchroniczny</td><td>domyślny wybór dla Spring MVC</td></tr>
+<tr><td><code>WebClient</code></td><td>reaktywny</td><td>dla WebFlux i strumieni</td></tr>
+<tr><td><code>RestTemplate</code></td><td>synchroniczny</td><td>Spring Framework 7 wycofuje go w dokumentacji, a <code>@Deprecated</code> zapowiedziano na 7.1</td></tr>
+</tbody>
+</table></div>
+<p class="reveal">Timeouty ustaw centralnie: <code>spring.http.clients.connect-timeout</code> i <code>spring.http.clients.read-timeout</code>. Domyślnie statusy 4xx i 5xx kończą się wyjątkiem z rodziny <code>RestClientException</code>.</p>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Wstrzykuj <code>RestClient.Builder</code> z Boota.</li><li>Nowy kod: <code>RestClient</code>, nie <code>RestTemplate</code>.</li><li><code>onStatus</code> tłumaczy błędy na język domeny.</li></ul></div>
+
+</section>
+<section class="chapter" id="httpiface" data-level="2" data-title="HTTP Service Clients"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>HTTP Service Clients: interfejs zamiast kodu</h2><span class="tag">deklaratywny klient bez Feign</span></div></div>
+<p class="reveal">Definiujesz interfejs z <code>@HttpExchange</code>, a Spring generuje proxy na bazie <code>RestClient</code>. Boot 4 dodał auto-konfigurację: grupy usług, <code>@ImportHttpServices</code> i właściwości <code>spring.http.serviceclient.*</code>.</p>
+<pre class="reveal">@HttpExchange("/orders")
+public interface OrderApi {
+    @GetExchange("/{id}")
+    OrderDto get(@PathVariable long id);
+
+    @PostExchange
+    OrderDto create(@RequestBody NewOrder body);
+}
+
+@SpringBootApplication
+@ImportHttpServices(group = "orders", types = OrderApi.class)
+class App { }</pre>
+<pre class="reveal">spring.http.serviceclient.orders.base-url=https://orders.internal</pre>
+<p class="reveal">Teraz wstrzykujesz <code>OrderApi</code> jak zwykły bean. Ten sam interfejs może implementować także kontroler serwera, choć taki kontrakt-współdzielony wiąże zespoły ze sobą ściśle, więc dla API międzyzespołowego lepszy jest OpenAPI.</p>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li><code>@HttpExchange</code> + <code>@ImportHttpServices</code>.</li><li>Grupy współdzielą konfigurację.</li><li>Natywna alternatywa dla Feign w Spring Framework.</li></ul></div>
+
+</section>
+<section class="chapter" id="resilience" data-level="2" data-title="Timeout, retry, breaker"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Odporność: timeout, retry, circuit breaker</h2><span class="tag">jak zatrzymać kaskadę awarii</span></div></div>
+<p class="reveal">Wolna zależność jest gorsza niż martwa: wątki czekają, pula się wyczerpuje i pada serwis, który sam był zdrowy. Kolejność obrony: <b>timeout</b> (zawsze), <b>retry</b> z backoffem i jitterem (tylko operacje idempotentne), <b>limit współbieżności</b>, <b>circuit breaker</b>.</p>
+<figure class="fig wide" id="fig-cb"><div class="ftitle">▶ Circuit breaker <span>zepsuj zależność</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Progi ilustracyjne: otwarcie po 3 błędach, 2 próby w HALF_OPEN. Domyślne wartości Resilience4j są inne: próg 50% i okno 100 wywołań, oczekiwanie 60 s.</figcaption></figure>
+<p class="reveal">Od Spring Framework 7 retry i limit współbieżności są w rdzeniu. Włączasz je przez <code>@EnableResilientMethods</code>. Domyślnie <code>@Retryable</code> ponawia dla każdego wyjątku do 3 razy, z sekundą przerwy. Circuit breakera w rdzeniu nie ma, więc tutaj używa się Resilience4j.</p>
+<pre class="reveal">@Configuration
+@EnableResilientMethods
+class ResilienceConfig { }
+
+@Retryable(includes = HttpServerErrorException.class,
+           maxRetries = 3, delay = 200, multiplier = 2, jitter = 50)
+@ConcurrencyLimit(20)
+public Stock find(String sku) { ... }</pre>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p><code>@Retryable</code> bez <code>includes</code> ponowi też 400 i 404, czyli błędy, których ponowienie nie naprawi. Retry na wielu warstwach mnoży ruch: trzy warstwy po trzy próby to dziesiątki wywołań na żądanie w najgorszym momencie. Ponawiaj w jednym miejscu.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Zawsze connect i read timeout.</li><li>Retry tylko dla idempotentnych operacji i błędów przejściowych.</li><li>Breaker przerywa ruch do chorej zależności i daje jej czas.</li></ul></div>
+
+</section>
+<section class="part" id="part-vii" data-level="2"><span class="part-no">Część VII</span><h2>Bezpieczeństwo</h2><p>Spring Security dla API bezstanowych i typowe dziury OWASP.</p></section>
+<section class="chapter" id="jwt" data-level="2" data-title="Resource server, JWT"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>OAuth2 Resource Server i JWT</h2><span class="tag">API weryfikuje, nie wystawia</span></div></div>
+<p class="reveal">W OAuth2 token wystawia serwer autoryzacji, a API to <b>resource server</b>: sprawdza podpis i claimy. Spring Security robi to przez <code>BearerTokenAuthenticationFilter</code>, <code>JwtDecoder</code> i <code>JwtAuthenticationConverter</code>.</p>
+<pre class="reveal">spring.security.oauth2.resourceserver.jwt.issuer-uri=https://idp.example.com/issuer</pre>
+<pre class="reveal">@Bean
+SecurityFilterChain api(HttpSecurity http) throws Exception {
+    return http
+        .authorizeHttpRequests(a -&gt; a
+            .requestMatchers("/actuator/health/**").permitAll()
+            .requestMatchers(HttpMethod.POST, "/orders").hasAuthority("SCOPE_orders:write")
+            .anyRequest().authenticated())
+        .oauth2ResourceServer(o -&gt; o.jwt(Customizer.withDefaults()))
+        .sessionManagement(s -&gt; s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .csrf(c -&gt; c.disable())                     // tylko bez ciastek uwierzytelniających
+        .build();
+}</pre>
+<figure class="fig wide" id="fig-jwt"><div class="ftitle">▶ Droga tokenu <span>różne tokeny</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Uproszczenie: pomijamy pobieranie kluczy JWK i cache. Kod błędu w WWW-Authenticate według RFC 6750.</figcaption></figure>
+<p class="reveal">Domyślnie resource server waliduje podpis oraz <code>exp</code>, <code>nbf</code> i <code>iss</code>, a każdy scope zamienia w uprawnienie z prefiksem <code>SCOPE_</code>. Warto dodać walidację <code>aud</code>: token wystawiony dla innego API nie powinien tu działać (RFC 8725).</p>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Typowy JWT jest podpisany (JWS), ale <b>nie zaszyfrowany</b>. Nie umieszczaj w nim danych wrażliwych. Resource server, który sprawdza tylko podpis i claimy, nie dowie się o unieważnieniu tokenu przed <code>exp</code>, więc czas życia powinien być krótki.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>API jest resource serverem, a tokeny wystawia IdP.</li><li><code>issuer-uri</code> wystarczy do konfiguracji.</li><li>Sprawdzaj <code>aud</code>, trzymaj krótkie <code>exp</code>.</li></ul></div>
+
+</section>
+<section class="chapter" id="bola" data-level="2" data-title="BOLA, OWASP"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Autoryzacja obiektowa i OWASP API Top 10</h2><span class="tag">uwierzytelniony nie znaczy uprawniony</span></div></div>
+<p class="reveal">Najczęstsza luka API to BOLA: <code>GET /invoices/7</code> działa dla każdego zalogowanego, bo nikt nie sprawdził, czy faktura 7 należy do tego użytkownika. Reguła na poziomie URL tego nie wyłapie, bo decyzja zależy od danych. Sprawdzaj przez zapytanie zawężone do właściciela albo przez <code>@PreAuthorize</code> po włączeniu <code>@EnableMethodSecurity</code>.</p>
+<pre class="reveal">// najprostsza obrona: nie da się pobrać cudzego
+Optional&lt;Invoice&gt; findByIdAndCustomerId(long id, String customerId);
+
+@PreAuthorize("@invoiceAccess.canRead(#id, authentication)")
+public InvoiceDto get(long id) { ... }</pre>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>OWASP API 2023</th><th>Sedno</th><th>Obrona w Springu</th></tr></thead>
+<tbody>
+<tr><td>API1 Broken Object Level Authorization</td><td>dostęp do cudzego obiektu</td><td>zapytania z właścicielem, <code>@PreAuthorize</code></td></tr>
+<tr><td>API2 Broken Authentication</td><td>słabe uwierzytelnianie</td><td>resource server, walidacja <code>aud</code></td></tr>
+<tr><td>API3 Broken Object Property Level Authorization</td><td>ujawnianie lub zapis pól</td><td>osobne DTO</td></tr>
+<tr><td>API4 Unrestricted Resource Consumption</td><td>brak limitów</td><td>limit strony, uploadu, rate limit</td></tr>
+<tr><td>API5 Broken Function Level Authorization</td><td>funkcje administracyjne dla każdego</td><td>reguły w <code>authorizeHttpRequests</code></td></tr>
+<tr><td>API6 Unrestricted Access to Sensitive Business Flows</td><td>automatyzacja procesu</td><td>limity biznesowe</td></tr>
+<tr><td>API7 Server Side Request Forgery</td><td>serwer pobiera URL od klienta</td><td>biała lista hostów</td></tr>
+<tr><td>API8 Security Misconfiguration</td><td>błędna konfiguracja</td><td>ogranicz ekspozycję Actuatora, CORS</td></tr>
+<tr><td>API9 Improper Inventory Management</td><td>zapomniane wersje API</td><td>spis wersji, <code>Sunset</code></td></tr>
+<tr><td>API10 Unsafe Consumption of APIs</td><td>ślepe zaufanie do zewnętrznych API</td><td>walidacja odpowiedzi, timeouty</td></tr>
+</tbody>
+</table></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Autoryzacja obiektowa musi patrzeć na dane.</li><li>Cudzy zasób: 404 zamiast 403 ukrywa jego istnienie.</li><li>Każdy endpoint ma test „inny użytkownik”.</li></ul></div>
+
+</section>
+<section class="chapter" id="cors" data-level="2" data-title="CORS, CSRF"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>CORS i CSRF</h2><span class="tag">przeglądarka, nie serwer, egzekwuje CORS</span></div></div>
+<p class="reveal">CORS rozluźnia politykę same-origin w <b>przeglądarce</b>. Nie chroni serwera: <code>curl</code> go ignoruje. Żądania niebędące prostymi poprzedza preflight, czyli <code>OPTIONS</code> z <code>Origin</code> i <code>Access-Control-Request-Method</code>.</p>
+<figure class="fig wide" id="fig-cors"><div class="ftitle">▶ Preflight <span>poprawnie i z błędem kolejności</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Uproszczony przebieg. Preflight nie niesie ciastek ani nagłówka Authorization.</figcaption></figure>
+<pre class="reveal">@Bean
+UrlBasedCorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
+    config.setAllowedOrigins(List.of("https://app.example.com"));
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
+    config.setAllowedHeaders(List.of("Authorization", "Content-Type", "If-Match"));
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", config);
+    return source;
+}</pre>
+<p class="reveal">CORS musi działać przed Spring Security, bo preflight nie ma danych uwierzytelniających i dostałby 401. Spring Security konfiguruje to samo, jeśli znajdzie bean <code>UrlBasedCorsConfigurationSource</code>. Ogólnie masz też <code>@CrossOrigin</code> i <code>addCorsMappings</code>.</p>
+<p class="reveal"><b>CSRF</b> wykorzystuje to, że przeglądarka dokleja ciastka sama. Token w nagłówku <code>Authorization</code> nie jest dołączany automatycznie, więc API z tokenem Bearer może wyłączyć ochronę CSRF. API z ciastkiem sesyjnym nie może.</p>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>CORS to reguła dla przeglądarki, nie autoryzacja.</li><li>Preflight musi przejść przed uwierzytelnianiem.</li><li>Ciastka = CSRF. Bearer w nagłówku = bez CSRF.</li></ul></div>
+
+</section>
+<section class="chapter" id="ratelimit" data-level="2" data-title="Rate limiting"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Rate limiting</h2><span class="tag">ochrona przed klientem i przed samym sobą</span></div></div>
+<p class="reveal">Przekroczenie limitu to 429 z RFC 6585, opcjonalnie z <code>Retry-After</code>. Nagłówki <code>RateLimit</code> i <code>RateLimit-Policy</code> wciąż są szkicem IETF. Jednym z najpopularniejszych algorytmów jest token bucket: wiadro uzupełnia się w stałym tempie, a każde żądanie zabiera token, co pozwala na krótkie skoki.</p>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Miejsce</th><th>Narzędzie</th><th>Kiedy</th></tr></thead>
+<tbody>
+<tr><td>Gateway</td><td>Spring Cloud Gateway, ingress</td><td>limity globalne i per klient</td></tr>
+<tr><td>Aplikacja</td><td>Bucket4j, Resilience4j RateLimiter</td><td>limity zależne od logiki biznesowej</td></tr>
+<tr><td>Metoda</td><td><code>@ConcurrencyLimit</code></td><td>limit współbieżnych wywołań, nie żądań na sekundę</td></tr>
+</tbody>
+</table></div>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Licznik w pamięci każdej instancji mnoży limit przez liczbę podów. Limit globalny wymaga współdzielonego magazynu, np. Redis, albo egzekwowania na bramie.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>429 + <code>Retry-After</code>.</li><li>Rate limit na bramie, limity biznesowe w aplikacji.</li><li>Klient reaguje backoffem, nie natychmiastowym ponowieniem.</li></ul></div>
+
+</section>
+<section class="part" id="part-viii" data-level="2"><span class="part-no">Część VIII</span><h2>Testy</h2><p>Co testować na którym poziomie i jak nie oszukać samego siebie.</p></section>
+<section class="chapter" id="testpyr" data-level="2" data-title="Slice, RestTestClient"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Piramida testów REST</h2><span class="tag">dużo szybkich, kilka prawdziwych</span></div></div>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Poziom</th><th>Narzędzie</th><th>Co sprawdza</th><th>Kiedy</th></tr></thead>
+<tbody>
+<tr><td>Jednostkowy</td><td>JUnit, Mockito</td><td>logika domeny</td><td>reguły biznesowe</td></tr>
+<tr><td>Slice web</td><td><code>@WebMvcTest</code>, <code>MockMvcTester</code></td><td>mapowanie, walidacja, JSON, błędy</td><td>każdy kontroler</td></tr>
+<tr><td>Slice JPA</td><td><code>@DataJpaTest</code></td><td>zapytania</td><td>nietrywialne repozytoria</td></tr>
+<tr><td>Integracyjny</td><td><code>@SpringBootTest</code>, <code>RestTestClient</code></td><td>pełny kontekst</td><td>główne przepływy</td></tr>
+<tr><td>Kontraktowy</td><td>Spring Cloud Contract, Pact</td><td>zgodność między usługami</td><td>granice zespołów</td></tr>
+</tbody>
+</table></div>
+<p class="reveal"><code>RestTestClient</code> to nowość Spring Framework 7: jedno płynne API działające i na MockMvc, i na prawdziwym serwerze. W Boot 4 dodajesz <code>@AutoConfigureRestTestClient</code> z modułu <code>spring-boot-resttestclient</code>.</p>
+<pre class="reveal">@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@AutoConfigureRestTestClient
+class OrderFlowTest {
+
+    @Autowired RestTestClient client;
+
+    @Test
+    void rejectsOrderWithoutLines() {
+        client.post().uri("/orders")
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(new NewOrder("c-1", List.of()))
+              .exchange()
+              .expectStatus().isBadRequest();
+    }
+}</pre>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p><code>@Transactional</code> na teście z <code>RANDOM_PORT</code> nie wycofa zmian serwera: klient i serwer działają w osobnych wątkach i transakcjach. Czyść dane jawnie.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Każdy kontroler: slice web z błędami i walidacją.</li><li>Kilka przepływów na prawdziwym porcie.</li><li>Test odrzuca też „inny użytkownik”.</li></ul></div>
+
+</section>
+<section class="chapter" id="testcontainers" data-level="2" data-title="Testcontainers"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Testcontainers</h2><span class="tag">prawdziwa baza zamiast H2</span></div></div>
+<p class="reveal">H2 nie ma tego samego SQL co PostgreSQL. <code>ON CONFLICT</code>, JSONB czy blokady przejdą inaczej lub wcale. Testcontainers uruchamia prawdziwą bazę w Dockerze, a <code>@ServiceConnection</code> z Boota podpina ją bez ręcznych właściwości.</p>
+<pre class="reveal">@SpringBootTest
+@Testcontainers
+class OrderRepositoryIT {
+
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17");
+}</pre>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Testuj na tym samym silniku co produkcja.</li><li><code>@ServiceConnection</code> dla wspieranych kontenerów zastępuje <code>@DynamicPropertySource</code>.</li><li>Kontener statyczny skraca czas testów.</li></ul></div>
+
+</section>
+<section class="chapter" id="contracttest" data-level="2" data-title="Testy kontraktowe"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Testy kontraktowe</h2><span class="tag">klient i serwer bez wspólnego środowiska</span></div></div>
+<p class="reveal">Mock po stronie klienta to założenie o serwerze. Test kontraktowy zamienia je w fakt sprawdzany po obu stronach.</p>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Narzędzie</th><th>Kto pisze kontrakt</th><th>Jak działa</th></tr></thead>
+<tbody>
+<tr><td>Spring Cloud Contract</td><td>zwykle producent, wspólnie z konsumentem</td><td>z kontraktu generuje testy producenta i stuby dla konsumenta</td></tr>
+<tr><td>Pact</td><td>konsument</td><td>test konsumenta tworzy pakt, a producent go weryfikuje</td></tr>
+<tr><td>OpenAPI + diff</td><td>właściciel API</td><td>wykrywa zmiany łamiące w dokumencie, nie zachowanie</td></tr>
+</tbody>
+</table></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Test kontraktowy pilnuje granicy, E2E pilnuje przepływu.</li><li>Sprawdzaj kontrakty w CI producenta.</li><li>Nie zastępują testów logiki.</li></ul></div>
+</section>
+<section class="part" id="part-ix" data-level="3"><span class="part-no">Część IX</span><h2>Spring od środka</h2><p>Punkty rozszerzeń, których używasz, gdy adnotacji już nie wystarcza.</p></section>
+<section class="chapter" id="internals" data-level="3" data-title="Strategie MVC"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Strategie DispatcherServlet</h2><span class="tag">wszystko jest wymienne</span></div></div>
+<p class="reveal">Wewnątrz <code>RequestMappingHandlerAdapter</code> działają dwie listy strategii. <code>HandlerMethodArgumentResolver</code> buduje każdy argument metody, a <code>HandlerMethodReturnValueHandler</code> obsługuje wynik. <code>@RequestBody</code> to jeden z resolverów, a <code>@ResponseBody</code> jeden z handlerów. Oba delegują do konwerterów.</p>
+<pre class="reveal">@Target(ElementType.PARAMETER)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface CurrentTenant { }
+
+class TenantResolver implements HandlerMethodArgumentResolver {
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+        return parameter.hasParameterAnnotation(CurrentTenant.class);
+    }
+    @Override
+    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+                                  NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+        return webRequest.getHeader("X-Tenant");
+    }
+}
+
+@Configuration
+class WebConfig implements WebMvcConfigurer {
+    @Override
+    public void addArgumentResolvers(List&lt;HandlerMethodArgumentResolver&gt; resolvers) {
+        resolvers.add(new TenantResolver());
+    }
+}</pre>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Punkt rozszerzenia</th><th>Co robi</th><th>Użyj, gdy</th></tr></thead>
+<tbody>
+<tr><td><code>HandlerMethodArgumentResolver</code></td><td>tworzy argument</td><td>własny typ parametru, np. tenant</td></tr>
+<tr><td><code>HandlerMethodReturnValueHandler</code></td><td>obsługuje wynik</td><td>własny typ odpowiedzi</td></tr>
+<tr><td><code>HttpMessageConverter</code></td><td>czyta i pisze treść</td><td>nowy media type</td></tr>
+<tr><td><code>RequestBodyAdvice</code> / <code>ResponseBodyAdvice</code></td><td>opakowuje odczyt i zapis treści</td><td>modyfikacja przed konwersją</td></tr>
+<tr><td><code>WebMvcConfigurer</code></td><td>konfiguracja bez utraty auto-konfiguracji Boota</td><td>zawsze zamiast <code>@EnableWebMvc</code></td></tr>
+</tbody>
+</table></div>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p><code>@EnableWebMvc</code> w aplikacji Boot wyłącza auto-konfigurację MVC. Aby dodać konfigurację, zadeklaruj <code>WebMvcConfigurer</code> bez tej adnotacji.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Argument: resolver. Wynik: handler. Treść: konwerter.</li><li>Własne resolvery rejestruj przez <code>WebMvcConfigurer</code>.</li><li>Nie dodawaj <code>@EnableWebMvc</code>.</li></ul></div>
+
+</section>
+<section class="chapter" id="layers" data-level="3" data-title="Filtr, interceptor, advice"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Filtr, interceptor, advice</h2><span class="tag">która warstwa do czego</span></div></div>
+<p class="reveal">Trzy warstwy opakowują wywołanie jak cebula, ale każda widzi co innego. Filtr działa na poziomie Servlet, przed Springiem MVC. Interceptor zna handler. Advice zna treść i wyjątki.</p>
+<figure class="fig wide" id="fig-layers"><div class="ftitle">▶ Kolejność wywołań <span>zobacz, gdzie co działa</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Skrócony obraz. postHandle pokazano celowo: dla @ResponseBody treść jest już zapisana, zanim wywoła się postHandle.</figcaption></figure>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Warstwa</th><th>Widzi</th><th>Użyj do</th></tr></thead>
+<tbody>
+<tr><td><code>Filter</code></td><td>surowe żądanie i odpowiedź</td><td>bezpieczeństwo, CORS, korelacja, kompresja</td></tr>
+<tr><td><code>HandlerInterceptor</code></td><td>wybrany handler</td><td>audyt, metadane handlera</td></tr>
+<tr><td><code>@ControllerAdvice</code></td><td>wyjątki, <code>ResponseBodyAdvice</code></td><td>format błędów, opakowania treści</td></tr>
+<tr><td>AOP</td><td>wywołanie beana</td><td>transakcje, retry, metody poza web</td></tr>
+</tbody>
+</table></div>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Dla metod <code>@ResponseBody</code> i <code>ResponseEntity</code> odpowiedź jest zapisywana i zatwierdzana w <code>HandlerAdapter</code>, zanim wywoła się <code>postHandle</code>. Dodanie nagłówka w <code>postHandle</code> nie zadziała. Użyj <code>ResponseBodyAdvice</code>.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Filtr: przekrojowe sprawy HTTP.</li><li>Interceptor: gdy potrzebujesz handlera.</li><li>Wyjątek z filtra omija <code>@ExceptionHandler</code>.</li></ul></div>
+
+</section>
+<section class="chapter" id="threads" data-level="3" data-title="Wątki, async, WebFlux"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Wątki, async, wirtualne wątki, WebFlux</h2><span class="tag">gdzie czeka twoje żądanie</span></div></div>
+<p class="reveal">Tomcat w modelu blokującym: jedno żądanie, jeden wątek. Domyślnie <code>server.tomcat.threads.max=200</code>, <code>max-connections=8192</code>, <code>accept-count=100</code>. Gdy wszystkie wątki czekają na wolną zależność, nowe żądania stoją w kolejce, nawet jeśli CPU jest puste.</p>
+<figure class="fig wide" id="fig-threads"><div class="ftitle">▶ Nasycenie puli <span>zależność zwalnia</span></div><div class="ctrl"></div><div class="stage"></div><div class="status"></div><figcaption>Dziesięć kafelków to skrót 200 wątków. Czasy ilustracyjne.</figcaption></figure>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Mechanizm</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+<tbody>
+<tr><td><code>spring.threads.virtual.enabled=true</code></td><td>obsługa żądań na wątkach wirtualnych, <code>server.tomcat.threads.max</code> przestaje działać</td><td>sensowny wybór dla blokującego I/O na Javie 21+ (domyślnie <code>false</code>)</td></tr>
+<tr><td><code>Callable</code>, <code>DeferredResult</code></td><td>zwalnia wątek kontenera, wynik przez dispatch ASYNC</td><td>wynik z innego wątku lub zdarzenia</td></tr>
+<tr><td>WebFlux</td><td>nieblokujący stos, Reactive Streams</td><td>strumienie, wiele połączeń, backpressure</td></tr>
+</tbody>
+</table></div>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Wątki wirtualne nie są nieskończoną przepustowością. Znika limit 200, który przypadkiem chronił bazę i zależności. Ogranicz współbieżność do zasobów skończonych, np. przez pulę połączeń lub <code>@ConcurrencyLimit</code>.</p></div>
+<div class="box geek reveal"><span class="lbl">🤓 Głębiej</span><p>Jeśli na classpath są jednocześnie MVC i WebFlux, Boot konfiguruje MVC, a <code>WebClient</code> można używać i tak. Blokowanie w event loopie WebFlux to błąd: niewielka liczba wątków obsługuje wszystkie połączenia, więc jedno blokujące wywołanie zatrzymuje wielu klientów.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Blokujące czekanie zużywa wątek, nie CPU.</li><li>Wątki wirtualne wymagają innych limitów.</li><li>WebFlux wybierz dla strumieni, nie dla mody.</li></ul></div>
+
+</section>
+<section class="chapter" id="streaming" data-level="3" data-title="Streaming, SSE"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Streaming, SSE, duże pliki</h2><span class="tag">odpowiedź, która nie mieści się w pamięci</span></div></div>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Typ zwracany</th><th>Co robi</th><th>Kiedy</th></tr></thead>
+<tbody>
+<tr><td><code>StreamingResponseBody</code></td><td>pisze prosto do strumienia wyjściowego</td><td>duże eksporty CSV</td></tr>
+<tr><td><code>SseEmitter</code></td><td>Server-Sent Events, <code>text/event-stream</code></td><td>postęp zadania, powiadomienia</td></tr>
+<tr><td><code>ResponseBodyEmitter</code></td><td>wiele obiektów przez konwertery</td><td>JSON strumieniowy</td></tr>
+</tbody>
+</table></div>
+<pre class="reveal">@GetMapping(path = "/jobs/{id}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+SseEmitter events(@PathVariable long id) {
+    SseEmitter emitter = new SseEmitter();
+    registry.register(id, emitter);
+    return emitter;
+}</pre>
+<p class="reveal">Upload: <code>spring.servlet.multipart.max-file-size</code> ma domyślnie 1 MB. Dla bardzo dużych plików częstszą praktyką jest podpisany URL do magazynu obiektowego, dzięki czemu bajty nie przechodzą przez API.</p>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Streaming zamiast ładowania do pamięci.</li><li>SSE to jednokierunkowy strumień po HTTP.</li><li>Sprawdź <code>spring.mvc.async.request-timeout</code> i timeouty proxy.</li></ul></div>
+
+</section>
+<section class="part" id="part-x" data-level="3"><span class="part-no">Część X</span><h2>Produkcja</h2><p>Co dzieje się po wdrożeniu: obserwowalność, cykl życia, ewolucja.</p></section>
+<section class="chapter" id="observability" data-level="3" data-title="Observability"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Observability: Micrometer, Actuator, tracing</h2><span class="tag">„działa u mnie” nie jest metryką</span></div></div>
+<p class="reveal">Spring ma jedną abstrakcję: Micrometer Observation. Jedno miejsce instrumentacji daje metrykę i span. Dla serwera metryka to <code>http.server.requests</code>. Boot 4 dodał starter <code>spring-boot-starter-opentelemetry</code>.</p>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Właściwość</th><th>Domyślnie</th><th>Co zmienić</th></tr></thead>
+<tbody>
+<tr><td><code>management.endpoints.web.exposure.include</code></td><td><code>[health]</code></td><td>dodaj tylko to, co potrzebne, np. <code>prometheus</code></td></tr>
+<tr><td><code>management.tracing.sampling.probability</code></td><td><code>0.1</code></td><td>dobierz do wolumenu ruchu</td></tr>
+<tr><td><code>logging.structured.format.console</code></td><td>brak</td><td>format JSON, np. <code>ecs</code>, do agregatorów logów</td></tr>
+</tbody>
+</table></div>
+<p class="reveal">Ślad łączy wywołania między usługami przez nagłówek W3C <code>traceparent</code>. Boot domyślnie dopisuje <code>traceId</code> i <code>spanId</code> do logów. Warunek instrumentacji klienta: buduj go z auto-konfigurowanego <code>RestClient.Builder</code>.</p>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Metryka musi używać szablonu URI, np. <code>/orders/{id}</code>, a nie wartości. Każda unikalna kombinacja etykiet to nowa seria czasowa, więc ręczne tagi z ID użytkownika czy pełnym URL mnożą serie i obciążają Prometheusa.</p></div>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Złote sygnały: ruch, błędy, opóźnienie, nasycenie.</li><li><code>http.server.requests</code> daje trzy pierwsze.</li><li>Identyfikator śladu w logu i w ProblemDetail.</li></ul></div>
+
+</section>
+<section class="chapter" id="probes" data-level="3" data-title="Probes, shutdown"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Health probes i graceful shutdown</h2><span class="tag">wdrożenie bez utraconych żądań</span></div></div>
+<p class="reveal">Boot udostępnia <code>/actuator/health/liveness</code> i <code>/actuator/health/readiness</code>. Liveness odpowiada na pytanie: czy trzeba zrestartować proces? Readiness: czy wolno kierować ruch?</p>
+<div class="box watch reveal"><span class="lbl">⚠️ Uwaga!</span><p>Nie dodawaj bazy do liveness. Awaria bazy zrestartuje wszystkie pody jednocześnie, a to niczego nie naprawi. Zależności zewnętrzne mogą co najwyżej wpływać na readiness.</p></div>
+<p class="reveal">Graceful shutdown jest domyślny: <code>server.shutdown=graceful</code> i <code>spring.lifecycle.timeout-per-shutdown-phase=30s</code>. Po SIGTERM serwer kończy trwające żądania i nie przyjmuje nowych. W Kubernetesie dodaj krótki <code>preStop</code>, bo usunięcie poda z endpointów dzieje się równolegle i przez chwilę ruch nadal może przychodzić.</p>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Liveness: tylko stan procesu.</li><li>Readiness: gotowość na ruch.</li><li><code>terminationGracePeriodSeconds</code> dłuższy niż timeout zamykania.</li></ul></div>
+
+</section>
+<section class="chapter" id="evolution" data-level="3" data-title="Ewolucja API"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Ewolucja i wycofywanie API</h2><span class="tag">zmiana bez zrywania umowy</span></div></div>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Zmiana</th><th>Łamiąca?</th></tr></thead>
+<tbody>
+<tr><td>nowe pole w odpowiedzi</td><td>nie, jeśli klient toleruje nieznane pola</td></tr>
+<tr><td>nowy opcjonalny parametr</td><td>nie</td></tr>
+<tr><td>nowa wartość w enumie odpowiedzi</td><td>często tak</td></tr>
+<tr><td>usunięcie lub zmiana nazwy pola</td><td>tak</td></tr>
+<tr><td>zmiana typu pola</td><td>tak</td></tr>
+<tr><td>nowe pole wymagane w żądaniu</td><td>tak</td></tr>
+<tr><td>zmiana znaczenia statusu</td><td>tak</td></tr>
+</tbody>
+</table></div>
+<p class="reveal"><b>Tolerant Reader</b>: klient czyta tylko to, czego potrzebuje, i ignoruje resztę. Wycofanie ogłaszają dwa nagłówki: <code>Deprecation</code> (RFC 9745, data ustrukturyzowana, np. <code>@1688169599</code>) i <code>Sunset</code> (RFC 8594, data HTTP, kiedy zasób przestanie działać). Link z <code>rel="deprecation"</code> wskazuje przewodnik migracji.</p>
+<pre class="reveal">@Override
+public void configureApiVersioning(ApiVersionConfigurer configurer) {
+    StandardApiVersionDeprecationHandler handler = new StandardApiVersionDeprecationHandler();
+    handler.configureVersion("1.0")
+           .setDeprecationDate(ZonedDateTime.parse("2026-06-01T00:00:00Z"))
+           .setSunsetDate(ZonedDateTime.parse("2027-06-01T00:00:00Z"));
+    configurer.useRequestHeader("API-Version").setDeprecationHandler(handler);
+}</pre>
+<div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul><li>Dodawanie jest bezpieczne, usuwanie nie.</li><li>Mierz użycie starej wersji przed jej wyłączeniem.</li><li><code>Deprecation</code> ostrzega, <code>Sunset</code> podaje datę końca.</li></ul></div>
+
+</section>
+<section class="part" id="part-xi" data-level="1"><span class="part-no">Część XI</span><h2>Warsztat</h2><p>Narzędzia do codziennej pracy.</p></section>
+<section class="chapter" id="clinic" data-level="1" data-title="Klinika błędów"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Klinika błędów</h2><span class="tag">objaw, przyczyna, naprawa</span></div></div>
+<div class="scroll-x reveal"><table class="mini">
+<thead><tr><th>Objaw</th><th>Przyczyna</th><th>Naprawa</th></tr></thead>
+<tbody>
+<tr><td>415 przy POST z JSON</td><td>brak lub zły <code>Content-Type</code></td><td>ustaw <code>application/json</code>, sprawdź <code>consumes</code></td></tr>
+<tr><td>406 z kontrolera</td><td>brak zgodnego konwertera dla <code>Accept</code></td><td>popraw <code>Accept</code> lub <code>produces</code></td></tr>
+<tr><td>404 po migracji do Spring 6 lub 7</td><td>końcowy ukośnik: dopasowanie przestarzałe w 6.0, usunięte w 7.0</td><td><code>UrlHandlerFilter</code> lub normalizacja</td></tr>
+<tr><td>500 z <code>ConstraintViolationException</code></td><td><code>@Validated</code> na klasie kontrolera</td><td>usuń ją, obsłuż <code>HandlerMethodValidationException</code></td></tr>
+<tr><td><code>LazyInitializationException</code></td><td>serializacja encji po transakcji</td><td>mapuj na DTO w serwisie</td></tr>
+<tr><td>N+1 przy GET listy</td><td>leniwe relacje i open-in-view</td><td>fetch join, projekcja, <code>open-in-view=false</code></td></tr>
+<tr><td>401 na preflight</td><td>CORS za Spring Security</td><td>konfiguracja CORS przed uwierzytelnianiem</td></tr>
+<tr><td>Nagłówek z <code>postHandle</code> nie dociera</td><td>odpowiedź już zatwierdzona</td><td><code>ResponseBodyAdvice</code> lub filtr</td></tr>
+<tr><td>Błąd z filtra ma inny format</td><td>filtr omija <code>@ExceptionHandler</code></td><td>obsłuż w filtrze lub przez <code>HandlerExceptionResolver</code></td></tr>
+<tr><td><code>Location</code> z wewnętrznym hostem</td><td>aplikacja za proxy</td><td><code>server.forward-headers-strategy</code></td></tr>
+<tr><td>Wszystkie żądania wolne, CPU niskie</td><td>wątki czekają na zależność</td><td>timeouty, breaker, thread dump</td></tr>
+<tr><td>Podwójne płatności po timeoutach</td><td>ponawiany POST bez klucza</td><td><code>Idempotency-Key</code></td></tr>
+<tr><td>Duplikaty na liście podczas przewijania</td><td>paginacja offset i nowe rekordy</td><td>keyset</td></tr>
+<tr><td>Test zielony, produkcja 500 na /error</td><td>MockMvc bez kontenera</td><td>test z <code>RANDOM_PORT</code></td></tr>
+<tr><td>Liczba serii w Prometheusie rośnie bez końca</td><td>wysoka kardynalność tagów</td><td>szablon URI, usuń tagi z ID</td></tr>
+</tbody>
+</table></div>
+
+</section>
+<section class="chapter" id="checklist" data-level="1" data-title="Checklista review"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Checklista przeglądu API</h2><span class="tag">wydrukuj i używaj</span></div></div>
+<h3 class="reveal">Kontrakt</h3>
+<ul class="chk"><li>URI to rzeczowniki, spójne nazewnictwo w całej firmie.</li><li>Metody zgodne z semantyką: GET nic nie zmienia.</li><li>OpenAPI w repozytorium, a diff w CI.</li><li>Błędy w <code>application/problem+json</code>.</li><li>Statusy: 201 z <code>Location</code>, 204 bez treści, 4xx kontra 5xx.</li></ul>
+<h3 class="reveal">Kolekcje i zmiany</h3>
+<ul class="chk"><li>Limit rozmiaru strony i białe listy sortowania.</li><li>Stabilny JSON strony (<code>PagedModel</code>, <code>VIA_DTO</code>).</li><li>Współbieżne zapisy chronione: <code>If-Match</code>, <code>@Version</code>.</li><li>POST z efektem finansowym ma <code>Idempotency-Key</code>.</li><li>Długie operacje przez 202.</li></ul>
+<h3 class="reveal">Spring</h3>
+<ul class="chk"><li>DTO zamiast encji, <code>open-in-view=false</code>.</li><li><code>@RestControllerAdvice</code> obsługuje wyjątki MVC i <code>Exception</code>.</li><li>Oba wyjątki walidacji obsłużone.</li><li>Logika w serwisach, transakcje poza kontrolerem.</li></ul>
+<h3 class="reveal">Bezpieczeństwo</h3>
+<ul class="chk"><li>Autoryzacja obiektowa na każdym ID.</li><li><code>aud</code>, <code>iss</code>, krótkie <code>exp</code>.</li><li>Rate limit, limity uploadu i strony.</li><li>Brak danych wrażliwych w URL i logach, <code>no-store</code> dla nich w odpowiedzi.</li><li>CORS z jawną listą origin.</li></ul>
+<h3 class="reveal">Odporność i produkcja</h3>
+<ul class="chk"><li>Każdy klient ma connect i read timeout.</li><li>Retry tylko dla operacji idempotentnych, w jednej warstwie.</li><li>Liveness bez zależności zewnętrznych.</li><li>Metryki, ślady, logi z <code>traceId</code>.</li><li>Polityka wersji i wycofywania z <code>Deprecation</code> i <code>Sunset</code>.</li></ul>
+<h3 class="reveal">Testy</h3>
+<ul class="chk"><li>Slice web dla ścieżek błędów i walidacji.</li><li>Test „inny użytkownik” dla każdego zasobu.</li><li>Testcontainers zamiast H2.</li><li>Kontrakty na granicach zespołów.</li></ul>
+
+</section>
+<section class="chapter" id="final" data-level="1" data-title="Egzamin + ściąga"><div class="chap-head reveal"><div class="chap-num"></div><div><h2>Egzamin i ściąga</h2><span class="tag">sprawdź, co zostało</span></div></div>
+<div id="quiz"></div>
+<div class="score" id="score">Wynik: 0 / 0</div>
+<h3 class="reveal">Ściąga</h3>
+<div class="scroll-x reveal"><table class="mini cheat">
+<thead><tr><th>Parametr / element</th><th>Domyślnie / co robi</th><th>Kiedy</th></tr></thead>
+<tbody>
+<tr><td><code>spring.mvc.problemdetails.enabled</code></td><td><code>false</code>; ProblemDetail dla wyjątków MVC</td><td>start bez własnego advice</td></tr>
+<tr><td><code>spring.jpa.open-in-view</code></td><td><code>true</code></td><td>w API ustaw <code>false</code></td></tr>
+<tr><td><code>spring.data.web.pageable.default-page-size</code></td><td><code>20</code></td><td>domyślny rozmiar strony</td></tr>
+<tr><td><code>spring.data.web.pageable.max-page-size</code></td><td><code>2000</code></td><td>obniż zawsze</td></tr>
+<tr><td><code>spring.data.web.pageable.serialization-mode</code></td><td><code>direct</code></td><td>ustaw <code>via-dto</code></td></tr>
+<tr><td><code>spring.mvc.apiversion.use.header</code></td><td>nazwa nagłówka wersji</td><td>wersja w nagłówku</td></tr>
+<tr><td><code>spring.http.clients.read-timeout</code></td><td>domyślny read timeout klienta</td><td>ustaw zawsze</td></tr>
+<tr><td><code>spring.http.serviceclient.&lt;grupa&gt;.base-url</code></td><td>URL grupy HTTP Service</td><td><code>@ImportHttpServices</code></td></tr>
+<tr><td><code>server.tomcat.threads.max</code></td><td><code>200</code>; bez znaczenia przy wątkach wirtualnych</td><td>model blokujący</td></tr>
+<tr><td><code>spring.threads.virtual.enabled</code></td><td><code>false</code></td><td>Java 21+, I/O</td></tr>
+<tr><td><code>server.shutdown</code></td><td><code>graceful</code></td><td>zwykle bez zmian</td></tr>
+<tr><td><code>spring.lifecycle.timeout-per-shutdown-phase</code></td><td><code>30s</code></td><td>długie żądania</td></tr>
+<tr><td><code>management.endpoints.web.exposure.include</code></td><td><code>[health]</code></td><td>dodaj tylko potrzebne</td></tr>
+<tr><td><code>management.tracing.sampling.probability</code></td><td><code>0.1</code></td><td>dobierz do ruchu</td></tr>
+<tr><td><code>server.http2.enabled</code></td><td><code>false</code></td><td>TLS na aplikacji</td></tr>
+<tr><td><code>spring.servlet.multipart.max-file-size</code></td><td><code>1MB</code></td><td>upload</td></tr>
+<tr><td><code>Idempotency-Key</code></td><td>szkic IETF: 400, 409, 422</td><td>POST z efektem ubocznym</td></tr>
+<tr><td><code>If-Match</code> / <code>If-None-Match</code></td><td>412 / 304</td><td>zapis / cache</td></tr>
+<tr><td><code>Deprecation</code> / <code>Sunset</code></td><td>RFC 9745 / RFC 8594</td><td>wycofanie API</td></tr>
+</tbody>
+</table></div></div>
+<div class="box relax reveal"><span class="lbl">🎓 Gratulacje</span><p>Wracamy do pytania z początku. Po utracie odpowiedzi klient ponawia <code>POST /payments</code> z <b>tym samym</b> <code>Idempotency-Key</code>. Serwer rozstrzyga wyścig unikalnym indeksem, odtwarza zapisaną odpowiedź i przekazuje klucz dalej do dostawcy płatności. Timeout, retry, idempotencja, status i obserwowalność grają razem, a Spring dostarcza do tego klocki. Weź checklistę i przejrzyj swoje API.</p></div>
+
+</section>
+</main>
+
+<footer>
+  Materiał edukacyjny w jednym pliku HTML: bez frameworków, bez kroku budowania, bez zależności sieciowych.
+  Źródła: RFC 9110–9114, 9457, 5789, 7396, 6902, 6585, 8288, 8594, 9745, 6750, 8725, rozprawa R. Fieldinga, dokumentacja Spring Framework, Spring Boot, Spring Data, Spring Security, Resilience4j, OWASP API Security Top 10 2023. Stan: listopad 2026, Spring Framework 7.0.x i Spring Boot 4.x. Spring jest znakiem towarowym Broadcom Inc.; strona nie jest z nim powiązana.
+</footer>
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sleep = ms => new Promise(r => setTimeout(r, REDUCE ? 0 : ms));
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, text, attrs = {}) {
+  const t = S('text', Object.assign({ x, y, 'text-anchor': 'middle' }, attrs), parent);
+  t.textContent = text;
+  return t;
+}
+function H(tag, cls, html, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const ease = k => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+function tween(ms, fn) {
+  return new Promise(res => {
+    if (REDUCE || ms <= 0) { fn(1); return res(); }
+    const t0 = performance.now();
+    const step = t => {
+      const k = Math.min(1, (t - t0) / ms);
+      fn(ease(k));
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+function flyDot(parent, x0, y0, x1, y1, { ms = 600, color, r = 5 } = {}) {
+  const c = S('circle', { cx: x0, cy: y0, r, class: 'fly' }, parent);
+  c.style.fill = color || C.accent;
+  return tween(ms, k => { c.setAttribute('cx', x0 + (x1 - x0) * k); c.setAttribute('cy', y0 + (y1 - y0) * k); }).then(() => c.remove());
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function readColors() { for (const k of ['ink', 'paper', 'paper2', 'mut', 'line', 'accent', 'accent2', 'ok', 'bad', 'warn', 'dim', 'card']) C[k] = cssVar('--' + k); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function ringXY(cx, cy, r, f) { const a = f * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+
+/* ---------- structure: auto numbering, TOC, course map, level chips, depth switch ---------- */
+const LEVELS = ['Podstawy', 'Praktyk', 'Ekspert'];
+const lvlOf = el => +(el.dataset.level || 1);
+const levelled = (root = document) => $$('main [data-level]', root).filter(e => !e.closest('#map'));   // content, not the map's own links
+const DEPTH_KEY = 'akp-depth:' + location.pathname;
+const blocks = $$('main > section.part, main > section.chapter');
+const chapters = blocks.filter(b => b.classList.contains('chapter'));
+chapters.forEach((s, i) => { const n = $('.chap-num', s); if (n && !n.textContent.trim()) n.textContent = i; });
+const titleOf = s => s.dataset.title || $('h2', s).textContent.trim();
+(() => {
+  const toc = $('#toc'), map = $('#map');
+  if (toc) toc.innerHTML = '<b>Spis treści</b>';
+  let grp = null;
+  for (const b of blocks) {
+    const lv = lvlOf(b);
+    if (b.classList.contains('part')) {
+      const name = `${$('.part-no', b)?.textContent || ''} · ${$('h2', b).textContent}`;
+      if (toc) H('div', 'toc-part', null, toc).textContent = name;
+      if (map) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = name; grp.dataset.level = lv; }
+      continue;
+    }
+    const num = $('.chap-num', b)?.textContent || '';
+    if (toc) { const a = H('a', '', null, toc); a.href = '#' + b.id; a.textContent = `${num} · ${titleOf(b)}`; a.dataset.level = lv; }
+    if (map) {
+      if (!grp) { grp = H('div', 'map-part', null, map); H('b', '', null, grp).textContent = 'Start'; }
+      const a = H('a', 'map-ch l' + lv, `<i>${num}</i><span></span>`, grp); a.href = '#' + b.id; a.dataset.level = lv;
+      $('span', a).textContent = titleOf(b);
+    }
+  }
+  const multi = levelled().some(e => lvlOf(e) > 1);
+  // level chips on chapter headings and "go deeper" summaries
+  chapters.forEach(s => { if (multi && s.dataset.level) { const h = $('.chap-head h2', s); if (h) H('span', 'lvl-chip l' + lvlOf(s), `L${lvlOf(s)} · ${LEVELS[lvlOf(s) - 1] || ''}`, h); } });
+  $$('details.deeper').forEach(d => { const sm = $('summary', d); if (sm) sm.insertAdjacentHTML('afterbegin', `<span class="lvl-chip l${lvlOf(d)}">L${lvlOf(d)}</span>`); });
+  // jumping to a chapter deeper than the current depth raises the depth first
+  $$('#toc a, #map a').forEach(a => a.addEventListener('click', () => { if (+a.dataset.level > depth) setDepth(+a.dataset.level); }));
+  const dEl = $('#depth');
+  if (!multi || !dEl) { if (dEl) dEl.remove(); return; }
+  dEl.innerHTML = '<span>Depth</span>';
+  LEVELS.forEach((n, i) => { const b = H('button', '', `${i + 1}<span class="nm"> ${n}</span>`, dEl); b.title = n; b.onclick = () => setDepth(i + 1); });
+})();
+let depth = LEVELS.length;
+try { const d = +localStorage.getItem(DEPTH_KEY); if (d >= 1 && d <= LEVELS.length) depth = d; } catch (e) { }
+function setDepth(d) {
+  depth = d;
+  try { localStorage.setItem(DEPTH_KEY, d); } catch (e) { }
+  levelled().forEach(el => el.classList.toggle('lvl-off', lvlOf(el) > depth));
+  $$('#toc a, #map a, .map-part').forEach(a => a.classList.toggle('dim', lvlOf(a) > depth));
+  $$('#depth button').forEach((b, i) => b.classList.toggle('on', i + 1 === depth));
+  $$('.lvl-hint').forEach(h => h.remove());
+  chapters.forEach(s => {
+    if (s.classList.contains('lvl-off')) return;
+    const hid = levelled(s).filter(e => e.classList.contains('lvl-off'));
+    if (!hid.length) return;
+    const need = Math.min(...hid.map(lvlOf));
+    const b = H('button', 'lvl-hint', `＋ Ukryte bloki: ${hid.length}. Pokaż poziom ${need} (${LEVELS[need - 1] || ''})`, s);
+    b.onclick = () => setDepth(need);
+  });
+}
+setDepth(depth);
+
+/* ---------- scroll machinery ---------- */
+const bar = $('#progress');
+let ticking = false;
+addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+    document.body.classList.toggle('past-cover', scrollY > innerHeight * .8);
+    ticking = false;
+  });
+}, { passive: true });
+
+const revealIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('shown'); revealIO.unobserve(e.target); }
+}), { threshold: 0.12 });
+$$('.reveal').forEach(el => revealIO.observe(el));
+
+const tocLinks = new Map($$('#toc a').map(a => [a.getAttribute('href').slice(1), a]));
+const tocIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove('active'));
+  const a = tocLinks.get(e.target.id); if (a) a.classList.add('active');
+  $$('#map a').forEach(m => { const on = m.getAttribute('href') === '#' + e.target.id; m.classList.toggle('here', on); if (on) m.classList.add('seen'); });
+}), { rootMargin: '-35% 0px -60% 0px' });
+$$('section.chapter').forEach(s => tocIO.observe(s));
+
+const figIO = new IntersectionObserver(es => es.forEach(e => {
+  const f = e.target._fig; if (!f) return;
+  if (e.isIntersecting) {
+    if (f.visible) return;
+    f.visible = true;
+    if (!f.seen) { f.seen = true; f.first && f.first(); }
+    f.enter && f.enter();
+  } else if (f.visible) {
+    f.visible = false; f.leave && f.leave();
+  }
+}), { threshold: 0.25 });
+function registerFig(el, api) { el._fig = api; figIO.observe(el); return api; }
+
+/* enqueue helper: serialize animation runs, drop excess clicks */
+function makeQueue() {
+  let queue = Promise.resolve(), pending = 0;
+  return fn => { if (pending >= 3) return; pending++; queue = queue.then(fn).catch(e => console.error(e)).finally(() => pending--); };
+}
+
+
+/* ---------- generic helpers ---------- */
+function paintBar(el, segs, cap) {           // stacked bar: segs = [{k, v, c, t}], widths as % of cap
+  for (const s of segs) {
+    let d = el.querySelector(`[data-k="${s.k}"]`);
+    if (!d) { d = H('div', 'seg', null, el); d.dataset.k = s.k; }
+    d.style.width = Math.min(100, 100 * s.v / cap) + '%';
+    d.style.background = s.c;
+    d.textContent = s.v >= cap * 0.07 ? s.t : '';
+  }
+}
+function logLine(box, text, cls = '') {      // append a fading-in line to a .log box (textContent: safe)
+  const d = H('div', cls, null, box); d.textContent = text;
+  requestAnimationFrame(() => d.classList.add('shown'));
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+function say(el, html, cls = '') { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = html; }
+const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase labels wrap between words, not mid-word
+
+/* ---------- cover ---------- */
+(() => {
+  const g = $('#cover-nodes');
+  const icons = ['📨', '🌐', '🍃', '🧾', '🔐', '🧪', '📈', '🛠️'];
+  for (let i = 0; i < 8; i++) {
+    const [x, y] = ringXY(200, 200, 150, i / 8);
+    const c = S('circle', { cx: x, cy: y, r: 17 }, g);
+    c.style.fill = C.paper2; c.style.stroke = C.ink; c.style.strokeWidth = 3;
+    T(g, x, y + 6, icons[i], { 'font-size': 16 });
+  }
+})();
+
+/* ---------- engines: sequence diagram + pipeline ---------- */
+function ctrlBtn(root, label, cls, fn) {
+  const b = H('button', 'btn' + (cls ? ' ' + cls : ''), label, $('.ctrl', root));
+  b.dataset.act = label; b.onclick = fn; return b;
+}
+function seqFig(id, lanes, scens, intro) {
+  const root = $('#' + id), stage = $('.stage', root), st = $('.status', root), N = lanes.length;
+  const px = i => N === 1 ? 50 : 8 + (84 * i) / (N - 1);
+  let run = 0; const q = makeQueue();
+  const box = H('div', 'sq', `<div class="sq-head">${lanes.map(l => `<span>${l}</span>`).join('')}</div>`, stage);
+  const body = H('div', 'sq-body', null, box);
+  function clear() {
+    body.innerHTML = ''; lanes.forEach((_, i) => { H('div', 'sq-life', null, body).style.left = px(i) + '%'; });
+  }
+  function reset() { run++; clear(); say(st, intro); }
+  function row(s) {
+    const [a, b, lab, , cls] = s, r = H('div', 'sq-row' + (cls ? ' ' + cls : ''), null, body);
+    if (a === b) {
+      r.classList.add('sq-note'); r.style.justifyContent = a === 0 ? 'flex-start' : a === N - 1 ? 'flex-end' : 'center';
+      H('i', '', lab, r); return;
+    }
+    const l = Math.min(px(a), px(b)), w = Math.abs(px(a) - px(b));
+    const c = H('div', '', null, r);
+    if (l + w / 2 > 60) c.style.textAlign = 'right'; else c.style.marginLeft = l + '%';
+    H('span', 'sq-lab', lab, c);
+    const ln = H('div', 'sq-line' + (a > b ? ' back' : ''), null, r);
+    ln.style.marginLeft = l + '%'; ln.style.width = w + '%';
+  }
+  async function play(sc) {
+    run++; const my = run; clear();
+    for (const s of sc.steps) {
+      row(s); say(st, s[3], s[4] || '');
+      await sleep(sc.fast ? 500 : 1000);
+      if (my !== run) return;
+    }
+  }
+  scens.forEach(sc => ctrlBtn(root, sc.b, sc.cls, () => q(() => play(sc))));
+  ctrlBtn(root, '↺ Reset', '', reset);
+  reset();
+  registerFig(root, { first() { q(() => play(scens[0])); } });
+}
+function pipeFig(id, stages, scens, intro) {
+  const root = $('#' + id), stage = $('.stage', root), st = $('.status', root);
+  let run = 0; const q = makeQueue();
+  const w = H('div', 'pp', null, stage);
+  const el = stages.map(([n, d]) => H('div', 'pp-s', `<b>${wbr(n)}</b><small>${d || ''}</small>`, w));
+  const clear = () => el.forEach(e => e.className = 'pp-s');
+  function reset() { run++; clear(); say(st, intro); }
+  async function play(sc) {
+    run++; const my = run; clear();
+    let prev = null;
+    for (const [i, txt, cls] of sc.steps) {
+      if (prev != null) { el[prev].classList.remove('on'); el[prev].classList.add('done'); }
+      if (i != null) { el[i].classList.add(cls === 'bad' ? 'fail' : 'on'); prev = cls === 'bad' ? null : i; }
+      say(st, txt, cls || '');
+      await sleep(1000);
+      if (my !== run) return;
+    }
+    if (prev != null) { el[prev].classList.remove('on'); el[prev].classList.add('done'); }
+    (sc.skip || []).forEach(i => el[i].classList.add('skip'));
+  }
+  scens.forEach(sc => ctrlBtn(root, sc.b, sc.cls, () => q(() => play(sc))));
+  ctrlBtn(root, '↺ Reset', '', reset);
+  reset();
+  registerFig(root, { first() { q(() => play(scens[0])); } });
+}
+/* ---------- 1. anatomy of a message ---------- */
+(() => {
+  const root = $('#fig-anat'), stage = $('.stage', root), st = $('.status', root);
+  const L = [
+    ['POST /orders HTTP/1.1', 'Linia żądania: metoda, cel żądania, wersja protokołu.'],
+    ['Host: api.example.com', 'Host: wskazuje serwis. W HTTP/1.1 pole jest obowiązkowe.'],
+    ['Content-Type: application/json', 'Content-Type: format treści, którą właśnie wysyłasz.'],
+    ['Accept: application/json', 'Accept: format, którego oczekujesz w odpowiedzi.'],
+    ['Authorization: Bearer eyJhbGci…', 'Authorization: dane uwierzytelniające, tutaj token.'],
+    ['', 'Pusta linia: koniec nagłówków, dalej idzie treść.'],
+    ['{"customerId":"c-1"}', 'Treść: reprezentacja w formacie z Content-Type.'],
+    ['— odpowiedź —', 'Serwer odsyła wiadomość o tym samym kształcie.'],
+    ['HTTP/1.1 201 Created', 'Linia statusu: wersja, kod, opis. Kod to wynik semantyczny.'],
+    ['Location: /orders/7', 'Location: adres nowo utworzonego zasobu.'],
+    ['Content-Type: application/json', 'Content-Type odpowiedzi: format zwracanej treści.'],
+  ];
+  let bs = [];
+  const pick = i => { bs.forEach((b, j) => b.classList.toggle('on', i === j)); say(st, L[i][1]); };
+  bs = L.map(([t], i) => { const b = H('button', 'an-l', null, stage); b.textContent = t || '(pusta linia)'; b.onclick = () => pick(i); return b; });
+  const go = async () => { for (let i = 0; i < L.length; i++) { pick(i); await sleep(650); } };
+  ctrlBtn(root, '▶ Przejdź przez wiadomość', 'primary', go);
+  ctrlBtn(root, '↺ Reset', '', () => { bs.forEach(b => b.classList.remove('on')); say(st, 'Kliknij dowolną linię wiadomości.'); });
+  say(st, 'Kliknij dowolną linię wiadomości.');
+  registerFig(root, { first() { pick(0); } });
+})();
+/* ---------- 2. retry after lost response ---------- */
+seqFig('fig-retry', ['Klient', 'Serwer', 'Baza'], [
+  { b: 'PUT: ponów', cls: 'primary', steps: [
+    [0, 1, 'PUT /orders/7 {status:PAID}', 'Klient wysyła PUT z pełnym stanem.'],
+    [1, 2, 'UPDATE id=7', 'Serwer zapisuje stan.', 'ok'],
+    [1, 0, 'odpowiedź zgubiona ✗', 'Odpowiedź ginie w sieci, klient widzi timeout.', 'warn'],
+    [0, 1, 'PUT /orders/7 {status:PAID}', 'Klient ponawia identyczne żądanie.'],
+    [1, 2, 'UPDATE id=7 (ten sam stan)', 'Drugi zapis ustawia ten sam stan.', 'ok'],
+    [1, 0, '200 OK', 'PUT jest idempotentny: stan końcowy jest taki sam jak po jednym żądaniu.', 'ok'] ] },
+  { b: '💥 POST: ponów', cls: 'bad', steps: [
+    [0, 1, 'POST /orders {…}', 'Klient wysyła POST tworzący zamówienie.'],
+    [1, 2, 'INSERT → id=8', 'Serwer tworzy rekord.', 'ok'],
+    [1, 0, 'odpowiedź zgubiona ✗', 'Odpowiedź ginie, klient nie wie, czy się udało.', 'warn'],
+    [0, 1, 'POST /orders {…}', 'Klient ponawia.'],
+    [1, 2, 'INSERT → id=9', 'Powstaje drugi rekord.', 'bad'],
+    [1, 0, '201 Created', 'Klient widzi sukces, ale w bazie są dwa zamówienia. POST nie jest idempotentny.', 'bad'] ] },
+], 'Wybierz metodę. Odpowiedź serwera zawsze zgubi się po pierwszym zapisie.');
+/* ---------- 3. status decision tree ---------- */
+(() => {
+  const root = $('#fig-status'), stage = $('.stage', root), st = $('.status', root);
+  const T_ = {
+    s: ['Czy żądanie się udało?', [['Tak', 'ok'], ['Nie, wina klienta', 'c'], ['Nie, wina serwera', 'e']]],
+    ok: ['Co się stało?', [['Zwracam dane', '=200 OK'], ['Utworzyłem zasób', '=201 Created z Location'], ['Przyjąłem, zrobię później', '=202 Accepted'], ['Zrobione, nie ma treści', '=204 No Content']]],
+    c: ['Co jest nie tak?', [['Kim jest klient?', 'au'], ['Składnia lub format', 'fm'], ['Zasób lub metoda', 'rs'], ['Stan lub limity', 'sl']]],
+    au: ['Czy tożsamość jest znana?', [['Nie lub token nieważny', '=401 Unauthorized z WWW-Authenticate'], ['Tak, ale brak uprawnień', '=403 Forbidden']]],
+    fm: ['Dokładniej?', [['Zły JSON lub typ parametru', '=400 Bad Request'], ['Zły Content-Type', '=415 Unsupported Media Type'], ['Nie umiem spełnić Accept', '=406 Not Acceptable'], ['Składnia OK, treść nie do przetworzenia', '=422 Unprocessable Content']]],
+    rs: ['Dokładniej?', [['Nie ma zasobu', '=404 Not Found'], ['Zasób nie wspiera metody', '=405 Method Not Allowed z Allow']]],
+    sl: ['Dokładniej?', [['Konflikt ze stanem', '=409 Conflict'], ['If-Match się nie zgadza', '=412 Precondition Failed'], ['Brak wymaganego warunku', '=428 Precondition Required'], ['Za dużo żądań', '=429 Too Many Requests']]],
+    e: ['Dokładniej?', [['Błąd w aplikacji', '=500 Internal Server Error'], ['Brama dostała złą odpowiedź', '=502 Bad Gateway'], ['Chwilowa niedostępność', '=503 Service Unavailable'], ['Brama nie doczekała się odpowiedzi', '=504 Gateway Timeout']]],
+  };
+  const box = H('div', 'dq', null, stage);
+  function show(k) {
+    box.innerHTML = ''; H('b', '', T_[k][0], box);
+    T_[k][1].forEach(([t, n]) => {
+      const b = H('button', 'btn', t, box);
+      b.onclick = () => { if (n[0] === '=') { say(st, `<b>${n.slice(1)}</b>`, 'ok'); box.innerHTML = ''; H('b', '', 'Gotowe. Zacznij ponownie przyciskiem Reset.', box); } else show(n); };
+    });
+  }
+  const reset = () => { show('s'); say(st, 'Odpowiadaj na pytania, a figura wskaże status.'); };
+  ctrlBtn(root, '↺ Reset', '', reset); reset();
+  registerFig(root, { first() { $('.btn', box).click(); } });
+})();
+/* ---------- 4. content negotiation ---------- */
+(() => {
+  const root = $('#fig-neg'), stage = $('.stage', root), st = $('.status', root);
+  const w = H('div', 'dq', null, stage);
+  const sel = (lab, opts) => { H('span', '', lab, w); const s = H('select', '', opts.map(o => `<option>${o}</option>`).join(''), w); s.setAttribute('aria-label', lab); s.style.maxWidth = '100%'; return s; };
+  const c = sel('Content-Type:', ['application/json', 'text/plain', 'application/xml']);
+  const a = sel('Accept:', ['application/json', '*/*', 'text/csv']);
+  function run() {
+    if (c.value !== 'application/json') return say(st, '<b>415 Unsupported Media Type.</b> Mapowanie consumes nie pasuje, metoda nie została wywołana.', 'bad');
+    if (a.value === 'text/csv') return say(st, '<b>406 Not Acceptable.</b> Mapowanie produces nie spełnia nagłówka Accept.', 'bad');
+    say(st, '<b>200 OK.</b> Mapowanie pasuje, a konwerter JSON zapisuje odpowiedź.', 'ok');
+  }
+  c.onchange = a.onchange = run;
+  ctrlBtn(root, '▶ Wyślij', 'primary', run);
+  ctrlBtn(root, '💥 Zły Content-Type', 'bad', () => { c.value = 'text/plain'; run(); });
+  ctrlBtn(root, '↺ Reset', '', () => { c.value = 'application/json'; a.value = 'application/json'; say(st, 'Zmień nagłówki i wyślij żądanie.'); });
+  say(st, 'Zmień nagłówki i wyślij żądanie.');
+  registerFig(root, { first() { run(); } });
+})();
+/* ---------- 5. etag flow ---------- */
+seqFig('fig-cache', ['Klient', 'Cache', 'Serwer'], [
+  { b: 'Pierwszy GET i 304', cls: 'primary', steps: [
+    [0, 2, 'GET /products/1', 'Brak kopii, żądanie idzie do serwera.'],
+    [2, 0, '200, ETag: "v7", max-age=60', 'Odpowiedź trafia do cache.', 'ok'],
+    [1, 1, 'kopia świeża przez 60 s', 'W czasie świeżości serwer w ogóle nie jest pytany.'],
+    [0, 1, 'GET (po 60 s)', 'Kopia straciła świeżość.'],
+    [1, 2, 'If-None-Match: "v7"', 'Cache pyta warunkowo.'],
+    [2, 1, '304 Not Modified', 'Dane bez zmian: odpowiedź bez treści, oszczędność transferu.', 'ok'] ] },
+  { b: 'Zmiana danych', steps: [
+    [1, 2, 'If-None-Match: "v7"', 'Walidacja po utracie świeżości.'],
+    [2, 2, 'dane zmienione, ETag "v8"', 'Tym razem zasób się zmienił.', 'warn'],
+    [2, 0, '200, ETag: "v8"', 'Serwer odsyła pełną nową reprezentację.', 'ok'] ] },
+  { b: '💥 Brak Vary', cls: 'bad', steps: [
+    [0, 2, 'GET /report, Accept: text/csv', 'Pierwszy klient chce CSV.'],
+    [2, 1, '200 text/csv (bez Vary)', 'Współdzielony cache zapisuje CSV pod samym URL.', 'warn'],
+    [0, 1, 'GET /report, Accept: application/json', 'Drugi klient chce JSON.'],
+    [1, 0, '200 text/csv ✗', 'Cache podaje zły format. Vary: Accept rozróżniłby te kopie.', 'bad'] ] },
+], 'Wybierz scenariusz.');
+/* ---------- 6. http2 multiplexing ---------- */
+(() => {
+  const root = $('#fig-mux'), stage = $('.stage', root), st = $('.status', root);
+  const box = H('div', 'mux', null, stage); const n = 18;
+  const rows = ['HTTP/1.1', 'HTTP/2', 'HTTP/3'].map(t => { const r = H('div', 'mux-r', `<b>${t}</b>`, box); const tr = H('div', 'mux-t', Array(n).fill('<i></i>').join(''), r); return [...tr.children]; });
+  const seq = { 0: 'aaaaaabbbbbbcccccc', 1: 'abcabcabcabcabcabc', 2: 'abcabcabcabcabcabc' };
+  let run = 0;
+  const clear = () => rows.forEach(r => r.forEach(i => i.className = ''));
+  const paint = async (loss) => {
+    run++; const my = run; clear();
+    for (let k = 0; k < n; k++) {
+      rows.forEach((r, ri) => {
+        if (loss && k >= 4) {
+          if (ri < 2) { if (k === 4) r[k].className = 'x'; return; }
+          r[k].className = k === 4 ? 'x' : seq[ri][k] === 'b' ? '' : seq[ri][k]; return;
+        }
+        r[k].className = seq[ri][k];
+      });
+      await sleep(90); if (my !== run) return;
+    }
+    say(st, loss ? '<b>Strata pakietu.</b> W HTTP/1.1 i HTTP/2 TCP wstrzymuje wszystko do retransmisji. W HTTP/3 czeka tylko strumień, którego dotyczy strata.' : '<b>Bez strat.</b> HTTP/1.1 wysyła odpowiedzi po kolei, a HTTP/2 i HTTP/3 przeplatają strumienie.', loss ? 'bad' : 'ok');
+  };
+  const q = makeQueue();
+  ctrlBtn(root, '▶ Trzy żądania', 'primary', () => q(() => paint(false)));
+  ctrlBtn(root, '💥 Zgub pakiet', 'bad', () => q(() => paint(true)));
+  ctrlBtn(root, '↺ Reset', '', () => { run++; clear(); say(st, 'Kolory to trzy strumienie w jednym połączeniu.'); });
+  say(st, 'Kolory to trzy strumienie w jednym połączeniu.');
+  registerFig(root, { first() { q(() => paint(false)); } });
+})();
+/* ---------- 7. REST constraints toggle ---------- */
+(() => {
+  const root = $('#fig-rest'), stage = $('.stage', root), st = $('.status', root);
+  const R = [
+    ['Client-server', 'UI i dane nie mogą ewoluować niezależnie.'],
+    ['Stateless', 'Sesja na serwerze utrudnia skalowanie i odzyskiwanie po awarii.'],
+    ['Cache', 'Każde żądanie obciąża serwer, rośnie opóźnienie.'],
+    ['Uniform interface', 'Każda usługa ma własny protokół, pośrednicy nic nie rozumieją.'],
+    ['Layered system', 'Klient widzi całą topologię, nie dodasz bramy ani CDN przejrzyście.'],
+    ['Code on demand (opcjonalne)', 'Klient traci możliwość rozszerzania kodem z serwera; REST na to pozwala, bo ograniczenie jest opcjonalne.'],
+  ];
+  const w = H('div', 'tg', null, stage);
+  const cb = R.map(([n]) => { const l = H('label', '', `<input type="checkbox" checked> ${n}`, w); return $('input', l); });
+  const upd = i => {
+    const off = cb.filter(c => !c.checked).length;
+    if (i == null) return say(st, 'Wszystkie ograniczenia aktywne.', 'ok');
+    say(st, cb[i].checked ? `<b>${R[i][0]}</b> przywrócone.` : `<b>Bez ${R[i][0]}:</b> ${R[i][1]}`, !cb[i].checked ? (i === 5 ? 'warn' : 'bad') : 'ok');
+    if (!off) say(st, 'Wszystkie ograniczenia aktywne.', 'ok');
+  };
+  cb.forEach((c, i) => c.onchange = () => upd(i));
+  ctrlBtn(root, '💥 Sesja na serwerze', 'bad', () => { cb[1].checked = false; upd(1); });
+  ctrlBtn(root, '↺ Reset', '', () => { cb.forEach(c => c.checked = true); upd(null); });
+  upd(null); registerFig(root, { first() { cb[2].checked = false; upd(2); } });
+})();
+/* ---------- 10. dispatcher pipeline ---------- */
+pipeFig('fig-disp', [['Tomcat', 'parsuje HTTP'], ['Filtry', 'Security, CORS…'], ['DispatcherServlet', 'Front Controller'], ['HandlerMapping', 'wybiera metodę'], ['Interceptory', 'preHandle'], ['HandlerAdapter', 'wywołuje'], ['ArgumentResolvers', 'parametry'], ['Konwerter', 'JSON na obiekt'], ['Kontroler', 'twój kod'], ['Konwerter', 'obiekt na JSON'], ['ExceptionResolver', 'obsługa błędu']], [
+  { b: 'POST /orders', cls: 'primary', steps: [[0, 'Tomcat przyjmuje połączenie i tworzy HttpServletRequest.'], [1, 'Filtry działają przed Springiem MVC.'], [2, 'DispatcherServlet przejmuje żądanie.'], [3, 'RequestMappingHandlerMapping dopasowuje POST /orders do metody.'], [4, 'preHandle interceptorów.'], [5, 'HandlerAdapter przygotowuje wywołanie.'], [6, 'Resolvery budują argumenty metody.'], [7, 'Konwerter JSON czyta treść @RequestBody, a @Valid uruchamia walidację.'], [8, 'Kontroler wywołuje serwis.'], [9, 'Konwerter zapisuje wynik jako JSON: 201.', 'ok']] },
+  { b: '💥 Zły JSON', cls: 'bad', steps: [[0, 'Żądanie wchodzi.'], [2, 'DispatcherServlet przejmuje żądanie.'], [3, 'Mapowanie pasuje.'], [6, 'Resolver @RequestBody wywołuje konwerter.'], [7, 'Konwerter rzuca HttpMessageNotReadableException.', 'bad'], [10, 'Łańcuch resolverów zamienia wyjątek na 400. Kontroler nie został wywołany.', 'bad']] },
+  { b: '💥 Zła metoda', cls: 'bad', steps: [[2, 'DELETE /orders dociera do DispatcherServlet.'], [3, 'Ścieżka pasuje, metoda nie: HttpRequestMethodNotSupportedException.', 'bad'], [10, 'Odpowiedź 405 z nagłówkiem Allow.', 'bad']] },
+], 'Wybierz żądanie.');
+/* ---------- 12. converter selection ---------- */
+pipeFig('fig-conv', [['StringHttp…', 'typ String'], ['ByteArray…', 'typ byte[]'], ['JacksonJson…', 'typ dowolny, JSON'], ['Jackson XML', 'tylko gdy na classpath']], [
+  { b: 'Obiekt + Accept: JSON', cls: 'primary', steps: [[0, 'OrderDto to nie String: konwerter odpada.'], [1, 'To nie byte[]: odpada.'], [2, 'canWrite(OrderDto, JSON) daje true: JacksonJsonHttpMessageConverter zapisuje odpowiedź.', 'ok']] },
+  { b: '💥 Obiekt + Accept: text/csv', cls: 'bad', steps: [[2, 'Jackson nie pisze text/csv.', 'warn'], [3, 'XML też nie.', 'warn'], [null, 'Żaden konwerter nie pasuje: 406 Not Acceptable.', 'bad']] },
+], 'Spring pyta konwertery po kolei: canRead lub canWrite.');
+/* ---------- 14. exception resolver chain ---------- */
+pipeFig('fig-err', [['Wyjątek', 'z kontrolera lub MVC'], ['ExceptionHandlerExceptionResolver', '@ExceptionHandler, advice'], ['ResponseStatusExceptionResolver', '@ResponseStatus'], ['DefaultHandlerExceptionResolver', 'wyjątki MVC'], ['Kontener', 'sendError, /error']], [
+  { b: 'OrderNotFound', cls: 'primary', steps: [[0, 'Serwis rzuca OrderNotFound.'], [1, '@ExceptionHandler w advice pasuje i zwraca ProblemDetail: 404.', 'ok']] },
+  { b: '@ResponseStatus', steps: [[0, 'Wyjątek z @ResponseStatus(CONFLICT), bez handlera.'], [1, 'Brak @ExceptionHandler, resolver zwraca null.'], [2, 'Czyta adnotację i wysyła 409.', 'ok']] },
+  { b: '💥 NullPointerException', cls: 'bad', steps: [[0, 'Niespodziewany wyjątek.'], [1, 'Brak handlera.'], [2, 'Brak adnotacji.'], [3, 'To nie wyjątek MVC.'], [4, 'Nikt nie obsłużył: kontener odpowiada 500 z domyślnym formatem, a nie ProblemDetail.', 'bad']] },
+], 'Łańcuch próbuje resolverów po kolei, do pierwszego skutecznego.');
+/* ---------- 17. offset vs keyset ---------- */
+(() => {
+  const root = $('#fig-page'), stage = $('.stage', root), st = $('.status', root);
+  const w = H('div', 'pg-w', null, stage);
+  const col = t => { const c = H('div', 'pg-c', `<h5>${t}</h5>`, w); return H('div', '', null, c); };
+  const a = col('Offset: page=0, page=1'), b = col('Keyset: id &lt; last');
+  let run = 0;
+  const line = (el, t, c) => H('div', 'pg-i ' + c, t, el);
+  const reset = () => { run++; a.innerHTML = b.innerHTML = ''; say(st, 'Pobieramy dwie strony. Między nimi wpada nowy rekord.'); };
+  async function play() {
+    reset(); const my = run;
+    for (const id of [100, 99, 98]) { line(a, '#' + id, 'p1'); line(b, '#' + id, 'p1'); }
+    say(st, 'Strona 1 w obu wariantach: 100, 99, 98.'); await sleep(1200); if (my !== run) return;
+    line(a, '#101 wstawiony', 'new'); line(b, '#101 wstawiony', 'new');
+    say(st, 'Ktoś dodaje rekord #101. Wszystkie wiersze przesuwają się o jeden.', 'warn'); await sleep(1200); if (my !== run) return;
+    line(a, '#98 duplikat!', 'dup'); line(a, '#97', 'p2'); line(a, '#96', 'p2');
+    for (const id of [97, 96, 95]) line(b, '#' + id, 'p2');
+    say(st, '<b>OFFSET 3 pokazuje #98 drugi raz.</b> Keyset pyta o id &lt; 98, więc jest odporny na wstawienie.', 'bad');
+  }
+  const q = makeQueue();
+  ctrlBtn(root, '▶ Pobierz strony', 'primary', () => q(play));
+  ctrlBtn(root, '↺ Reset', '', reset); reset();
+  registerFig(root, { first() { q(play); } });
+})();
+/* ---------- 19. put vs patch ---------- */
+(() => {
+  const root = $('#fig-patch'), stage = $('.stage', root), st = $('.status', root);
+  const base = { name: 'Ala', phone: '500', tags: ['a', 'b'] };
+  const box = H('pre', 'jsn', '', stage); box.classList.remove('reveal');
+  const show = (req, obj, msg, cls) => { box.textContent = `Przed:   ${JSON.stringify(base)}\nDokument: ${req}\nPo:      ${JSON.stringify(obj)}`; say(st, msg, cls); };
+  ctrlBtn(root, 'PUT {name}', 'primary', () => show('{"name":"Ola"} (PUT)', { name: 'Ola' }, '<b>PUT zastępuje całość.</b> Pominięte pola znikają.', 'warn'));
+  ctrlBtn(root, 'Merge: {name}', '', () => show('{"name":"Ola"} (Merge Patch)', { ...base, name: 'Ola' }, '<b>Merge Patch.</b> Brak pola znaczy: bez zmian.', 'ok'));
+  ctrlBtn(root, 'Merge: {phone:null}', '', () => { const { phone, ...r } = base; show('{"phone":null} (Merge Patch)', r, '<b>null usuwa pole</b> według RFC 7396.', 'ok'); });
+  ctrlBtn(root, '💥 Merge: {tags:[c]}', 'bad', () => show('{"tags":["c"]} (Merge Patch)', { ...base, tags: ['c'] }, '<b>Tablica zastąpiona w całości.</b> Nie da się dodać jednego elementu.', 'bad'));
+  ctrlBtn(root, 'JSON Patch: add', '', () => show('[{"op":"add","path":"/tags/-","value":"c"}]', { ...base, tags: ['a', 'b', 'c'] }, '<b>JSON Patch</b> dodaje element na koniec tablicy.', 'ok'));
+  ctrlBtn(root, '↺ Reset', '', () => { box.textContent = JSON.stringify(base); say(st, 'Wybierz dokument.'); });
+  box.textContent = JSON.stringify(base); say(st, 'Wybierz dokument.');
+  registerFig(root, { first() { $('.ctrl .btn', root).click(); } });
+})();
+/* ---------- 20. version selection ---------- */
+(() => {
+  const root = $('#fig-ver'), stage = $('.stage', root), st = $('.status', root);
+  const w = H('div', 'pp', null, stage);
+  const H_ = [['getV1', 'version="1.0"'], ['getV2', 'version="1.2+"'], ['getV3', 'version="2.0"']].map(([n, d]) => H('div', 'pp-s', `<b>${n}</b><small>${d}</small>`, w));
+  const pick = (i, msg, cls) => { H_.forEach((e, j) => e.className = 'pp-s' + (j === i ? ' on' : '')); say(st, msg, cls); };
+  const R = [['1.0', 0, '1.0 trafia w metodę stałą.'], ['1.2', 1, '1.2 trafia w baseline "1.2+".'], ['1.5', -2, ''], ['2.0', 2, '2.0: najwyższa pasująca wersja nie większa od żądanej.']];
+  ctrlBtn(root, 'API-Version: 1.0', 'primary', () => pick(0, '<b>getV1.</b> ' + R[0][2], 'ok'));
+  ctrlBtn(root, 'API-Version: 1.2', '', () => pick(1, '<b>getV2.</b> ' + R[1][2], 'ok'));
+  ctrlBtn(root, 'API-Version: 2.0', '', () => pick(2, '<b>getV3.</b> ' + R[3][2], 'ok'));
+  ctrlBtn(root, '💥 API-Version: 1.5', 'bad', () => pick(-1, '<b>400.</b> 1.5 nie ma w zadeklarowanych wersjach: InvalidApiVersionException. Dodaj ją do supported, a obsłuży ją "1.2+".', 'bad'));
+  ctrlBtn(root, '💥 Bez nagłówka', 'bad', () => pick(-1, '<b>400.</b> Wersja jest domyślnie wymagana: MissingApiVersionException.', 'bad'));
+  ctrlBtn(root, '↺ Reset', '', () => pick(-1, 'Wyślij żądanie.'));
+  pick(-1, 'Wyślij żądanie.'); registerFig(root, { first() { $('.ctrl .btn', root).click(); } });
+})();
+/* ---------- 24. idempotency key ---------- */
+seqFig('fig-idem', ['Klient', 'API', 'Płatności'], [
+  { b: 'Z kluczem', cls: 'primary', steps: [
+    [0, 1, 'POST /payments, Idempotency-Key: k1', 'Klient generuje klucz.'],
+    [1, 1, 'INSERT k1 (udany)', 'Unikalny indeks: to pierwsze wykonanie.'],
+    [1, 2, 'charge 100 zł', 'Obciążenie.', 'ok'],
+    [1, 0, 'odpowiedź zgubiona ✗', 'Klient dostaje timeout.', 'warn'],
+    [0, 1, 'POST /payments, Idempotency-Key: k1', 'Ponowienie z tym samym kluczem.'],
+    [1, 1, 'INSERT k1 → konflikt, wynik zapisany', 'Klucz istnieje i ma zapisany wynik.'],
+    [1, 0, '201 (zapisana odpowiedź)', 'Klient dostaje wynik, a pieniądze zeszły raz.', 'ok'] ] },
+  { b: '💥 Bez klucza', cls: 'bad', steps: [
+    [0, 1, 'POST /payments', 'Żądanie bez klucza.'],
+    [1, 2, 'charge 100 zł', 'Pierwsze obciążenie.'],
+    [1, 0, 'odpowiedź zgubiona ✗', 'Timeout.', 'warn'],
+    [0, 1, 'POST /payments', 'Ponowienie.'],
+    [1, 2, 'charge 100 zł', 'Drugie obciążenie.', 'bad'],
+    [1, 0, '201', 'Klient zapłacił dwa razy.', 'bad'] ] },
+  { b: 'Wyścig', steps: [
+    [0, 1, 'POST k2 (próba A)', 'Dwie równoległe próby.'],
+    [0, 1, 'POST k2 (próba B)', 'Druga próba, np. dwuklik.'],
+    [1, 1, 'A: INSERT OK, B: konflikt', 'Baza rozstrzyga wyścig.'],
+    [1, 0, 'B: 409 Conflict', 'Pierwsze żądanie wciąż trwa.', 'warn'],
+    [1, 0, 'A: 201 Created', 'Tylko jedno wykonanie.', 'ok'] ] },
+  { b: '💥 Klucz użyty ponownie', cls: 'bad', steps: [
+    [0, 1, 'POST k1, kwota 200 zł', 'Ten sam klucz, inna treść.'],
+    [1, 1, 'odcisk treści inny', 'Porównanie odcisku.', 'warn'],
+    [1, 0, '422 Unprocessable Content', 'Serwer odrzuca niejednoznaczne żądanie.', 'bad'] ] },
+], 'Wybierz scenariusz.');
+/* ---------- 25. lost update ---------- */
+seqFig('fig-lost', ['Ala', 'API', 'Bartek'], [
+  { b: '💥 Bez warunku', cls: 'bad', steps: [
+    [1, 0, 'GET: limit=100', 'Ala pobiera zasób.'],
+    [1, 2, 'GET: limit=100', 'Bartek też.'],
+    [0, 1, 'PUT limit=200', 'Ala zapisuje.', 'ok'],
+    [2, 1, 'PUT limit=150', 'Bartek zapisuje na podstawie starych danych.'],
+    [1, 1, 'limit=150, zmiana Ali przepadła', 'Nikt nie dostał błędu. To lost update.', 'bad'] ] },
+  { b: 'If-Match', cls: 'primary', steps: [
+    [1, 0, 'GET: limit=100, ETag "3"', 'Ala dostaje wersję 3.'],
+    [1, 2, 'GET: limit=100, ETag "3"', 'Bartek też.'],
+    [0, 1, 'PUT If-Match: "3"', 'Warunek spełniony, wersja rośnie.', 'ok'],
+    [1, 0, '200, ETag "4"', 'Nowa wersja to 4.', 'ok'],
+    [2, 1, 'PUT If-Match: "3"', 'Bartek wciąż ma wersję 3.'],
+    [1, 2, '412 Precondition Failed', 'Bartek musi pobrać stan i ponownie podjąć decyzję.', 'warn'] ] },
+], 'Dwie osoby edytują ten sam zasób.');
+/* ---------- 30. circuit breaker ---------- */
+(() => {
+  const root = $('#fig-cb'), stage = $('.stage', root), st = $('.status', root);
+  const m = H('div', 'st-m', '<div>CLOSED</div><div>OPEN</div><div>HALF_OPEN</div>', stage);
+  const log = H('div', 'log', null, stage);
+  let s, fails, sick, okh, run = 0; const q = makeQueue();
+  const paint = () => [...m.children].forEach((d, i) => d.classList.toggle('on', ['CLOSED', 'OPEN', 'HALF_OPEN'][i] === s));
+  const reset = () => { run++; s = 'CLOSED'; fails = 0; sick = false; okh = 0; log.innerHTML = ''; paint(); say(st, 'Breaker przepuszcza ruch i liczy błędy.'); };
+  function call() {
+    if (s === 'OPEN') { logLine(log, 'odrzucone od razu: CallNotPermittedException', 'u'); return say(st, '<b>OPEN.</b> Wywołanie odrzucone bez dotykania zależności. Szybka porażka chroni wątki.', 'warn'); }
+    if (sick) {
+      logLine(log, 'wywołanie: timeout', 'e');
+      if (s === 'HALF_OPEN') { s = 'OPEN'; okh = 0; paint(); return say(st, '<b>Próba nieudana.</b> Powrót do OPEN.', 'bad'); }
+      if (++fails >= 3) { s = 'OPEN'; paint(); return say(st, '<b>Trzy błędy: OPEN.</b> Ruch do zależności zatrzymany.', 'bad'); }
+      return say(st, `Błąd ${fails} z 3.`, 'warn');
+    }
+    logLine(log, 'wywołanie: 200', 'g');
+    if (s === 'HALF_OPEN' && ++okh >= 2) { s = 'CLOSED'; fails = 0; okh = 0; paint(); return say(st, '<b>Dwie udane próby: CLOSED.</b> Normalny ruch wraca.', 'ok'); }
+    say(st, s === 'HALF_OPEN' ? 'Próba udana, potrzebna jeszcze jedna.' : 'Sukces.', 'ok');
+  }
+  ctrlBtn(root, '▶ Wywołaj', 'primary', call);
+  ctrlBtn(root, '💥 Zepsuj zależność', 'bad', () => { sick = true; say(st, 'Zależność odpowiada timeoutami.', 'bad'); });
+  ctrlBtn(root, '🩹 Napraw', '', () => { sick = false; say(st, 'Zależność wróciła. Breaker jeszcze o tym nie wie.', 'ok'); });
+  ctrlBtn(root, '⏱ Minął czas oczekiwania', '', () => { if (s === 'OPEN') { s = 'HALF_OPEN'; okh = 0; paint(); say(st, '<b>HALF_OPEN.</b> Przepuszczamy kilka prób.', 'warn'); } else say(st, 'To działa tylko w stanie OPEN.'); });
+  ctrlBtn(root, '↺ Reset', '', reset); reset();
+  registerFig(root, { first() { q(async () => { const my = run; for (const f of [call, () => { sick = true; }, call, call, call, call]) { f(); await sleep(650); if (my !== run) return; } }); } });
+})();
+/* ---------- 31. jwt path ---------- */
+pipeFig('fig-jwt', [['BearerToken AuthenticationFilter', 'czyta nagłówek'], ['JwtDecoder', 'podpis, exp, nbf, iss'], ['JwtAuthentication Converter', 'scope na SCOPE_'], ['AuthorizationFilter', 'reguły URL'], ['Kontroler', 'twój kod']], [
+  { b: 'Ważny token', cls: 'primary', steps: [[0, 'Filtr wyjmuje token z Authorization: Bearer.'], [1, 'Podpis i claimy poprawne.'], [2, 'scope orders:write staje się SCOPE_orders:write.'], [3, 'Reguła hasAuthority spełniona.'], [4, 'Kontroler działa: 201.', 'ok']] },
+  { b: '💥 Wygasły', cls: 'bad', steps: [[0, 'Filtr wyjmuje token.'], [1, 'exp w przeszłości: 401, WWW-Authenticate: Bearer error="invalid_token".', 'bad']] },
+  { b: '💥 Brak scope', cls: 'bad', steps: [[0, 'Token obecny.'], [1, 'Token poprawny.'], [2, 'Uprawnienia: tylko SCOPE_orders:read.'], [3, 'Reguła niespełniona: 403 Forbidden. Tożsamość znana, brak uprawnień.', 'bad']] },
+  { b: '💥 Bez tokenu', cls: 'bad', steps: [[3, 'Żądanie anonimowe dociera do reguły authenticated().', 'warn'], [null, '401 z WWW-Authenticate: Bearer.', 'bad']] },
+], 'Wybierz token.');
+/* ---------- 33. cors preflight ---------- */
+seqFig('fig-cors', ['Przeglądarka', 'Filtr CORS', 'Security + API'], [
+  { b: 'Poprawnie', cls: 'primary', steps: [
+    [0, 1, 'OPTIONS /orders, Origin: app.example.com', 'Przeglądarka pyta przed PUT z Authorization.'],
+    [1, 0, '200, Access-Control-Allow-Origin', 'Filtr CORS odpowiada, zanim zadziała uwierzytelnianie.', 'ok'],
+    [0, 2, 'PUT /orders/7, Authorization: Bearer', 'Właściwe żądanie.'],
+    [2, 0, '200 OK', 'Przeglądarka udostępnia odpowiedź skryptowi.', 'ok'] ] },
+  { b: '💥 CORS za Security', cls: 'bad', steps: [
+    [0, 2, 'OPTIONS /orders (bez tokenu)', 'Preflight nie niesie danych uwierzytelniających.'],
+    [2, 0, '401 Unauthorized', 'Security odrzuca preflight.', 'bad'],
+    [0, 0, 'błąd CORS w konsoli', 'PUT nawet nie zostanie wysłany. Konsola pokazuje CORS, a przyczyna leży w kolejności filtrów.', 'bad'] ] },
+  { b: '💥 Obcy origin', cls: 'bad', steps: [
+    [0, 1, 'OPTIONS, Origin: evil.example', 'Origin spoza listy.'],
+    [1, 0, '403, brak nagłówków CORS', 'Przeglądarka blokuje. curl ominąłby to bez trudu, więc CORS nie zastępuje autoryzacji.', 'bad'] ] },
+], 'Wybierz scenariusz.');
+/* ---------- 39. filter, interceptor, advice ---------- */
+pipeFig('fig-layers', [['Filter', 'przed'], ['preHandle', 'interceptor'], ['ArgumentResolver', 'RequestBodyAdvice'], ['Kontroler', 'metoda'], ['ResponseBodyAdvice', 'przed zapisem'], ['Konwerter', 'zapis treści'], ['postHandle', 'interceptor'], ['afterCompletion', 'interceptor'], ['Filter', 'po']], [
+  { b: 'Normalny przebieg', cls: 'primary', steps: [[0, 'Filtr widzi surowe żądanie.'], [1, 'preHandle zna już handler.'], [2, 'Budowa argumentów.'], [3, 'Twoja metoda.'], [4, 'ResponseBodyAdvice może zmienić wynik i nagłówki.'], [5, 'Treść trafia do odpowiedzi, która zostaje zatwierdzona.', 'ok'], [6, 'postHandle: dla @ResponseBody za późno na nagłówki.', 'warn'], [7, 'afterCompletion: sprzątanie, zawsze.'], [8, 'Filtr kończy pracę.', 'ok']] },
+  { b: '💥 Wyjątek w filtrze', cls: 'bad', steps: [[0, 'Filtr rzuca wyjątek przed DispatcherServlet.', 'bad'], [null, 'Spring MVC tego nie widzi, @ExceptionHandler nie zadziała. Odpowiada kontener.', 'bad']], skip: [1, 2, 3, 4, 5, 6, 7] },
+], 'Wybierz przebieg.');
+/* ---------- 40. thread pool saturation ---------- */
+(() => {
+  const root = $('#fig-threads'), stage = $('.stage', root), st = $('.status', root);
+  const g = H('div', 'th-g', Array(10).fill('<i></i>').join(''), stage), info = H('div', 'th-q', '', stage);
+  const cells = [...g.children]; let run = 0;
+  const reset = () => { run++; cells.forEach(c => c.className = ''); info.textContent = 'kolejka: 0'; say(st, 'Pula wątków wolna.'); };
+  async function sat(v) {
+    reset(); const my = run;
+    for (let i = 0; i < 10; i++) { cells[i].className = 'b'; info.textContent = 'kolejka: 0'; await sleep(180); if (my !== run) return; }
+    if (v === 'virt') { info.textContent = 'wątki wirtualne: czekające nie blokują wątków nośnych'; cells.forEach(c => c.className = 'f'); return say(st, '<b>Wątki wirtualne.</b> Czekanie na I/O zwalnia wątek nośny, więc limit 200 znika. Pojawia się za to ryzyko przeciążenia bazy.', 'warn'); }
+    if (v === 'to') { info.textContent = 'timeout: wątki zwolnione, breaker otwarty'; await sleep(600); if (my !== run) return; cells.forEach(c => c.className = 'f'); return say(st, '<b>Timeout i breaker.</b> Wątki wracają do puli, a błąd dotyczy tylko jednej funkcji.', 'ok'); }
+    for (let q = 10; q <= 100; q += 30) { info.textContent = 'kolejka: ' + q; await sleep(160); if (my !== run) return; }
+    say(st, '<b>Wszystkie wątki czekają.</b> CPU niskie, a serwis nie odpowiada: nawet /actuator/health czeka w kolejce. Kaskada gotowa.', 'bad');
+  }
+  const q = makeQueue();
+  ctrlBtn(root, '💥 Zależność zwalnia', 'bad', () => q(() => sat('sat')));
+  ctrlBtn(root, 'Timeout + breaker', 'primary', () => q(() => sat('to')));
+  ctrlBtn(root, 'Wątki wirtualne', '', () => q(() => sat('virt')));
+  ctrlBtn(root, '↺ Reset', '', reset); reset();
+  registerFig(root, { first() { q(() => sat('sat')); } });
+})();
+
+/* ---------- quiz ---------- */
+(() => {
+  const Q = [
+['Która para metod jest idempotentna, ale nie safe?', ['GET i HEAD', 'PUT i DELETE', 'POST i PATCH'], 1, 'PUT i DELETE zmieniają stan, ale wielokrotne wywołanie daje ten sam skutek.'],
+['Drugi DELETE zwraca 404. Czy metoda jest idempotentna?', ['Nie, bo odpowiedź jest inna', 'Tak, idempotentność dotyczy stanu serwera', 'Tylko gdy zwróci 204'], 1, 'Liczy się skutek zamierzony, nie status.'],
+['Klient ma token, ale brak mu uprawnień. Status?', ['401', '403', '400'], 1, '403: tożsamość znana, dostęp odmówiony.'],
+['Serwer nie umie spełnić nagłówka Accept. Status?', ['415', '406', '400'], 1, '406 dotyczy Accept, 415 dotyczy Content-Type.'],
+['Co znaczy Cache-Control: no-cache?', ['Nie wolno zapisywać', 'Wolno zapisać, trzeba walidować przed użyciem', 'Tylko prywatny cache'], 1, 'Zakaz zapisu to no-store.'],
+['Czego HTTP/2 nie rozwiązuje, a HTTP/3 tak?', ['Kompresji nagłówków', 'Blokowania strumieni przez stratę pakietu TCP (L2)', 'Multipleksowania'], 1, 'HTTP/3 działa na QUIC, gdzie strata dotyczy jednego strumienia.'],
+['Które ograniczenie REST jest opcjonalne?', ['Cache', 'Code on demand', 'Layered system'], 1, 'Fielding opisuje code on demand jako opcjonalne.'],
+['Na którym poziomie Richardsona pojawiają się linki hipermedialne?', ['1', '2', '3'], 2, 'Poziom 3 to hipermedia.'],
+['Najlepszy URI do pobrania zamówienia 7?', ['GET /getOrder?id=7', 'GET /orders/7', 'POST /orders/7/get'], 1, 'Rzeczownik w ścieżce, metoda niesie czasownik.'],
+['Co wybiera metodę kontrolera?', ['HandlerAdapter', 'HandlerMapping', 'ViewResolver'], 1, 'HandlerMapping wybiera, HandlerAdapter wywołuje.'],
+['Jak zwrócić 201 z Location w Springu?', ['@ResponseStatus(OK)', 'ResponseEntity.created(uri).body(dto)', 'return uri'], 1, 'ResponseEntity.created ustawia status i Location.'],
+['W którym pakiecie jest Jackson 3?', ['com.fasterxml.jackson.databind', 'tools.jackson', 'org.springframework.json'], 1, 'Adnotacje zostały w com.fasterxml.jackson.annotation.'],
+['Ograniczenie @Min bezpośrednio na @PathVariable kończy się przy błędzie wyjątkiem:', ['MethodArgumentNotValidException', 'HandlerMethodValidationException', 'BindException'], 1, 'To walidacja metody, wbudowana od Spring Framework 6.1.'],
+['Który media type definiuje RFC 9457 dla JSON?', ['application/error+json', 'application/problem+json', 'application/json'], 1, 'problem+json.'],
+['Co usunięto w Boot 4?', ['@MockitoBean', '@MockBean', '@WebMvcTest'], 1, '@MockitoBean zastąpił @MockBean.'],
+['Kiedy API-first ma największy sens? (L2)', ['Prototyp jednej osoby', 'API między zespołami', 'Skrypt jednorazowy'], 1, 'Przegląd kontraktu przed kodem i praca równoległa.'],
+['Dlaczego keyset jest stabilny przy wstawianiu? (L2)', ['Bo cache’uje strony', 'Bo pyta o wartość klucza, a nie o pozycję', 'Bo blokuje tabelę'], 1, 'Warunek id &lt; last nie zależy od liczby rekordów przed nim.'],
+['Dlaczego sortowanie po dowolnym polu jest ryzykowne? (L2)', ['Jest niezgodne z HTTP', 'Pole bez indeksu może być kosztowne dla bazy', 'Spring na to nie pozwala'], 1, 'Stąd białe listy.'],
+['W JSON Merge Patch wartość null oznacza: (L2)', ['ustaw null', 'usuń pole', 'zostaw bez zmian'], 1, 'RFC 7396: null usuwa.'],
+['Co oznacza version="1.2+" w mapowaniu? (L2)', ['Tylko 1.2', '1.2 i wyższe obsługiwane', 'Wszystko poniżej 1.2'], 1, 'To baseline.'],
+['Operacja częściowo udana. Status bulk? (L2)', ['200', '207', '204'], 1, '207 mówi, że trzeba czytać wyniki elementów.'],
+['Co jest prawdą o 202 Accepted? (L2)', ['Operacja zakończona', 'Żądanie przyjęte, wynik nieznany', 'Zawsze się powiedzie'], 1, '202 nie gwarantuje wyniku.'],
+['Wartość domyślna spring.jpa.open-in-view? (L2)', ['false', 'true', 'nie ma takiej właściwości'], 1, 'Domyślnie true, w API ustaw false.'],
+['Co rozstrzyga wyścig dwóch żądań z tym samym kluczem? (L2)', ['Słownik w pamięci', 'Unikalny indeks w bazie', 'Nagłówek Retry-After'], 1, 'Działa też przy wielu instancjach.'],
+['If-Match z nieaktualnym ETag daje: (L2)', ['304', '412', '428'], 1, '304 dotyczy If-None-Match, 428 braku warunku.'],
+['Dlaczego outbox zapisuje zdarzenie do tabeli? (L2)', ['Bo Kafka tego wymaga', 'Żeby dane i zdarzenie były w jednej transakcji', 'Żeby ominąć konsumentów'], 1, 'Relay publikuje później, gwarancja at-least-once.'],
+['Kiedy server.forward-headers-strategy jest bezpieczna? (L2)', ['Zawsze', 'Gdy zaufane proxy kontroluje te nagłówki', 'Nigdy'], 1, 'Klient może je podrobić.'],
+['Jaki jest status RestTemplate w Spring Framework 7.0? (L2)', ['Domyślny klient', 'Wycofywany, zalecany RestClient', 'Usunięty'], 1, '@Deprecated zapowiedziano na 7.1.'],
+['Czym jest HTTP Service Client? (L2)', ['Interfejsem z @HttpExchange i proxy', 'Serwerem HTTP', 'Filtrem Servlet'], 0, 'Spring generuje proxy na bazie klienta HTTP.'],
+['Ile razy maksymalnie wykona się metoda z @Retryable przy domyślnych ustawieniach? (L2)', ['3', '4', '5'], 1, '1 próba + maxRetries = 3.'],
+['Które claimy resource server sprawdza domyślnie? (L2)', ['exp, nbf oraz iss przy ustawionym issuer-uri', 'tylko aud', 'żadne'], 0, 'aud warto dodać samodzielnie.'],
+['Faktura innego klienta dostępna po zmianie ID to: (L2)', ['BOLA', 'CSRF', 'SSRF'], 0, 'API1:2023.'],
+['Co chroni CORS? (L2)', ['Serwer przed curl', 'Użytkownika przeglądarki, polityka same-origin', 'Bazę danych'], 1, 'Egzekwuje przeglądarka.'],
+['Limit w pamięci przy 5 podach to: (L2)', ['limit globalny', 'efektywnie do 5 razy większy limit', 'brak limitu'], 1, 'Potrzebny współdzielony magazyn lub brama.'],
+['@Transactional na teście RANDOM_PORT: (L2)', ['Cofa zmiany serwera', 'Nie cofa zmian serwera', 'Wyłącza serwer'], 1, 'Klient i serwer działają w osobnych transakcjach.'],
+['Po co Testcontainers zamiast H2? (L2)', ['Jest szybszy', 'Ten sam silnik co produkcja', 'Nie wymaga Dockera'], 1, 'Dialekt i zachowanie bazy są prawdziwe.'],
+['Pact to podejście: (L2)', ['sterowane konsumentem', 'tylko dla producenta', 'wydajnościowe'], 0, 'Konsument tworzy pakt.'],
+['Co psuje @EnableWebMvc w Boot? (L3)', ['Security', 'Auto-konfigurację MVC', 'Actuator'], 1, 'Użyj samego WebMvcConfigurer.'],
+['Gdzie dodać nagłówek do odpowiedzi @ResponseBody? (L3)', ['postHandle', 'ResponseBodyAdvice lub filtr', 'afterCompletion'], 1, 'Przy postHandle odpowiedź jest zatwierdzona.'],
+['Co przestaje działać przy wątkach wirtualnych? (L3)', ['server.tomcat.threads.max', 'server.port', '@RestController'], 0, 'Limit puli nie obowiązuje, więc potrzebne są inne limity.'],
+['Do czego służy SseEmitter? (L3)', ['Upload plików', 'Strumień zdarzeń serwera', 'Retry'], 1, 'Jednokierunkowy text/event-stream.'],
+['Domyślna wartość management.endpoints.web.exposure.include? (L3)', ['*', '[health]', 'pusta'], 1, 'Wszystko inne dodajesz świadomie.'],
+['Czy liveness powinien sprawdzać bazę? (L3)', ['Tak, zawsze', 'Nie, restart nie naprawi bazy', 'Tylko w piątki'], 1, 'Inaczej awaria bazy restartuje wszystkie pody.'],
+['Co opisuje nagłówek Sunset? (L3)', ['Czas cache', 'Kiedy zasób przestanie działać', 'Wersję API'], 1, 'RFC 8594.'],
+['Objaw: wszystko wolne, CPU niskie. Pierwsza hipoteza?', ['Wątki czekają na zależność', 'Za mało RAM w klasie DTO', 'Zły status'], 0, 'Sprawdź thread dump i timeouty.'],
+['Co musi zawierać odpowiedź 405?', ['Retry-After', 'Allow', 'Location'], 1, 'RFC 9110 wymaga Allow.']
+];
+  const box = $('#quiz'); let answered = 0, good = 0; const scoreEl = $('#score');
+  function upd() { scoreEl.textContent = `Wynik: ${good} / ${answered}`; }
+  Q.forEach(([q, opts, ok, why], n) => {
+    const d = H('div', 'quiz-q reveal', `<h4>${n + 1}. ${q}</h4><div class="opts"></div><div class="why">💡 ${why}</div>`, box);
+    opts.forEach((t, i) => {
+      const b = H('button', '', null, $('.opts', d)); b.textContent = t;
+      b.onclick = () => {
+        if (d.classList.contains('done')) return;
+        d.classList.add('done'); answered++;
+        if (i === ok) good++; else b.classList.add('wrong');
+        $('.opts', d).children[ok].classList.add('right');
+        $$('button', d).forEach(x => x.disabled = true);
+        upd();
+      };
+    });
+    revealIO.observe(d);                 // dynamically created .reveal must be observed explicitly
+  });
+})();
+</script>
+</body>
+</html>
