@@ -2088,7 +2088,7 @@ ALTER TABLE log_ev REPLICA IDENTITY FULL;      -- albo lepiej: dodaj klucz głó
   </div>
 
   <details class="deeper reveal" data-level="3"><summary>🔬 Głębiej: slot logiczny też trzyma WAL, a PG 18 i 19 coś zmieniają</summary>
-    <p>Każda aktywna subskrypcja czyta z własnego slotu na źródle. Wszystko, co w <a href="#ch14">rozdziale 14</a> mówiliśmy o porzuconych slotach i <code>max_slot_wal_keep_size</code>, dotyczy też slotów logicznych. Gdy źródło jest nieosiągalne, <code>DROP SUBSCRIPTION</code> kończy się błędem. Najpierw robisz <code>ALTER SUBSCRIPTION … DISABLE</code> i <code>SET (slot_name = NONE)</code>; wtedy subskrypcja zniknie, ale slot na źródle zostaje i trzeba go usunąć ręcznie.</p>
+    <p>Każda aktywna subskrypcja czyta z własnego slotu na źródle. Wszystko, co w <a href="#ch14">rozdziale 14</a> mówiliśmy o porzuconych slotach i <code>max_slot_wal_keep_size</code>, dotyczy też slotów logicznych. Gdy źródło jest nieosiągalne, <code>DROP SUBSCRIPTION</code> kończy się błędem. Najpierw robisz <code>ALTER SUBSCRIPTION … DISABLE</code> i <code>SET (slot_name = NONE)</code>, a dopiero potem <code>DROP SUBSCRIPTION</code>, który nie próbuje już usuwać slotu; slot na źródle zostaje i trzeba go usunąć ręcznie.</p>
     <p>PostgreSQL 18: domyślna opcja <code>streaming</code> w <code>CREATE SUBSCRIPTION</code> zmieniła się z <code>off</code> na <code>parallel</code>, konflikty przy stosowaniu zmian są logowane, a kolumny generowane można publikować (<code>publish_generated_columns</code>). <span class="anno">w PG 19 (RC)</span> W wydaniu 19 (RC) dochodzi replikacja wartości sekwencji (<code>FOR ALL SEQUENCES</code>, <code>ALTER SUBSCRIPTION … REFRESH SEQUENCES</code>) oraz włączanie replikacji logicznej bez restartu przy <code>wal_level = replica</code>.</p>
   </details>
 
@@ -2979,7 +2979,7 @@ SELECT num_timed, num_requested FROM pg_stat_checkpointer;
       <li>Najpierw <code>pg_stat_activity</code>: kto czeka, na co (<code>wait_event_type</code>), od kiedy (<code>xact_start</code>).</li>
       <li>Potem <code>pg_stat_statements</code> posortowane po <code>total_exec_time</code> (<a href="#ch20">rozdział 20</a>).</li>
       <li>Dopiero potem <code>EXPLAIN (ANALYZE, BUFFERS)</code> dla konkretnego zapytania.</li>
-      <li>Restart zostaw na koniec i zapisz wcześniej wynik powyższych zapytań: po restarcie znikną sesje i blokady (<code>pg_stat_activity</code>, <code>pg_locks</code>); skumulowane statystyki (<code>pg_stat_*</code>, <code>pg_stat_statements</code>) przetrwają czysty restart, ale zostaną wyzerowane po awarii.</li>
+      <li>Restart zostaw na koniec i zapisz wcześniej wynik powyższych zapytań: po restarcie znikną sesje i blokady (<code>pg_stat_activity</code>, <code>pg_locks</code>); skumulowane statystyki (<code>pg_stat_*</code>) przetrwają czysty restart, ale po awarii są zerowane; <code>pg_stat_statements</code> zapisuje swoje przy zamknięciu serwera (<code>pg_stat_statements.save</code>).</li>
     </ol>
   </div>
 
@@ -3159,7 +3159,7 @@ SELECT num_timed, num_requested FROM pg_stat_checkpointer;
   </table>
   </div>
   <div class="box relax reveal"><span class="lbl">🎓 Gratulacje</span><p><b>Odpowiedź na zagadkę z początku.</b> Każdy <code>UPDATE</code> zapisuje nową wersję wiersza, a stara dostaje <code>xmax</code> (<a href="#ch4">MVCC</a>). Zwykle stare wersje są sprzątane na bieżąco: przycinanie strony przy aktualizacjach HOT (<a href="#ch18">HOT</a>) i <code>VACUUM</code>. Ale otwarta transakcja <code>REPEATABLE READ</code> trzyma snapshot, który może jeszcze potrzebować każdej z tych wersji, więc żadnej nie wolno usunąć (<a href="#ch8">horyzont VACUUM</a>). Sto tysięcy wersji po kilkadziesiąt bajtów — i plik rośnie.</p>
-<p>Po zamknięciu tamtej sesji <code>VACUUM</code> oznacza martwe wersje jako wolne miejsce do ponownego użycia, ale plik oddaje systemowi tylko puste strony z <b>końca</b> pliku. Jeśli żywa wersja leży na ostatniej stronie, plik zostaje duży, choć jest prawie pusty. Zmniejszy go dopiero przepisanie tabeli (<code>VACUUM FULL</code>, który bierze blokadę <code>ACCESS EXCLUSIVE</code>). Sprawdziliśmy to na PostgreSQL 16: 100 000 aktualizacji przy otwartym snapshocie dało w naszych przebiegach od ok. 1,2 MB do ok. 3,5 MB (rozmiar zależy od definicji tabeli i przebiegu; nasza tabela: <code>id int PRIMARY KEY, n bigint</code>), po <code>VACUUM</code> rozmiar się nie zmienił, a ten sam test bez otwartej transakcji skończył się na 8192 bajtach.</p>
+<p>Po zamknięciu tamtej sesji <code>VACUUM</code> oznacza martwe wersje jako wolne miejsce do ponownego użycia, ale plik oddaje systemowi tylko puste strony z <b>końca</b> pliku. Jeśli żywa wersja leży na ostatniej stronie, plik zostaje duży, choć jest prawie pusty. Zmniejszy go dopiero przepisanie tabeli (<code>VACUUM FULL</code>, który bierze blokadę <code>ACCESS EXCLUSIVE</code>). Sprawdziliśmy to na PostgreSQL 16: 100 000 aktualizacji przy otwartym snapshocie dało w naszych przebiegach od ok. 1,2 MB do ok. 3,9 MB (rozmiar zależy od definicji tabeli i przebiegu; nasza tabela: <code>id int PRIMARY KEY, n bigint</code>), po <code>VACUUM</code> rozmiar się nie zmienił, a ten sam test bez otwartej transakcji skończył się na 8192 bajtach.</p>
 <p>Co dalej? Włącz <code>pg_stat_statements</code> na swojej bazie, ustaw <code>idle_in_transaction_session_timeout</code> i <code>lock_timeout</code>, a potem przejdź jeszcze raz <a href="#ch23">klinikę objawów</a> — tym razem z własnymi danymi.</p>
 </div>
 </section>
@@ -4886,7 +4886,7 @@ const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase label
     if (CAP - used(pg) === 0 && hotOk) {
       const fr = prune(p);
       if (fr) {
-        paint(); say(st, `<b>Przycinanie strony w trakcie zwykłej pracy (bez VACUUM):</b> pośrednie wersje z łańcucha HOT usunięte bez VACUUM, a slot ${tid(s.root[0], s.root[1])} zostaje przekierowaniem ↪ do bieżącej wersji.`, 'warn');
+        paint(); say(st, `<b>Przycinanie strony w trakcie zwykłej pracy (bez VACUUM):</b> pośrednie wersje z łańcucha HOT usunięte bez VACUUM, a slot ${tid(s.root[0], s.root[1])} zostaje przekierowaniem ↪ do najstarszej wersji, która może być jeszcze widoczna (bez równoległych transakcji to wersja bieżąca).`, 'warn');
         await sleep(1300); if (my !== run) return;
       }
     }
