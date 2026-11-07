@@ -143,12 +143,13 @@ fs.mkdirSync(out, { recursive: true });
     const out = [];
     const where = el => { const s = el.closest('section[id]'); return s ? s.id : 'page'; };
     const level = el => { const l = el.closest('[data-level]'); return l ? l.dataset.level : '1'; };
-    const SEL = 'main p, main li, main tr, main figcaption, main pre, main .qa > div:not(.q):not(.a), main .fire .line, main summary, main h3';
+    const SEL = 'main p, main li, main tr, main figcaption, main pre, main .qa > div:not(.q):not(.a), main .fire .line, main dl, main summary, main h3';
     const picked = new Set();
     for (const el of document.querySelectorAll(SEL)) {
       if (el.closest('#map, #quiz, #toc, .ctrl, .legend')) continue;
       if ([...picked].some(a => a.contains(el))) continue;       // parent already taken
-      const t = clean(el.tagName === 'TR' ? [...el.children].map(c => c.textContent).join(' | ') : el.textContent);
+      const t = clean(el.tagName === 'TR' ? [...el.children].map(c => c.textContent).join(' | ')
+        : el.tagName === 'DL' ? [...el.children].map(c => c.textContent + (c.tagName === 'DT' ? ': ' : ' · ')).join('') : el.textContent);
       if (t.length < 12 || el.closest('thead')) continue;
       picked.add(el);
       out.push({ where: where(el), level: level(el), kind: el.tagName.toLowerCase(), text: t });
