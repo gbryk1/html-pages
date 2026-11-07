@@ -29,7 +29,7 @@ fs.mkdirSync(out, { recursive: true });
     }
     const extra = `#${id} button:not([data-act]):not(:disabled)`;
     const n = await p.$$eval(extra, bs => bs.length);
-    for (let i = 0; i < n; i++) { await p.locator(extra).nth(i).click().catch(() => {}); await p.waitForTimeout(WAIT / 2); }
+    for (let i = 0; i < n; i++) { await p.locator(extra).nth(i).click({ timeout: 1500 }).catch(() => {}); await p.waitForTimeout(WAIT / 2); }
     // selects and checkboxes: toggle once
     for (const sel of await p.$$(`#${id} select`)) {
       const vals = await sel.$$eval('option', os => os.map(o => o.value));
