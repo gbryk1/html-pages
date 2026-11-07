@@ -730,7 +730,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
   <div id="map" class="reveal"></div>
   <p class="reveal">Opisujemy <b>PostgreSQL 18</b> (bieżąca stabilna wersja główna); tam, gdzie zachowanie zmieniło się niedawno, piszemy, od której wersji. Fakty sprawdziliśmy w dokumentacji na postgresql.org/docs/18 i w release notes w listopadzie 2026, a przykłady SQL uruchomiliśmy na prawdziwym serwerze. Tematy po stronie aplikacji (pula połączeń w aplikacji, <code>@Transactional</code>, JPA) są w osobnym kursie <a href="db-app-course.html">„Your app vs. the database”</a>.</p>
   <div class="box brain reveal"><span class="lbl">🧠 Zagadka na start</span>
-    <p>Masz tabelę <code>counter</code> z <b>jednym wierszem</b>. Aplikacja robi na nim <code>UPDATE counter SET n = n + 1</code> sto tysięcy razy, każdy w osobnej transakcji. W tym czasie w innej sesji ktoś zostawił otwartą transakcję <code>REPEATABLE READ</code> po jednym <code>SELECT</code>-cie. Tabela wciąż ma jeden wiersz, a jej plik urósł z 8 kB do prawie 3 MB. Dlaczego? I dlaczego po zamknięciu tamtej sesji i ręcznym <code>VACUUM</code> plik nadal ma prawie 3 MB?</p>
+    <p>Masz tabelę <code>counter</code> z <b>jednym wierszem</b>. Aplikacja robi na nim <code>UPDATE counter SET n = n + 1</code> sto tysięcy razy, każdy w osobnej transakcji. W tym czasie w innej sesji ktoś zostawił otwartą transakcję <code>REPEATABLE READ</code> po jednym <code>SELECT</code>-cie. Tabela wciąż ma jeden wiersz, a jej plik urósł z 8 kB do megabajtów. Dlaczego? I dlaczego po zamknięciu tamtej sesji i ręcznym <code>VACUUM</code> plik nadal jest tak duży?</p>
     <p class="mut">Odpowiedź w finale. Do tego czasu będziesz ją znać sam.</p>
   </div>
 </section>
@@ -853,14 +853,14 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 --  base/16436/16445     |             8192     ← jedna strona</code></pre>
 
   <h3 class="reveal">Strona 8 kB</h3>
-  <p class="reveal">Tabela to tablica stron o stałym rozmiarze, zwykle 8 kB (rozmiar ustala się przy kompilacji serwera). Strona składa się z czterech części:</p>
+  <p class="reveal">Tabela to tablica stron o stałym rozmiarze, zwykle 8 kB (rozmiar ustala się przy kompilacji serwera). Dokumentacja wymienia pięć części strony; cztery są zawsze, a piąta, sekcja specjalna, bywa pusta:</p>
   <ol class="reveal">
     <li><b>Nagłówek</b> (24 bajty): między innymi wskaźniki wolnego miejsca (<code>pd_lower</code>, <code>pd_upper</code>).</li>
     <li><b>Tablica wskaźników</b> (line pointers, <code>ItemIdData</code>), po 4 bajty na wpis: para (offset, długość). Rośnie od początku wolnego miejsca.</li>
     <li><b>Wolne miejsce</b> pośrodku.</li>
     <li><b>Krotki</b> (tuples), czyli wersje wierszy, układane od końca strony w stronę początku. Każda ma nagłówek o stałym rozmiarze (23 bajty na większości maszyn) z polami <code>t_xmin</code>, <code>t_xmax</code> i <code>t_ctid</code>. Wrócimy do nich w <a href="#ch4">MVCC</a>.</li>
   </ol>
-  <p class="reveal">Na końcu strony może być jeszcze „sekcja specjalna”. Indeksy B-tree trzymają w niej linki do sąsiednich stron, a zwykłe tabele jej nie używają.</p>
+  <p class="reveal">Piąta część to „sekcja specjalna” na końcu strony. Indeksy B-tree trzymają w niej linki do sąsiednich stron, a zwykłe tabele jej nie używają.</p>
   <p class="reveal">Fizyczny adres krotki to <b>TID</b>, widoczny jako kolumna systemowa <code>ctid</code>: para (numer strony, numer wskaźnika na stronie). Wskaźnik nie zmienia miejsca, dopóki nie zostanie zwolniony, więc indeks może bezpiecznie wskazywać na „(strona, wpis)”, nawet gdy krotka przesunie się wewnątrz strony.</p>
 <pre class="reveal"><code>CREATE TABLE konta (id int PRIMARY KEY, saldo int);
 INSERT INTO konta VALUES (1,100),(2,200),(3,300);
@@ -1535,7 +1535,7 @@ CREATE INDEX products_name_pattern_idx ON products (name text_pattern_ops);</cod
   <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
     <ul>
       <li>Typ indeksu dobierasz do operatora: <code>= &lt; &gt;</code> i sortowanie → B-tree; „zawiera” w jsonb/tablicach/tekście → GIN; geometria i najbliżsi sąsiedzi → GiST; ogromne tabele append-only → BRIN.</li>
-      <li>Tylko B-tree oddaje wiersze posortowane i tylko B-tree bywa unikalny.</li>
+      <li>Tylko B-tree oddaje wiersze posortowane według wartości (GiST i SP-GiST potrafią zwracać je według odległości, „najbliżsi sąsiedzi”) i tylko B-tree bywa unikalny.</li>
       <li>Indeks częściowy i wyrażeniowy: mniejszy indeks, ale zapytanie musi pasować do warunku lub wyrażenia.</li>
       <li><code>LIKE 'abc%'</code> poza lokalizacją C wymaga <code>text_pattern_ops</code>; <code>LIKE '%abc%'</code> wymaga <code>pg_trgm</code>.</li>
       <li><code>CREATE INDEX CONCURRENTLY</code> nie blokuje zapisów, ale po błędzie zostawia indeks <code>INVALID</code>.</li>
@@ -1584,7 +1584,7 @@ FROM pg_stats WHERE tablename = 'orders' AND attname = 'status';</code></pre>
   <div class="scroll-x reveal"><table class="mini">
     <tr><th>Opcja</th><th>Co robi</th><th>Kiedy</th></tr>
     <tr><td><code>seq_page_cost</code> = 1.0</td><td>koszt strony czytanej sekwencyjnie</td><td>zwykle zostaw; to jednostka odniesienia</td></tr>
-    <tr><td><code>random_page_cost</code> = 4.0</td><td>koszt strony czytanej nie po kolei</td><td>niżej, gdy dane prawie w całości mieszczą się w cache; równe <code>seq_page_cost</code>, gdy cała baza jest w RAM; wyżej dla dysków talerzowych</td></tr>
+    <tr><td><code>random_page_cost</code> = 4.0</td><td>koszt strony czytanej nie po kolei</td><td>niżej, gdy dane prawie w całości mieszczą się w cache; przy całej bazie w RAM można zejść blisko <code>seq_page_cost</code>; wyżej dla dysków talerzowych</td></tr>
     <tr><td><code>cpu_tuple_cost</code> = 0.01</td><td>przetworzenie jednego wiersza</td><td>rzadko zmieniane</td></tr>
     <tr><td><code>cpu_index_tuple_cost</code> = 0.005</td><td>przetworzenie jednego wpisu indeksu</td><td>rzadko zmieniane</td></tr>
     <tr><td><code>cpu_operator_cost</code> = 0.0025</td><td>wykonanie operatora lub funkcji</td><td>rzadko zmieniane</td></tr>
@@ -1623,14 +1623,14 @@ EXPLAIN ANALYZE SELECT * FROM t1 WHERE a = 1 AND b = 0;
   </div>
 
   <details class="deeper" data-level="3"><summary>🔬 Głębiej: kolejność złączeń i plany generic kontra custom</summary>
-    <p>Przy wielu tabelach liczba możliwych kolejności złączeń rośnie wykładniczo. <code>from_collapse_limit</code> i <code>join_collapse_limit</code> (domyślnie 8) ograniczają, ile elementów <code>FROM</code>/<code>JOIN</code> planer przestawia swobodnie; powyżej <code>geqo_threshold</code> (domyślnie 12) elementów włącza się genetyczny optymalizator GEQO. Ustawienie <code>join_collapse_limit = 1</code> wymusza kolejność z jawnych <code>JOIN</code>-ów w zapytaniu.</p>
+    <p>Przy wielu tabelach liczba możliwych kolejności złączeń rośnie wykładniczo. <code>from_collapse_limit</code> i <code>join_collapse_limit</code> (domyślnie 8) ograniczają, ile elementów <code>FROM</code>/<code>JOIN</code> planer przestawia swobodnie; od <code>geqo_threshold</code> (domyślnie 12) elementów włącza się genetyczny optymalizator GEQO. Ustawienie <code>join_collapse_limit = 1</code> wymusza kolejność z jawnych <code>JOIN</code>-ów w zapytaniu.</p>
     <p>Dla przygotowanych zapytań (<code>PREPARE</code>, a pośrednio wiele sterowników) przy <code>plan_cache_mode = auto</code> pierwsze pięć wykonań dostaje plan „custom” dla konkretnych parametrów. Potem PostgreSQL buduje plan „generic” (z <code>$1</code>) i używa go, jeśli jego szacowany koszt nie jest wyraźnie wyższy od średniej z planów custom. Gdy rozkład danych jest bardzo nierówny, plan generic potrafi być zły dla rzadkich wartości; wtedy pomaga <code>plan_cache_mode = force_custom_plan</code>. Plan generic podejrzysz przez <code>EXPLAIN (GENERIC_PLAN)</code>.</p>
   </details>
 
   <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
     <ul>
       <li>Planer liczy koszt z statystyk (<code>pg_stats</code>: MCV, histogram, n_distinct) i stałych kosztów; wybiera najtańszy wariant.</li>
-      <li><code>seq_page_cost = 1</code>, <code>random_page_cost = 4</code>: przy dużej selektywności Seq Scan bywa tańszy niż indeks.</li>
+      <li><code>seq_page_cost = 1</code>, <code>random_page_cost = 4</code>: gdy zapytanie zwraca dużą część tabeli, Seq Scan bywa tańszy niż indeks.</li>
       <li>Nieaktualne statystyki → zły szacunek wierszy → złe złączenie. Pierwsza pomoc: <code>ANALYZE</code>.</li>
       <li>Kolumny skorelowane: <code>CREATE STATISTICS</code> (dependencies, ndistinct, mcv).</li>
       <li>Nested Loop dla małych wejść z indeksem, Hash Join dla dużych z równością, Merge Join dla posortowanych.</li>
@@ -1787,7 +1787,7 @@ SELECT pg_walfile_name(pg_current_wal_lsn());        -- 000000010000000000000009
     <p>Każdy checkpoint to zapis wszystkich brudnych stron plus dodatkowy ruch WAL (pełne obrazy stron) zaraz po nim. Sprawdź, ile checkpointów wynikło z harmonogramu, a ile z braku miejsca w WAL:</p>
 <pre><code>SELECT num_timed, num_requested, write_time, sync_time, buffers_written
 FROM pg_stat_checkpointer;   -- widok od PostgreSQL 17</code></pre>
-    <p>Dużo <code>num_requested</code> względem <code>num_timed</code> znaczy, że <code>max_wal_size</code> jest za małe. Jeśli checkpointy następują częściej niż co <code>checkpoint_warning</code> (domyślnie 30 s), serwer zapisuje do logu sugestię podniesienia <code>max_wal_size</code>. <code>log_checkpoints</code> jest domyślnie włączony i loguje każdy checkpoint ze statystykami.</p>
+    <p>Dużo <code>num_requested</code> względem <code>num_timed</code> zwykle znaczy, że <code>max_wal_size</code> jest za małe (<code>num_requested</code> liczy też ręczne <code>CHECKPOINT</code> i backupy). Jeśli checkpointy wywołane zapełnieniem WAL następują częściej niż co <code>checkpoint_warning</code> (domyślnie 30 s), serwer zapisuje do logu sugestię podniesienia <code>max_wal_size</code>. <code>log_checkpoints</code> jest domyślnie włączony i loguje każdy checkpoint ze statystykami.</p>
   </details>
 
   <div class="box bullets reveal"><span class="lbl">📌 W punktach</span>
@@ -1902,7 +1902,7 @@ pg_combinebackup /kopie/pn /kopie/wt -o /odtw/wt                         # sklej
   <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span>
     <div class="qa">
       <div class="q">P:</div><div>Mam replikę (standby). Czy to nie jest backup?</div>
-      <div class="a">O:</div><div>Nie. Standby odtwarza każdy rekord WAL z primary, łącznie z <code>DROP TABLE</code>, zwykle w niecałą sekundę. Replika chroni przed awarią sprzętu, a backup z archiwum WAL przed błędem człowieka. Szczegóły w <a href="#ch14">rozdziale 14</a>.</div>
+      <div class="a">O:</div><div>Nie. Standby odtwarza każdy rekord WAL z primary, łącznie z <code>DROP TABLE</code>, zwykle po krótkim opóźnieniu. Replika chroni przed awarią sprzętu, a backup z archiwum WAL przed błędem człowieka. Szczegóły w <a href="#ch14">rozdziale 14</a>.</div>
       <div class="q">P:</div><div>Czy w PostgreSQL 18 pg_dump zrzuca statystyki planera?</div>
       <div class="a">O:</div><div>Na życzenie: doszła opcja <code>--statistics</code>, a domyślnie działa <code>--no-statistics</code>. Bez statystyk po odtworzeniu zrób <code>ANALYZE</code>, bo inaczej <a href="#ch10">planer</a> zgaduje.</div>
     </div>
@@ -2088,7 +2088,7 @@ ALTER TABLE log_ev REPLICA IDENTITY FULL;      -- albo lepiej: dodaj klucz głó
   </div>
 
   <details class="deeper reveal" data-level="3"><summary>🔬 Głębiej: slot logiczny też trzyma WAL, a PG 18 i 19 coś zmieniają</summary>
-    <p>Każda aktywna subskrypcja czyta z własnego slotu na źródle. Wszystko, co w <a href="#ch14">rozdziale 14</a> mówiliśmy o porzuconych slotach i <code>max_slot_wal_keep_size</code>, dotyczy też slotów logicznych. Gdy usuwasz subskrypcję, a źródło jest nieosiągalne, slot zostaje na źródle i trzeba go usunąć ręcznie.</p>
+    <p>Każda aktywna subskrypcja czyta z własnego slotu na źródle. Wszystko, co w <a href="#ch14">rozdziale 14</a> mówiliśmy o porzuconych slotach i <code>max_slot_wal_keep_size</code>, dotyczy też slotów logicznych. Gdy źródło jest nieosiągalne, <code>DROP SUBSCRIPTION</code> kończy się błędem. Najpierw robisz <code>ALTER SUBSCRIPTION … DISABLE</code> i <code>SET (slot_name = NONE)</code>; wtedy subskrypcja zniknie, ale slot na źródle zostaje i trzeba go usunąć ręcznie.</p>
     <p>PostgreSQL 18: domyślna opcja <code>streaming</code> w <code>CREATE SUBSCRIPTION</code> zmieniła się z <code>off</code> na <code>parallel</code>, konflikty przy stosowaniu zmian są logowane, a kolumny generowane można publikować (<code>publish_generated_columns</code>). <span class="anno">w PG 19 (RC)</span> W wydaniu 19 (RC) dochodzi replikacja wartości sekwencji (<code>FOR ALL SEQUENCES</code>, <code>ALTER SUBSCRIPTION … REFRESH SEQUENCES</code>) oraz włączanie replikacji logicznej bez restartu przy <code>wal_level = replica</code>.</p>
   </details>
 
@@ -2134,7 +2134,7 @@ CREATE INDEX ON measurement (logdate);   -- tworzy indeks w każdej partycji</co
   <p class="reveal">Wiersz bez pasującej partycji (i bez <code>DEFAULT</code>) to błąd <code>no partition of relation "measurement" found for row</code>. Ograniczenia unikalne, w tym klucz główny, na tabeli partycjonowanej muszą zawierać wszystkie kolumny klucza partycjonowania: <code>PRIMARY KEY (id)</code> zostanie odrzucone, <code>PRIMARY KEY (id, logdate)</code> przejdzie.</p>
 
   <h3 class="reveal">Partition pruning: przekreślanie przegródek</h3>
-  <p class="reveal">Planer porównuje warunki <code>WHERE</code> z granicami partycji i pomija te, które nie mogą zawierać pasujących wierszy (<code>enable_partition_pruning</code>, domyślnie on). Robi to na dwóch etapach. <b>Przy planowaniu</b>, gdy wartości są stałymi. <b>Przy wykonaniu</b>, gdy wartość znana jest dopiero wtedy, np. parametr ogólnego planu przygotowanego zapytania albo wynik podzapytania. Wtedy w <code>EXPLAIN ANALYZE</code> zobaczysz <code>Subplans Removed: N</code>.</p>
+  <p class="reveal">Planer porównuje warunki <code>WHERE</code> z granicami partycji i pomija te, które nie mogą zawierać pasujących wierszy (<code>enable_partition_pruning</code>, domyślnie on). Robi to na dwóch etapach. <b>Przy planowaniu</b>, gdy wartości są stałymi. <b>Przy wykonaniu</b>, gdy wartość znana jest dopiero wtedy, np. parametr ogólnego planu przygotowanego zapytania albo wynik podzapytania. Partycje odcięte przy inicjalizacji planu (np. dla parametru ogólnego planu) znikają z <code>EXPLAIN ANALYZE</code>, a ich liczbę pokazuje <code>Subplans Removed: N</code>. Partycje odcinane już w trakcie działania (wynik podzapytania, parametr zagnieżdżonej pętli) zostają w planie, a poznasz je po liczbie <code>loops</code> i adnotacji <code>(never executed)</code>.</p>
 <pre><code>EXPLAIN (COSTS OFF) SELECT count(*) FROM measurement
  WHERE logdate &gt;= '2026-02-10' AND logdate &lt; '2026-02-20';
 --  Aggregate
@@ -2192,7 +2192,7 @@ EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF) EXECUTE q('2026-03-05');
     <ul>
       <li>RANGE / LIST / HASH + opcjonalna partycja <code>DEFAULT</code>. Granica górna RANGE jest wyłączna.</li>
       <li>Klucz główny i unikalne ograniczenia muszą zawierać klucz partycjonowania.</li>
-      <li>Pruning przy planowaniu (stałe) i przy wykonaniu (<code>Subplans Removed</code>).</li>
+      <li>Pruning przy planowaniu (stałe) i przy wykonaniu: przy inicjalizacji planu (<code>Subplans Removed</code>) albo w trakcie działania (<code>loops</code>, <code>never executed</code>).</li>
       <li>Zapytanie bez klucza = skan wszystkich partycji.</li>
       <li>Retencja przez <code>DETACH … CONCURRENTLY</code> / <code>DROP TABLE</code> zamiast <code>DELETE</code>.</li>
       <li>Partycjonuj duże tabele (reguła: większe niż RAM) z dostępem po kluczu, nie „na zapas”.</li>
@@ -2525,7 +2525,7 @@ ERROR:  pg_stat_statements must be loaded via shared_preload_libraries
 
 -- postgresql.conf, potem restart:
 shared_preload_libraries = 'pg_stat_statements'</code></pre>
-  <p class="reveal">Zapytania różniące się tylko stałymi trafiają do jednego wiersza: stała zamienia się na symbol parametru, np. <code>$1</code>, a <code>queryid</code> to hash znormalizowanego zapytania. Po <code>SELECT 1</code> i <code>SELECT 2</code> zobaczysz jeden wiersz <code>select $1</code> z <code>calls = 2</code>. Moduł pamięta do <code>pg_stat_statements.max</code> różnych zapytań (domyślnie 5000); przy nadmiarze wyrzuca najrzadziej wykonywane.</p>
+  <p class="reveal">Zapytania różniące się tylko stałymi trafiają do jednego wiersza: stała zamienia się na symbol parametru, np. <code>$1</code>, a <code>queryid</code> to hash znormalizowanego zapytania. Po <code>SELECT 1</code> i <code>SELECT 2</code> zobaczysz jeden wiersz <code>SELECT $1</code> z <code>calls = 2</code>. Moduł pamięta do <code>pg_stat_statements.max</code> różnych zapytań (domyślnie 5000); przy nadmiarze wyrzuca najrzadziej wykonywane.</p>
 <pre><code>SELECT queryid, calls,
        round(total_exec_time) AS total_ms,
        round(mean_exec_time::numeric, 2) AS mean_ms,
@@ -2626,7 +2626,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE app_owner IN SCHEMA app
     <tr><td><code>reject</code></td><td>Odrzuca bezwarunkowo.</td><td>„Wycięcie” hosta z większej sieci — <b>przed</b> linią, która tę sieć wpuszcza.</td></tr>
     <tr><td><code>trust</code></td><td>Wpuszcza bez żadnego sprawdzania.</td><td>Praktycznie nigdy poza laptopem dewelopera.</td></tr>
   </table></div>
-  <p class="reveal">Sprawdziłem to na lokalnym serwerze: z liniami <code>host all bob 127.0.0.1/32 reject</code> i pod nią <code>host all all 127.0.0.1/32 trust</code> bob dostaje <code>FATAL: pg_hba.conf rejects connection…</code>. Po zamianie kolejności ten sam bob loguje się bez hasła. Bieżącą zawartość pliku, tak jak widzi ją serwer (z numerami linii i błędami składni), pokazuje widok <code>pg_hba_file_rules</code>. Zmiany wczytujesz przez <code>SELECT pg_reload_conf()</code>.</p>
+  <p class="reveal">Sprawdziłem to na lokalnym serwerze: z liniami <code>host all bob 127.0.0.1/32 reject</code> i pod nią <code>host all all 127.0.0.1/32 trust</code> bob dostaje <code>FATAL: pg_hba.conf rejects connection…</code>. Po zamianie kolejności ten sam bob loguje się bez hasła. Widok <code>pg_hba_file_rules</code> pokazuje zawartość pliku na dysku (z numerami linii i błędami składni), także zanim wczytasz zmiany. Wczytujesz je przez <code>SELECT pg_reload_conf()</code>.</p>
 
   <figure class="fig wide" id="fig-sec">
     <div class="ftitle">▶ Bramka pg_hba i RLS <span>wybierz klienta i sprawdź; niżej wybierz użytkownika</span></div>
@@ -2979,7 +2979,7 @@ SELECT num_timed, num_requested FROM pg_stat_checkpointer;
       <li>Najpierw <code>pg_stat_activity</code>: kto czeka, na co (<code>wait_event_type</code>), od kiedy (<code>xact_start</code>).</li>
       <li>Potem <code>pg_stat_statements</code> posortowane po <code>total_exec_time</code> (<a href="#ch20">rozdział 20</a>).</li>
       <li>Dopiero potem <code>EXPLAIN (ANALYZE, BUFFERS)</code> dla konkretnego zapytania.</li>
-      <li>Restart zostaw na koniec i zapisz wcześniej wynik powyższych zapytań: po restarcie dowody znikną.</li>
+      <li>Restart zostaw na koniec i zapisz wcześniej wynik powyższych zapytań: po restarcie znikną sesje i blokady (<code>pg_stat_activity</code>, <code>pg_locks</code>); skumulowane statystyki (<code>pg_stat_*</code>, <code>pg_stat_statements</code>) przetrwają czysty restart, ale zostaną wyzerowane po awarii.</li>
     </ol>
   </div>
 
@@ -2988,7 +2988,7 @@ SELECT num_timed, num_requested FROM pg_stat_checkpointer;
       <li>Objaw to nie diagnoza: potwierdź przyczynę zapytaniem, zanim coś zmienisz.</li>
       <li>Trzy widoki rozwiązują większość spraw: <code>pg_stat_activity</code>, <code>pg_stat_user_tables</code>, <code>pg_stat_statements</code>.</li>
       <li>Wiele objawów ma jednego sprawcę: długą transakcję trzymającą horyzont lub blokadę.</li>
-      <li>Restart usuwa objaw i dowody, nie przyczynę.</li>
+      <li>Restart usuwa objaw i dowody na żywo (sesje, blokady), nie przyczynę.</li>
     </ul>
   </div>
 </section>
@@ -3041,7 +3041,7 @@ SELECT num_timed, num_requested FROM pg_stat_checkpointer;
         <div class="fc-back"><p>Zwykle nie: oznacza miejsce do ponownego użycia. Oddaje je systemowi tylko, gdy całkowicie puste są strony na końcu tabeli. Zmniejsza <code>VACUUM FULL</code>, ale przepisuje tabelę pod blokadą wyłączną.</p><a href="#ch8">→ rozdział 8</a></div></div>
 
       <div class="fc-card" data-id="11"><div class="fc-front"><span class="fc-lv">L1</span>Kiedy autovacuum odpali VACUUM na tabeli?</div>
-        <div class="fc-back"><p>Gdy martwych krotek jest więcej niż <code>autovacuum_vacuum_threshold</code> (50) + <code>autovacuum_vacuum_scale_factor</code> (0.2) × liczba krotek. Dla dużych tabel 20% to bardzo dużo.</p><a href="#ch8">→ rozdział 8</a></div></div>
+        <div class="fc-back"><p>Gdy martwych krotek jest więcej niż <code>autovacuum_vacuum_threshold</code> (50) + <code>autovacuum_vacuum_scale_factor</code> (0.2) × liczba krotek. Od PG 18 próg nie przekracza <code>autovacuum_vacuum_max_threshold</code> (domyślnie 100 mln). Dla dużych tabel 20% to i tak bardzo dużo.</p><a href="#ch8">→ rozdział 8</a></div></div>
 
       <div class="fc-card" data-id="12"><div class="fc-front"><span class="fc-lv">L2</span>Do czego GIN, a do czego BRIN?</div>
         <div class="fc-back"><p>GIN to indeks odwrócony dla wartości złożonych (tablice, <code>jsonb</code>, pełnotekstowe). BRIN trzyma podsumowania zakresów bloków i działa, gdy wartości są skorelowane z fizyczną kolejnością (np. czas w tabeli tylko dopisywanej).</p><a href="#ch9">→ rozdział 9</a></div></div>
@@ -3146,7 +3146,7 @@ SELECT num_timed, num_requested FROM pg_stat_checkpointer;
 <tr><td>hot_standby_feedback</td><td>off</td><td>on: mniej anulowanych zapytań na replice kosztem bloatu na primary</td></tr>
 <tr><td>io_method</td><td>worker (PG 18)</td><td>io_uring na Linuksie, sync = zachowanie sprzed 18</td></tr>
 <tr><td>EXPLAIN (ANALYZE, BUFFERS)</td><td>wykonuje zapytanie; w PG 18 BUFFERS domyślnie z ANALYZE</td><td>diagnoza wolnego zapytania</td></tr>
-<tr><td>VACUUM (VERBOSE) · VACUUM FULL</td><td>sprząta bez blokowania · przepisuje z ACCESS EXCLUSIVE</td><td>bloat; FULL tylko w oknie serwisowym</td></tr>
+<tr><td>VACUUM (VERBOSE) · VACUUM FULL</td><td>sprząta bez blokowania odczytów i zapisów · przepisuje z ACCESS EXCLUSIVE</td><td>bloat; FULL tylko w oknie serwisowym</td></tr>
 <tr><td>CREATE INDEX CONCURRENTLY</td><td>bez blokowania zapisów; po błędzie INVALID</td><td>indeks na żywej tabeli</td></tr>
 <tr><td>pg_blocking_pids(pid)</td><td>kto blokuje daną sesję</td><td>„zapytanie wisi”</td></tr>
 <tr><td>pg_stat_activity</td><td>sesje, stan, wait_event, xact_start</td><td>idle in transaction, długie zapytania</td></tr>
@@ -3159,7 +3159,7 @@ SELECT num_timed, num_requested FROM pg_stat_checkpointer;
   </table>
   </div>
   <div class="box relax reveal"><span class="lbl">🎓 Gratulacje</span><p><b>Odpowiedź na zagadkę z początku.</b> Każdy <code>UPDATE</code> zapisuje nową wersję wiersza, a stara dostaje <code>xmax</code> (<a href="#ch4">MVCC</a>). Zwykle stare wersje są sprzątane na bieżąco: przycinanie strony przy aktualizacjach HOT (<a href="#ch18">HOT</a>) i <code>VACUUM</code>. Ale otwarta transakcja <code>REPEATABLE READ</code> trzyma snapshot, który może jeszcze potrzebować każdej z tych wersji, więc żadnej nie wolno usunąć (<a href="#ch8">horyzont VACUUM</a>). Sto tysięcy wersji po kilkadziesiąt bajtów — i plik rośnie.</p>
-<p>Po zamknięciu tamtej sesji <code>VACUUM</code> oznacza martwe wersje jako wolne miejsce do ponownego użycia, ale plik oddaje systemowi tylko puste strony z <b>końca</b> pliku. Jeśli żywa wersja leży na ostatniej stronie, plik zostaje duży, choć jest prawie pusty. Zmniejszy go dopiero przepisanie tabeli (<code>VACUUM FULL</code>, który bierze blokadę <code>ACCESS EXCLUSIVE</code>). Sprawdziliśmy to na PostgreSQL 16: 100 000 aktualizacji przy otwartym snapshocie dało 2904 kB, po <code>VACUUM</code> nadal 2904 kB, a ten sam test bez otwartej transakcji skończył się na 8192 bajtach.</p>
+<p>Po zamknięciu tamtej sesji <code>VACUUM</code> oznacza martwe wersje jako wolne miejsce do ponownego użycia, ale plik oddaje systemowi tylko puste strony z <b>końca</b> pliku. Jeśli żywa wersja leży na ostatniej stronie, plik zostaje duży, choć jest prawie pusty. Zmniejszy go dopiero przepisanie tabeli (<code>VACUUM FULL</code>, który bierze blokadę <code>ACCESS EXCLUSIVE</code>). Sprawdziliśmy to na PostgreSQL 16: 100 000 aktualizacji przy otwartym snapshocie dało w naszych przebiegach od ok. 1,2 MB do ok. 3,5 MB (rozmiar zależy od definicji tabeli i przebiegu; nasza tabela: <code>id int PRIMARY KEY, n bigint</code>), po <code>VACUUM</code> rozmiar się nie zmienił, a ten sam test bez otwartej transakcji skończył się na 8192 bajtach.</p>
 <p>Co dalej? Włącz <code>pg_stat_statements</code> na swojej bazie, ustaw <code>idle_in_transaction_session_timeout</code> i <code>lock_timeout</code>, a potem przejdź jeszcze raz <a href="#ch23">klinikę objawów</a> — tym razem z własnymi danymi.</p>
 </div>
 </section>
@@ -4886,7 +4886,7 @@ const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase label
     if (CAP - used(pg) === 0 && hotOk) {
       const fr = prune(p);
       if (fr) {
-        paint(); say(st, `<b>Strona pełna, więc najpierw pruning:</b> pośrednie wersje z łańcucha HOT usunięte bez VACUUM, a slot ${tid(s.root[0], s.root[1])} zostaje przekierowaniem ↪ do bieżącej wersji.`, 'warn');
+        paint(); say(st, `<b>Przycinanie strony w trakcie zwykłej pracy (bez VACUUM):</b> pośrednie wersje z łańcucha HOT usunięte bez VACUUM, a slot ${tid(s.root[0], s.root[1])} zostaje przekierowaniem ↪ do bieżącej wersji.`, 'warn');
         await sleep(1300); if (my !== run) return;
       }
     }
@@ -5371,7 +5371,7 @@ const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase label
     ['VACUUM VERBOSE pokazuje „dead but not yet removable”. Najczęstsza przyczyna?', ['Za mały maintenance_work_mem', 'Stara otwarta transakcja (np. idle in transaction) trzyma horyzont', 'Brak indeksu'], 1, 'Wersji nie wolno usunąć, póki jakaś migawka może ich potrzebować (rozdz. 8).'],
     ['Potrzebujesz szukać dokumentów jsonb operatorem @>. Jaki indeks?', ['B-tree', 'GIN', 'Hash'], 1, 'GIN indeksuje elementy wartości złożonych i obsługuje „zawiera” (rozdz. 9).'],
     ['Co się dzieje, gdy CREATE INDEX CONCURRENTLY się nie powiedzie?', ['Nic, transakcja się wycofuje bez śladu', 'Zostaje indeks oznaczony jako INVALID: trzeba go usunąć i zbudować ponownie (albo przebudować przez REINDEX INDEX CONCURRENTLY)', 'Tabela zostaje zablokowana'], 1, 'Nieudana budowa współbieżna zostawia nieważny indeks, który dalej kosztuje przy zapisach (rozdz. 9).'],
-    ['Planer wybrał Seq Scan, mimo że indeks istnieje. Co jest najbardziej prawdopodobne?', ['Planer ma błąd', 'Zapytanie zwraca dużą część tabeli i sekwencyjny odczyt jest tańszy niż losowy', 'Indeks jest uszkodzony'], 1, 'Przy dużej selektywności random_page_cost = 4 przegrywa z seq_page_cost = 1 (rozdz. 10).'],
+    ['Planer wybrał Seq Scan, mimo że indeks istnieje. Co jest najbardziej prawdopodobne?', ['Planer ma błąd', 'Zapytanie zwraca dużą część tabeli i sekwencyjny odczyt jest tańszy niż losowy', 'Indeks jest uszkodzony'], 1, 'Gdy pasuje duża część tabeli, wiele losowych odczytów (random_page_cost = 4) przegrywa z czytaniem po kolei (seq_page_cost = 1) (rozdz. 10).'],
     ['Szacunek wierszy jest 100× za mały dla warunku na dwóch skorelowanych kolumnach. Co pomoże?', ['Zwiększenie work_mem', 'CREATE STATISTICS (dependencies) i ANALYZE', 'REINDEX'], 1, 'Planer domyślnie zakłada niezależność kolumn; rozszerzone statystyki to naprawiają (rozdz. 10).'],
     ['ALTER TABLE czeka na długi SELECT. Co dzieje się z kolejnymi SELECT-ami?', ['Wyprzedzają ALTER i działają normalnie', 'Ustawiają się w kolejce za ALTER, który czeka na ACCESS EXCLUSIVE — tabela „staje”', 'Dostają błąd'], 1, 'Kolejka blokad jest uczciwa; dlatego migracje ustawiają lock_timeout (rozdz. 11).'],
     ['Po jakim czasie PostgreSQL sprawdza, czy czekanie na blokadę nie jest deadlockiem?', ['Natychmiast', 'Po deadlock_timeout (domyślnie 1 s)', 'Po statement_timeout'], 1, 'Sprawdzanie grafu jest kosztowne, więc odbywa się dopiero po deadlock_timeout (rozdz. 11).'],
@@ -5384,7 +5384,7 @@ const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase label
     ['UPDATE na publikowanej tabeli bez klucza głównego i replica identity. Co się stanie?', ['UPDATE przejdzie, subskrybent zgadnie wiersz', 'Błąd już na źródle — UPDATE zostanie odrzucony', 'Subskrybent dostanie cały wiersz'], 1, 'Bez replica identity publikowanie UPDATE/DELETE nie jest możliwe (rozdz. 15).'],
     ['Tabela partycjonowana po dacie. Zapytanie filtruje tylko po customer_id. Co się dzieje?', ['Pruning zawsze pomoże', 'Skanowane są wszystkie partycje', 'Błąd'], 1, 'Bez warunku na kluczu partycjonowania planer nie może odciąć partycji (rozdz. 16).'],
     ['Co musi zawierać klucz główny tabeli partycjonowanej?', ['Nic szczególnego', 'Wszystkie kolumny klucza partycjonowania', 'Kolumnę ctid'], 1, 'Unikalność jest sprawdzana per partycja, więc klucz partycjonowania musi być w PK (rozdz. 16).'],
-    ['Dlaczego wraparound XID jest groźny tylko wtedy, gdy coś blokuje VACUUM?', ['Bo XID nie mają limitu', 'Bo VACUUM zamraża stare wiersze i przesuwa relfrozenxid; bez tego licznik dochodzi do granicy i baza przestaje przydzielać XID', 'Bo VACUUM resetuje licznik do zera'], 1, 'Zamrażanie robi stare wiersze „zawsze w przeszłości” (rozdz. 17).'],
+    ['Dlaczego wraparound XID staje się groźny, gdy VACUUM nie może zamrażać (coś go blokuje albo autovacuum nie nadąża)?', ['Bo XID nie mają limitu', 'Bo VACUUM zamraża stare wiersze i przesuwa relfrozenxid; bez tego licznik dochodzi do granicy i baza przestaje przydzielać XID', 'Bo VACUUM resetuje licznik do zera'], 1, 'Zamrażanie robi stare wiersze „zawsze w przeszłości” (rozdz. 17).'],
     ['Baza ostrzega o zbliżającym się wraparound. Pierwszy krok?', ['VACUUM FULL wszystkich tabel', 'Znaleźć i usunąć to, co trzyma horyzont (stare transakcje, prepared xacts, porzucone sloty), potem zwykły VACUUM', 'Restart serwera'], 1, 'Dokumentacja odradza VACUUM FULL i FREEZE w tej sytuacji (rozdz. 17).'],
     ['Kiedy UPDATE może być HOT?', ['Zawsze', 'Gdy nie zmienia żadnej indeksowanej kolumny (poza BRIN) i nowa wersja mieści się na tej samej stronie', 'Gdy tabela nie ma indeksów'], 1, 'Wtedy indeksy nie dostają nowych wpisów (rozdz. 18).'],
     ['Po co ustawiać fillfactor = 90 dla tabeli z częstymi UPDATE?', ['Żeby kompresować strony', 'Żeby zostawić miejsce na stronie na nowe wersje i zwiększyć szansę na HOT', 'Żeby VACUUM działał rzadziej'], 1, 'Wolne miejsce na stronie to warunek HOT (rozdz. 18).'],
