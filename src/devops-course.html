@@ -555,7 +555,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
     <tr><td>Wspólne repo (GitHub, GitLab, Bitbucket)</td><td>kod aplikacji, infrastruktury i pipeline'ów w jednym miejscu</td><td>zawsze — to fundament wspólnej odpowiedzialności</td></tr>
     <tr><td>Tablica pracy (Jira, GitHub Projects, GitLab Issues)</td><td>widoczność całej pracy, także „operacyjnej”</td><td>gdy praca ops ginie w mailach i rozmowach</td></tr>
     <tr><td>Czat z kanałami usług/incydentów (Slack, Teams)</td><td>szybka komunikacja, wspólny kontekst przy awarii</td><td>gdy informacja krąży w prywatnych wiadomościach</td></tr>
-    <tr><td>System on-call (PagerDuty, Opsgenie, Grafana OnCall)</td><td>grafik dyżurów, eskalacje, alerty do właściwego zespołu</td><td>gdy zespół przejmuje utrzymanie swojej usługi</td></tr>
+    <tr><td>System on-call (np. PagerDuty, Grafana IRM, incident.io)</td><td>grafik dyżurów, eskalacje, alerty do właściwego zespołu</td><td>gdy zespół przejmuje utrzymanie swojej usługi</td></tr>
     <tr><td>Wiki / runbooki w repo</td><td>wiedza „jak to naprawić” dostępna dla wszystkich</td><td>gdy wiedza jest w głowie jednej osoby</td></tr>
   </tbody></table></div>
 
@@ -583,7 +583,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
 <section class="chapter" id="flow" data-level="1" data-title="Flow i małe partie">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Flow, małe partie, WIP</h2><span class="tag">mniej naraz = szybciej do celu</span></div></div>
-  <p class="reveal"><b>Lead time</b> zmiany to czas od rozpoczęcia (albo od commita) do chwili, gdy działa u klienta. Składa się z dwóch rzeczy: <b>czasu pracy</b> (ktoś coś faktycznie robi) i <b>czasu oczekiwania</b> (zmiana leży w kolejce: na review, na testy, na okno wdrożeniowe). W większości organizacji to oczekiwanie dominuje — przyspieszanie samej pracy niewiele daje.</p>
+  <p class="reveal"><b>Lead time</b> zmiany to czas od rozpoczęcia (albo od commita) do chwili, gdy działa u klienta. Składa się z dwóch rzeczy: <b>czasu pracy</b> (ktoś coś faktycznie robi) i <b>czasu oczekiwania</b> (zmiana leży w kolejce: na review, na testy, na okno wdrożeniowe). Często to oczekiwanie dominuje — wtedy przyspieszanie samej pracy niewiele daje.</p>
   <p class="reveal"><b>Wielkość partii</b> (batch size) to liczba zmian wdrażanych razem. DORA wskazuje, że jednym z powodów dużych partii jest <b>wysoki stały koszt przekazania zmian</b>: gdy każde wydanie wymaga tygodnia testów i podpisów, nikt nie chce robić go często. A duża partia oznacza, że feedback przychodzi po tygodniach lub miesiącach.</p>
   <p class="reveal">Małe partie według DORA <b>skracają czas do feedbacku i ułatwiają diagnozę oraz naprawę problemów</b>. Wskazówka: pojedyncze funkcje nie powinny zajmować więcej niż kilka dni, a <b>partia kodu, której ukończenie i sprawdzenie zajmuje więcej niż tydzień, jest za duża</b>. Ideał: kilka małych zmian gotowych do wydania w trunku co najmniej raz dziennie.</p>
 
@@ -602,7 +602,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
 
   <p class="reveal"><b>WIP (work in process)</b> to praca rozpoczęta, ale nieskończona. Im więcej rzeczy robisz naraz, tym dłużej każda z nich czeka. DORA zaleca <b>limity WIP</b>: dla każdej kolumny tablicy (analiza, development, testy, operacje) ustalasz, ile kart może w niej być. Gdy limit jest osiągnięty, nie bierzesz nowej pracy — pomagasz przepchnąć to, co już jest („pull” zamiast „push”). Efekt według DORA: krótsze lead time'y, wyższa jakość, mniejsze koszty i mniej marnotrawstwa.</p>
   <p class="reveal">Limity WIP czasem sprawiają, że ktoś „stoi”. DORA mówi jasno: <b>nie podnoś wtedy limitu</b>, tylko usuń przyczynę czekania (np. pomóż zespołowi, który przygotowuje środowiska testowe). Najczęstsza pułapka: <b>nieliczenie niewidocznej pracy</b> — wsparcia produkcji, spotkań, długu technicznego.</p>
-  <p class="reveal"><b>Value stream mapping</b> (mapowanie strumienia wartości, technika z lean) to ćwiczenie, w którym rysujesz wszystkie kroki od pomysłu do klienta i przy każdym zapisujesz czas pracy oraz czas oczekiwania. Zwykle wychodzi, że kod pisze się dni, a czeka tygodnie. Mapę rób dla <b>całego strumienia od pomysłu do klienta</b>, a nie tylko dla „części developerskiej”.</p>
+  <p class="reveal"><b>Value stream mapping</b> (mapowanie strumienia wartości, technika z lean) to ćwiczenie, w którym rysujesz wszystkie kroki od pomysłu do klienta i przy każdym zapisujesz czas pracy oraz czas oczekiwania. Często wychodzi, że praca trwa krótko, a czekanie długo. Mapę rób dla <b>całego strumienia od pomysłu do klienta</b>, a nie tylko dla „części developerskiej”.</p>
 
   <div class="box pencil reveal"><span class="lbl">✏️ Zaostrz ołówek</span><p>Zmiana: 1 dzień kodowania, 2 dni czekania na review, 0,5 dnia testów, 6 dni czekania na okno wdrożeniowe, 1 godzina wdrożenia. Jaki to lead time i jaki procent to praca?</p><details><summary>Odpowiedź</summary><p>Ok. 9,5 dnia lead time'u (licząc dni robocze, liczby ilustracyjne). Praca to ok. 1,5 dnia — mniej więcej 16%. Największy zysk: skrócić czekanie na okno wdrożeniowe i review, nie pisać szybciej.</p></details></div>
 
@@ -651,7 +651,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
   </figure>
 
   <h3 class="reveal">Jak mierzyć w praktyce</h3>
-  <p class="reveal">Potrzebne dane leżą, jak pisze DORA, „w wielu różnych miejscach”: <b>VCS</b> (czas commita), <b>pipeline CI/CD</b> (czas i wynik wdrożenia), <b>system incydentów</b> (które wdrożenie wywołało problem, kiedy przywrócono działanie). Zacznij od prostego zestawienia zdarzeń: <code>commit</code> → <code>deploy</code> → <code>incident</code> → <code>resolved</code>. DORA ostrzega też przed <b>skupianiem się na pomiarze kosztem poprawy</b>: budowanie idealnych integracji do wszystkich systemów może nie być warte wysiłku.</p>
+  <p class="reveal">Potrzebne dane leżą, jak pisze DORA, „w wielu różnych miejscach”: <b>VCS</b> (czas commita), <b>pipeline CI/CD</b> (czas i wynik wdrożenia), <b>system incydentów</b> (które wdrożenie wywołało problem, kiedy przywrócono działanie). Zacznij prosto — od rozmowy w zespole albo DORA Quick Check, a potem od zestawienia zdarzeń: <code>commit</code> → <code>deploy</code> → <code>incident</code> → <code>resolved</code>. DORA ostrzega też przed <b>skupianiem się na pomiarze kosztem poprawy</b>: budowanie idealnych integracji do wszystkich systemów może nie być warte wysiłku.</p>
   <p class="reveal">Mierz <b>jedną aplikację lub usługę naraz</b> — tak DORA rekomenduje ich użycie — i patrz na <b>trend w czasie</b>, nie na pojedynczy tydzień.</p>
 
   <div class="box watch reveal"><span class="lbl">⚠️ Uwaga! Czego nie robić (pułapki wg DORA)</span><ul>
@@ -666,7 +666,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
   <h3 class="reveal">Narzędzia</h3>
   <div class="scroll-x reveal"><table class="mini"><thead><tr><th>Narzędzie</th><th>Do czego</th><th>Kiedy wybrać</th></tr></thead><tbody>
     <tr><td>Zdarzenia z CI/CD + VCS (np. webhooki, API GitHub/GitLab)</td><td>surowe dane o commitach i wdrożeniach</td><td>zawsze jako źródło prawdy</td></tr>
-    <tr><td>System incydentów (PagerDuty, Opsgenie, Jira Service Management…)</td><td>powiązanie incydentu z wdrożeniem, czas odzyskania</td><td>do change fail rate, recovery time i rework rate</td></tr>
+    <tr><td>System incydentów (np. PagerDuty, Jira Service Management, incident.io…)</td><td>powiązanie incydentu z wdrożeniem, czas odzyskania</td><td>do change fail rate, recovery time i rework rate</td></tr>
     <tr><td>Dashboard (Grafana, Looker Studio, arkusz)</td><td>wizualizacja trendów</td><td>gdy masz już dane; arkusz wystarczy na start</td></tr>
     <tr><td>Wbudowane analityki platform (np. GitLab Value Stream Analytics) lub dedykowane platformy metryk inżynierskich</td><td>gotowe wykresy przepływu</td><td>gdy nie chcesz budować własnych integracji</td></tr>
   </tbody></table></div>
@@ -674,7 +674,7 @@ footer { max-width:800px; margin:0 auto; padding:2rem 1.2rem 4rem; font:14px var
   <div class="box nodumb reveal"><span class="lbl">❓ Nie ma głupich pytań</span><div class="qa"><div class="q">P:</div><div>Szef chce rankingu zespołów według DORA. Co mu powiedzieć?</div><div class="a">O:</div><div>Że DORA wprost wymienia porównywanie różnych aplikacji i rywalizację jako pułapki. Zaproponuj zamiast rankingu trend każdego zespołu względem jego samego oraz rozmowę o tym, co blokuje poprawę.</div></div></div>
 
   <details class="deeper" data-level="3"><summary>🔬 Głębiej: standard enterprise</summary>
-    <p>W dużych firmach metryki DORA zbiera się zwykle centralnie (platforma/inżynieria), ale <b>raportuje per usługa</b> i udostępnia wszystkim — dev, ops i zespołom wydań (DORA: dzielenie się wszystkimi pięcioma metrykami sprzyja wspólnej odpowiedzialności). Kluczowe są uzgodnione definicje: co jest „wdrożeniem” (każdy deploy na produkcję? także konfiguracji?), co jest „porażką” (rollback, hotfix, incydent o określonej wadze). Bez tego liczby z różnych zespołów znaczą co innego.</p>
+    <p>W dużych firmach metryki DORA często zbiera się centralnie (platforma/inżynieria — to praktyka, nie wymóg DORA), ale <b>raportuje per usługa</b> i udostępnia wszystkim — dev, ops i zespołom wydań (DORA: dzielenie się wszystkimi pięcioma metrykami sprzyja wspólnej odpowiedzialności). Kluczowe są uzgodnione definicje: co jest „wdrożeniem” (każdy deploy na produkcję? także konfiguracji?), co jest „porażką” (rollback, hotfix, incydent o określonej wadze). Bez tego liczby z różnych zespołów znaczą co innego.</p>
   </details>
 
   <div class="box bullets reveal"><span class="lbl">📌 W punktach</span><ul>
@@ -823,7 +823,7 @@ feat!: drop support for Java 11</code></pre>
 <section class="chapter" id="ci" data-level="1" data-title="Continuous Integration">
   <div class="chap-head reveal"><div class="chap-num"></div><div><h2>Continuous Integration</h2><span class="tag">integruj codziennie, naprawiaj od razu</span></div></div>
   <p class="reveal">Definicja Martina Fowlera: <b>Continuous Integration to praktyka, w której każdy członek zespołu łączy swoje zmiany z kodem kolegów co najmniej raz dziennie, a każda integracja jest weryfikowana automatycznym buildem (z testami)</b>, żeby jak najszybciej wykryć błędy integracji. Uwaga: CI to <i>praktyka</i>. Serwer CI, który buduje gałęzie żyjące trzy tygodnie, to nie jest CI.</p>
-  <p class="reveal">Po co? Fowler wymienia m.in. mniejsze ryzyko opóźnień, mniej czasu traconego na integrację, mniej błędów i możliwość ciągłej refaktoryzacji. DORA dodaje: <b>trunk-based development jest wymaganą praktyką CI</b>.</p>
+  <p class="reveal">Po co? Fowler wymienia m.in. mniejsze ryzyko opóźnień, mniej czasu traconego na integrację, mniej błędów i możliwość ciągłej refaktoryzacji. DORA zalicza <b>trunk-based development</b> do praktyk CI.</p>
   <h3 class="reveal">Praktyki CI (wg Fowlera)</h3>
   <ul class="reveal">
     <li>Wszystko w wersjonowanym mainline; <b>automatyczny build</b>; <b>build sam się testuje</b> (self-testing).</li>
@@ -1364,7 +1364,7 @@ livenessProbe:
   <p class="reveal"><b>Cel dla firmy:</b> Git staje się jedynym miejscem zmian — każda zmiana ma autora, review i historię; wycofanie to <code>git revert</code>; a ręczne „poprawki” w klastrze są wykrywane albo cofane.</p>
 
   <h3 class="reveal">Push vs pull</h3>
-  <p class="reveal">W modelu <b>push</b> pipeline CI ma poświadczenia do klastra i sam wykonuje <code>kubectl apply</code>/<code>helm upgrade</code>. W modelu <b>pull</b> (GitOps) agent działa w klastrze i sam pobiera zmiany z repo. Dokumentacja Argo CD podkreśla zaletę: przy automatycznej synchronizacji pipeline CI nie potrzebuje już bezpośredniego dostępu do serwera API Argo CD — robi tylko commit i push do repozytorium z manifestami. Poświadczenia do klastra nie muszą więc wychodzić poza klaster.</p>
+  <p class="reveal">W modelu <b>push</b> pipeline CI ma poświadczenia do klastra i sam wykonuje <code>kubectl apply</code>/<code>helm upgrade</code>. W modelu <b>pull</b> (GitOps) agent działa w klastrze i sam pobiera zmiany z repo. Dokumentacja Argo CD podkreśla zaletę: przy automatycznej synchronizacji pipeline CI nie potrzebuje już bezpośredniego dostępu do serwera API Argo CD — robi tylko commit i push do repozytorium z manifestami. Zwykle nie trzeba więc trzymać w CI poświadczeń do klastra.</p>
 
   <h3 class="reveal">Argo CD: sync, prune, self-heal</h3>
   <p class="reveal"><b>Argo CD</b> to deklaratywne narzędzie CD w stylu GitOps dla Kubernetesa, zaimplementowane jako kontroler. Porównuje stan „live” w klastrze ze stanem docelowym z repo; aplikacja, której stan live odbiega od docelowego, ma status <b>OutOfSync</b>.</p>
@@ -1434,7 +1434,7 @@ livenessProbe:
   <p class="reveal">Klasyczny sposób: wygenerować klucz dostępu do chmury i wkleić go jako sekret repozytorium. Ten klucz działa, dopóki ktoś go ręcznie nie zrotuje — często miesiącami.</p>
   <p class="reveal">Z <b>OpenID Connect</b> workflow GitHub Actions wymienia krótkotrwały token bezpośrednio u dostawcy chmury. Każdy job dostaje od dostawcy OIDC GitHuba token JWT, unikalny dla tego joba. Chmura sprawdza jego <b>claimy</b> i wydaje krótkotrwały token dostępu, ważny tylko dla jednego joba — potem sam wygasa. Nie musisz trzymać poświadczeń chmury jako długotrwałych sekretów GitHuba.</p>
   <ul class="reveal">
-    <li><code>sub</code> (subject) — kto prosi, np. <code>repo:octo-org/octo-repo:environment:prod</code> albo <code>repo:my-org/my-repo:ref:refs/heads/main</code>. Po stronie chmury warunkiem zaufania ograniczasz, które repo/gałąź/środowisko może przyjąć daną rolę.</li>
+    <li><code>sub</code> (subject) — kto prosi, np. <code>repo:octo-org/octo-repo:environment:prod</code> albo <code>repo:my-org/my-repo:ref:refs/heads/main</code> (format klasyczny; według dokumentacji GitHuba repozytoria utworzone po 15 lipca 2026 domyślnie dostają niezmienny format <code>sub</code> z identyfikatorami właściciela i repo (poza GitHub Enterprise Server) — sprawdź go w swoim tokenie). Po stronie chmury warunkiem zaufania ograniczasz, które repo/gałąź/środowisko może przyjąć daną rolę.</li>
     <li><code>aud</code> (audience) — dla kogo token jest przeznaczony.</li>
     <li>Job musi mieć uprawnienie do pobrania tokenu: <code>permissions: id-token: write</code>.</li>
   </ul>
@@ -1452,7 +1452,7 @@ jobs:
     <div class="legend"><span style="--c:var(--accent)">poświadczenie ważne</span><span style="--c:var(--bad)">atakujący ma dostęp</span><span style="--c:var(--warn)">wyciek</span></div>
     <div class="p2-metrics" id="sec-metrics"></div>
     <div class="status" id="sec-status">…</div>
-    <figcaption>Liczby ilustracyjne: 12 miesięcy, rotacja klucza po wykryciu w 9. miesiącu, joby co kilka tygodni. Długość życia tokenu OIDC jest w rzeczywistości mierzona w minutach i nie byłaby widoczna w tej skali.</figcaption>
+    <figcaption>Liczby ilustracyjne: 12 miesięcy, rotacja klucza po wykryciu w 9. miesiącu, joby co kilka tygodni. Token OIDC żyje w rzeczywistości krótko — tylko na czas jednego joba — i w tej skali nie byłby widoczny.</figcaption>
   </figure>
 
   <h3 class="reveal">Hardening GitHub Actions</h3>
@@ -1524,7 +1524,7 @@ jobs:
   <p class="reveal">Google SRE daje prostą regułę: jeśli możesz zmierzyć tylko cztery rzeczy w systemie obsługującym użytkowników, mierz <b>latency, traffic, errors i saturation</b>.</p>
   <div class="scroll-x reveal"><table class="mini"><thead><tr><th>Sygnał</th><th>Co mierzy</th><th>Pułapka</th></tr></thead><tbody>
     <tr><td><b>Latency</b></td><td>Czas obsługi żądania.</td><td>Odróżniaj latency udanych i nieudanych żądań — szybki błąd 500 potrafi „poprawić” średnią.</td></tr>
-    <tr><td><b>Traffic</b></td><td>Popyt na system, np. żądania HTTP na sekundę.</td><td>Spadek ruchu też bywa objawem awarii (np. klienci nie mogą się połączyć).</td></tr>
+    <tr><td><b>Traffic</b></td><td>Popyt na system, np. żądania HTTP na sekundę.</td><td>W praktyce spadek ruchu też bywa objawem awarii (np. klienci nie mogą się połączyć).</td></tr>
     <tr><td><b>Errors</b></td><td>Odsetek żądań zakończonych błędem: jawnie (HTTP 500), niejawnie (200 z błędną treścią) albo z polityki (odpowiedź wolniejsza niż obiecana).</td><td>Licz też błędy „ukryte” — 200 z pustym koszykiem to nadal błąd.</td></tr>
     <tr><td><b>Saturation</b></td><td>Jak „pełny” jest serwis — ze wskazaniem najbardziej ograniczonego zasobu (pamięć, I/O, pula połączeń).</td><td>Wiele systemów zwalnia, zanim dobije do 100%.</td></tr>
   </tbody></table></div>
@@ -1628,7 +1628,7 @@ jobs:
   <div class="scroll-x reveal"><table class="mini"><thead><tr><th>Burn rate</th><th>Error rate przy SLO 99,9%</th><th>Czas do wyczerpania budżetu</th></tr></thead><tbody>
     <tr><td>1</td><td>0,1%</td><td>30 dni</td></tr><tr><td>2</td><td>0,2%</td><td>15 dni</td></tr><tr><td>10</td><td>1%</td><td>3 dni</td></tr><tr><td>1000</td><td>100%</td><td>43 minuty</td></tr>
   </tbody></table></div>
-  <p class="reveal">Dlaczego nie zwykły próg „error rate &gt; 0,1%”? Bo ma niską precyzję: 0,1% błędów przez 10 minut odpali alert, zużywając zaledwie 0,02% miesięcznego budżetu. Workbook proponuje alerty wielookienne jako punkt startu:</p>
+  <p class="reveal">Dlaczego nie zwykły próg „error rate &gt; 0,1%”? Bo ma niską precyzję: 0,1% błędów przez 10 minut odpali alert, zużywając zaledwie 0,02% miesięcznego budżetu. Workbook proponuje alerty z wieloma progami burn rate jako punkt startu:</p>
   <div class="scroll-x reveal"><table class="mini"><thead><tr><th>Zużycie budżetu</th><th>Okno</th><th>Burn rate</th><th>Powiadomienie</th></tr></thead><tbody>
     <tr><td>2%</td><td>1 godzina</td><td>14,4</td><td>Page</td></tr><tr><td>5%</td><td>6 godzin</td><td>6</td><td>Page</td></tr><tr><td>10%</td><td>3 dni</td><td>1</td><td>Ticket</td></tr>
   </tbody></table></div>
@@ -1725,7 +1725,7 @@ Lekcje:              co zmieniamy w procesie, alertach, runbookach</code></pre>
 
   <h3 class="reveal">Narzędzia</h3>
   <div class="scroll-x reveal"><table class="mini"><thead><tr><th>Narzędzie</th><th>Do czego</th><th>Kiedy wybrać</th></tr></thead><tbody>
-    <tr><td>PagerDuty, Opsgenie, Grafana IRM</td><td>Grafiki dyżurów, eskalacje, powiadomienia.</td><td>Gdy masz rotację on-call; przy Opsgenie sprawdź aktualny status produktu u Atlassiana.</td></tr>
+    <tr><td>PagerDuty, Grafana IRM, Jira Service Management</td><td>Grafiki dyżurów, eskalacje, powiadomienia.</td><td>Gdy masz rotację on-call; przed wyborem sprawdź aktualny status i plan rozwoju produktu.</td></tr>
     <tr><td>incident.io, FireHydrant, Rootly</td><td>Prowadzenie incydentu w Slacku/Teams: role, oś czasu, szkic postmortemu.</td><td>Gdy incydentów jest dużo i chcesz automatyzować „papierologię”.</td></tr>
     <tr><td>Statuspage (lub odpowiedniki)</td><td>Publiczna strona statusu dla klientów.</td><td>Gdy masz klientów zewnętrznych i rolę Communication.</td></tr>
     <tr><td>Jira Service Management, ServiceNow</td><td>ITSM: incydenty, problemy, zmiany.</td><td>Gdy organizacja działa w procesach ITIL.</td></tr>
@@ -2316,7 +2316,7 @@ deny contains msg if {
       <tr><td>Kontenery i orkiestracja</td><td>pakowanie i uruchamianie aplikacji</td><td>Docker, Podman, Kubernetes (EKS/AKS/GKE/OpenShift), ECS, Cloud Run</td><td><a href="#k8s">Kontenery</a></td></tr>
       <tr><td>Sekrety</td><td>przechowywanie i rotacja haseł, kluczy, tokenów</td><td>HashiCorp Vault / OpenBao, AWS Secrets Manager, Azure Key Vault, Google Secret Manager</td><td><a href="#secrets">Sekrety</a></td></tr>
       <tr><td>Observability</td><td>metryki, logi, trace'y, alerty</td><td>OpenTelemetry, Prometheus, Grafana, Loki, Tempo, Jaeger, ELK / OpenSearch, Datadog</td><td><a href="#obs">Observability</a></td></tr>
-      <tr><td>Incydenty i on-call</td><td>powiadamianie, eskalacja, koordynacja</td><td>PagerDuty, Opsgenie, incident.io, Grafana OnCall</td><td><a href="#incident">Incydenty</a></td></tr>
+      <tr><td>Incydenty i on-call</td><td>powiadamianie, eskalacja, koordynacja</td><td>PagerDuty, Grafana IRM, incident.io, Jira Service Management</td><td><a href="#incident">Incydenty</a></td></tr>
       <tr><td>Bezpieczeństwo w pipeline</td><td>SAST, SCA, sekrety, IaC, obrazy</td><td>CodeQL, Semgrep, SonarQube, Trivy, Grype, Checkov, gitleaks, OWASP ZAP</td><td><a href="#devsecops">DevSecOps</a></td></tr>
       <tr><td>Łańcuch dostaw</td><td>SBOM, podpisy, provenance</td><td>Syft, CycloneDX, SPDX, Sigstore cosign, SLSA</td><td><a href="#supply">Supply chain</a></td></tr>
       <tr><td>Policy as Code</td><td>automatyczne egzekwowanie reguł</td><td>OPA / Gatekeeper, Conftest, Kyverno</td><td><a href="#policy">Polityki</a></td></tr>
@@ -3875,7 +3875,7 @@ const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase label
     ['iac', 'IaC', 'Terraform/OpenTofu, Pulumi'],
     ['sec', 'Sekrety', 'Vault/OpenBao, menedżery chmur'],
     ['obs', 'Observability', 'OpenTelemetry, Prometheus, Grafana'],
-    ['inc', 'Incydenty', 'PagerDuty, Opsgenie'],
+    ['inc', 'Incydenty', 'PagerDuty, incident.io'],
     ['scan', 'Skany bezpieczeństwa', 'CodeQL, Semgrep, Trivy'],
     ['pol', 'Policy as Code', 'OPA, Kyverno'],
     ['idp', 'Portal deweloperski', 'Backstage'],
@@ -3973,7 +3973,7 @@ const wbr = s => s.replace(/([a-z])([A-Z])/g, '$1<wbr>$2');   // CamelCase label
 /* ---------- quiz ---------- */
 (() => {
   const Q = [   // [question, options, correctIndex, why] — wrong options = misconceptions from the chapters
-    ['Czym jest DevOps według tego kursu?', ['Połączeniem kultury, praktyk i narzędzi dla szybkiego i bezpiecznego przepływu zmian', 'Stanowiskiem osoby, która pisze pipeline’y za zespół', 'Konkretnym narzędziem CI/CD, które wystarczy kupić'], 0, 'Fowler: nawet z najlepszymi narzędziami DevOps jest buzzwordem bez właściwej kultury; to nie stanowisko ani produkt.'],
+    ['Czym jest DevOps według tego kursu?', ['Połączeniem kultury, praktyk i narzędzi dla szybkiego i bezpiecznego przepływu zmian', 'Stanowiskiem osoby, która pisze pipeline’y za zespół', 'Konkretnym narzędziem CI/CD, które wystarczy kupić'], 0, 'Fowler: nawet z najlepszymi narzędziami DevOps bez właściwej kultury to tylko buzzword — liczy się kultura i sposób pracy, a nie same narzędzia.'],
 ['Jak w kulturze generatywnej (Westrum) organizacja reaguje na porażkę?', ['Szuka kozła ofiarnego', 'Ignoruje posłańca złych wieści', 'Dociekaniem przyczyn (inquiry)'], 2, 'W tabeli Westruma: patologiczna — kozioł ofiarny, biurokratyczna — „sprawiedliwość”, generatywna — dociekanie przyczyn.'],
 ['Co według DORA jest sygnałem, że partia pracy jest za duża?', ['Zawiera więcej niż jeden commit', 'Jej ukończenie i sprawdzenie zajmuje ponad tydzień', 'Wymaga review innej osoby'], 1, 'DORA: każda partia kodu, której ukończenie i sprawdzenie trwa dłużej niż tydzień, jest za duża.'],
 ['Zespół osiągnął limit WIP w kolumnie „testy” i developerzy czekają. Co zaleca DORA?', ['Nie podnosić limitu, tylko usunąć przyczynę czekania', 'Podnieść limit WIP, żeby nikt nie stał', 'Zrezygnować z limitów'], 0, 'DORA: nie zwiększaj wtedy limitów WIP — popraw proces, który powoduje opóźnienia.'],
