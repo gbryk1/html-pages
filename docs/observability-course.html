@@ -1504,7 +1504,7 @@ management:
 export JAVA_TOOL_OPTIONS="-javaagent:path/to/opentelemetry-javaagent.jar"
 export OTEL_SERVICE_NAME=checkout
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318</code></pre>
-  <p class="reveal">Agent w wersji 2.0+ domyślnie używa <code>http/protobuf</code>, czyli portu 4318 (samo SDK Javy z autokonfiguracją domyślnie używa gRPC i 4317). Pojedyncze instrumentacje wyłączysz przez <code>otel.instrumentation.[nazwa].enabled=false</code>. Agent sam tłumi zagnieżdżone duplikaty, np. span Tomcata i span Servlet API dla tego samego żądania. Strategię ustawia <code>otel.instrumentation.experimental.span-suppression-strategy</code> (domyślnie <code>semconv</code>). Własne spany dodasz adnotacją <code>@WithSpan</code>.</p>
+  <p class="reveal">Agent w wersji 2.0+ domyślnie używa <code>http/protobuf</code>, czyli portu 4318 (samo SDK Javy z autokonfiguracją domyślnie używa gRPC i 4317). Pojedyncze instrumentacje wyłączysz przez <code>otel.instrumentation.[nazwa].enabled=false</code>. Agent sam tłumi zagnieżdżone duplikaty, np. span Tomcata i span Servlet API dla tego samego żądania. Strategię ustawia <code>otel.instrumentation.common.span-suppression-strategy</code> (domyślnie <code>semconv</code>). Własne spany dodasz adnotacją <code>@WithSpan</code>.</p>
 
   <h3 class="reveal">Spring Boot natywnie: Micrometer + Actuator</h3>
   <p class="reveal">Spring Boot do metryk i trace’ów używa <b>Micrometer Observation</b>. Metryki idą przez registry Micrometera, np. <code>micrometer-registry-prometheus</code> (endpoint <code>/actuator/prometheus</code>) albo OTLP (<code>management.otlp.metrics.export.url</code>). Trace’y idą przez Micrometer Tracing z OpenTelemetry (<code>spring-boot-starter-opentelemetry</code>). Ważne: Spring Boot <b>nie używa</b> metryk z SDK OTel, a domyślne nazwy pochodzą z konwencji Springa (np. <code>http.server.requests</code>). Na konwencje OTel przełączysz się przez <code>management.observations.conventions=open-telemetry</code> (tylko stabilne konwencje).</p>
@@ -2247,7 +2247,7 @@ MeterFilter dropUserId() {
   <p class="reveal">Moja rekomendacja (opinia): <b>liveness sprawdza tylko proces</b>. Do readiness dodawaj zależności, które są <i>lokalne dla instancji</i> (np. własna pula połączeń, rozgrzany cache), a wspólną bazę raczej obsłuż w kodzie, bo szybki, czytelny błąd z aplikacji łatwiej zdiagnozować niż „connection refused”.</p>
 
   <h3 class="reveal">Spring Boot: sondy w zestawie</h3>
-  <p class="reveal">Actuator zarządza stanem dostępności aplikacji (<code>LivenessState</code>, <code>ReadinessState</code>) i wystawia go jako dwie <i>health groups</i>: <code>/actuator/health/liveness</code> i <code>/actuator/health/readiness</code>. Te grupy są włączane automatycznie, gdy aplikacja działa w środowisku Kubernetes (poza nim włączysz je właściwością <code>management.endpoint.health.probes.enabled=true</code>); ustawienie <code>false</code> je wyłącza. Domyślnie Spring Boot <b>nie dodaje</b> do nich innych health indicatorów, więc zdrowie bazy nie trafia do liveness, dopóki sam go tam nie wpiszesz.</p>
+  <p class="reveal">Actuator zarządza stanem dostępności aplikacji (<code>LivenessState</code>, <code>ReadinessState</code>) i wystawia go jako dwie <i>health groups</i>: <code>/actuator/health/liveness</code> i <code>/actuator/health/readiness</code>. Dokumentacja opisuje je jako zbierane, gdy aplikacja działa w środowisku Kubernetes; właściwość <code>management.endpoint.health.probes.enabled</code> pozwala je jawnie włączyć (<code>true</code>) lub wyłączyć (<code>false</code>). Domyślnie Spring Boot <b>nie dodaje</b> do nich innych health indicatorów, więc zdrowie bazy nie trafia do liveness, dopóki sam go tam nie wpiszesz.</p>
 <pre><code># application.yml
 management:
   endpoint:
@@ -2325,7 +2325,7 @@ readinessProbe:
   <p class="reveal">Dokumentacja Grafany streszcza to jednym zdaniem: metoda USE mówi, jak szczęśliwe są twoje maszyny, a RED, jak szczęśliwi są twoi użytkownicy. RED raportuje objawy, USE przyczyny. Z tego wynika naturalny porządek poziomów:</p>
   <ol class="reveal">
     <li><b>Przegląd / SLO</b>: jeden kafelek na usługę lub podróż użytkownika, kolor = stan budżetu błędów (rozdział 12).</li>
-    <li><b>Usługa (RED)</b>: rate, errors, duration jako percentyle, jeden rząd na usługę, w kolejności przepływu danych.</li>
+    <li><b>Usługa (RED)</b>: rate, errors, duration jako rozkład opóźnień (np. percentyle), jeden rząd na usługę, w kolejności przepływu danych.</li>
     <li><b>Zasoby (USE)</b>: CPU, pamięć, pule połączeń, kolejki, z osiami znormalizowanymi (procent, nie surowe rdzenie).</li>
     <li><b>Drill-down</b>: link z punktu na wykresie do trace’ów, z trace’a do logów z tym samym <code>trace_id</code>.</li>
   </ol>
@@ -3535,7 +3535,7 @@ QUIZ.push(
   }
   function narrate() {
     if (s.dead > 0) return say(st, `<b>💀 OOM kill.</b> Bez <code>memory_limiter</code> pamięć przekroczyła limit kontenera. Kolejki żyły w pamięci, więc przepadło ${s.lostNow} elementów, a SDK-i nie mają dokąd wysyłać. Po restarcie te same warunki dadzą kolejny OOM (<em>crash loop</em>).`, 'bad');
-    if (s.refusing) return say(st, `<b>memory_limiter odrzuca dane</b> (pamięć ≥ soft ${SOFT} MiB). Receiver zwraca błąd „spróbuj ponownie”, a SDK-i trzymają dane i ponawiają. Zauważ, że do zdrowego backendu A też nic nie płynie: rosnąca kolejka B zjada pamięć, więc memory_limiter odrzuca dane także dla zdrowego A.`, 'warn');
+    if (s.refusing) return say(st, `<b>memory_limiter odrzuca dane</b> (pamięć ≥ soft ${SOFT} MiB). Receiver zwraca błąd „spróbuj ponownie”, a SDK-i ponawiają próbę (ograniczoną czasem i buforem), więc przy dłuższym przeciążeniu dane mogą zostać utracone. Zauważ, że do zdrowego backendu A też nic nie płynie: rosnąca kolejka B zjada pamięć, więc memory_limiter odrzuca dane także dla zdrowego A.`, 'warn');
     if (s.down && s.dropNow) return say(st, `<b>Kolejka exportera B jest pełna (${QCAP}/${QCAP}).</b> Nowe dane dla B są porzucane (<code>otelcol_exporter_enqueue_failed_*</code>). Backend A dostaje wszystko, bo kolejki exporterów są osobne.`, 'warn');
     if (s.down) return say(st, `<b>Backend B nie odpowiada.</b> Exporter B ponawia z backoffem (5 s, ×1.5, maks. 30 s; po 300 s porzuca paczkę). Jego kolejka rośnie, a pamięć razem z nią. Exporter A działa normalnie.`, 'warn');
     if (s.qB.length) return say(st, `<b>Backend B wrócił.</b> Exporter opróżnia zaległą kolejkę kilkoma równoległymi konsumentami (<code>num_consumers</code>).`, 'ok');
