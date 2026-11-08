@@ -36,7 +36,11 @@ fs.mkdirSync(out, { recursive: true });
       for (const v of vals) { await sel.selectOption(v); await p.waitForTimeout(WAIT / 2); }
     }
     for (const cb of await p.$$(`#${id} input[type=checkbox]`)) { await cb.click().catch(() => {}); await p.waitForTimeout(300); }
+    // a figure taller than the viewport never becomes "stable" for locator.screenshot: grow the viewport for the shot
+    const vp = p.viewportSize(); const h = await p.evaluate(id => document.getElementById(id).getBoundingClientRect().height, id);
+    if (h > vp.height - 20) await p.setViewportSize({ width: vp.width, height: Math.ceil(h) + 60 });
     await p.locator('#' + id).screenshot({ path: `${out}/${scheme}-click-${id}.png` });
+    if (h > vp.height - 20) await p.setViewportSize(vp);
     if (acts.includes('reset')) { await p.click(`#${id} [data-act=reset]`); await p.waitForTimeout(400); }
   }
   console.log(`figures=${figs.length} errors=${errs.length}`);
